@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+
+# Local configuration, including the generated auth.secret.
+/config.yml
+/config.toml
+/.env
+/.env.local
+
+# Local application state.
+/storage/
+/database.sqlite
+/database.sqlite-journal
+/database.sqlite-wal
+/database.sqlite-shm
+/.agents/
+/.claude/skills/
+/.agent-annotations/
+/.nocobase/
+*.log

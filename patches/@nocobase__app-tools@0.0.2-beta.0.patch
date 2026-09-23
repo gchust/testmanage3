@@ -1,0 +1,85 @@
+diff --git a/dist/scripts/utils/build-server-dist-package.mjs b/dist/scripts/utils/build-server-dist-package.mjs
+index 773fcccf1ee6cb75438b596a69025760e56fc8a1..8059a003c0c5c6e432cda300c438f836073fbc77 100644
+--- a/dist/scripts/utils/build-server-dist-package.mjs
++++ b/dist/scripts/utils/build-server-dist-package.mjs
+@@ -121,6 +121,43 @@ const copyWorkspacePackage = (packageName, packageDir) => {
+  * deployed server with `Could not locate the bindings file` — a runtime error naming nothing that points back here.
+  * The entries mirror the application's own `pnpm-workspace.yaml` so both decide the same packages the same way.
+  */
++/**
++ * Reads the application's own `allowBuilds` decisions.
++ *
++ * A generated application decides which packages may run install scripts in its `pnpm-workspace.yaml`; the
++ * deployment tree has to make the same decision, or a package the application deliberately skips (because it
++ * ships usable prebuilt binaries) is compiled during `pnpm build` and fails wherever no C++ toolchain exists.
++ * Falls back to the template defaults when the application has no such file or block.
++ */
++const readAllowBuilds = () => {
++  const fallback = [
++    '  better-sqlite3: true',
++    '  oracledb: true',
++    '  esbuild: true',
++    '  tesseract.js: false',
++  ];
++  let source;
++  try {
++    source = fs.readFileSync(path.join(rootDir, 'pnpm-workspace.yaml'), 'utf8');
++  } catch {
++    return fallback;
++  }
++
++  const lines = source.split(/\r?\n/u);
++  const start = lines.findIndex((line) => /^allowBuilds:\s*$/u.test(line));
++  if (start === -1) return fallback;
++
++  const entries = [];
++  for (const line of lines.slice(start + 1)) {
++    if (/^\s*(?:#|$)/u.test(line)) continue;
++    const match = /^\s+([@a-z0-9._/-]+):\s*(true|false)\s*$/iu.exec(line);
++    if (!match) break;
++    entries.push(`  ${match[1]}: ${match[2]}`);
++  }
++
++  return entries.length > 0 ? entries : fallback;
++};
++
+ const writeDistWorkspace = () => {
+   fs.writeFileSync(
+     distWorkspacePath,
+@@ -139,10 +176,7 @@ const writeDistWorkspace = () => {
+       '# Which dependencies may run install scripts: true compiles a native addon, false skips a script',
+       '# this application does not need. A package left out here installs without building and fails at runtime.',
+       'allowBuilds:',
+-      '  better-sqlite3: true',
+-      '  oracledb: true',
+-      '  esbuild: true',
+-      '  tesseract.js: false',
++      ...readAllowBuilds(),
+       '',
+     ].join('\n'),
+   );
+diff --git a/dist/scripts/utils/retarget-native.mjs b/dist/scripts/utils/retarget-native.mjs
+index c462bd80f3cf2b66d7177a725e382af5e56b253a..711a1aa0b42183743e1dd02c1beae3b5c185c03f 100644
+--- a/dist/scripts/utils/retarget-native.mjs
++++ b/dist/scripts/utils/retarget-native.mjs
+@@ -80,9 +80,18 @@ if (natives.length === 0) {
+   process.exit(0);
+ }
+ 
+-/** Runs a command and returns its result rather than throwing, so one failure can be reported in context. */
++/**
++ * Runs a command and returns its result rather than throwing, so one failure can be reported in context.
++ *
++ * `shell` on Windows only: `npm` and `npx` are `.cmd` shims there, and `spawnSync` cannot start a batch file
++ * without one — every platform-package fetch would fail with ENOENT and be reported as "could not fetch".
++ */
+ const run = (command, args, options = {}) =>
+-  spawnSync(command, args, { encoding: 'utf8', ...options });
++  spawnSync(command, args, {
++    encoding: 'utf8',
++    shell: process.platform === 'win32',
++    ...options,
++  });
+ 
+ let failures = 0;
+ 
