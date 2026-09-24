@@ -472,7 +472,10 @@ export function parseFeaturePointInput(
         ? null
         : readId(record.parentId, 'parentId');
   }
-  if (write('ownerId')) {
+  // Owner has two encodings: `ownerId` (account) is authoritative, `owner` (name)
+  // is resolved when unique. Only touch `ownerId` when the payload carries it, so a
+  // create that sends a name does not look like an explicit "clear the owner".
+  if ('ownerId' in record) {
     input.ownerId = readNullableString(record.ownerId, 'ownerId', 64);
   }
   if (write('owner')) {
@@ -614,7 +617,10 @@ export function parseProblemInput(
       'pending',
     );
   }
-  if (write('ownerId')) {
+  // Owner has two encodings: `ownerId` (account) is authoritative, `owner` (name)
+  // is resolved when unique. Only touch `ownerId` when the payload carries it, so a
+  // create that sends a name does not look like an explicit "clear the owner".
+  if ('ownerId' in record) {
     input.ownerId = readNullableString(record.ownerId, 'ownerId', 64);
   }
   if (write('owner')) {

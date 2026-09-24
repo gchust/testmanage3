@@ -79,7 +79,8 @@ curl -s -H 'x-api-key: <key>' '${api}/test-progress/problems?open=true'
 - \`exampleExists\`：\`yes\` | \`no\` | \`unspecified\`
 - \`status\`：\`testable\` | \`developed\` | \`testCompleted\` | \`refactoring\` | \`inProgress\` | \`deferred\` | \`unspecified\`
 - 评分（0–10，可空）：\`designScore\` / \`developmentScore\` / \`agentFriendlinessScore\` / \`outputQualityScore\`，配套 \`*Note\`
-- 其他：\`owner\`、\`exampleExpected\`、\`exampleCurrent\`、\`remark\`
+- 负责人：\`ownerId\`（账号 id，优先）或 \`owner\`（账号姓名，名称唯一时自动解析为账号）；清空传 \`ownerId: null\`
+- 其他：\`exampleExpected\`、\`exampleCurrent\`、\`remark\`
 
 示例：新建功能点
 

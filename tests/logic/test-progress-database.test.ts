@@ -600,6 +600,52 @@ describe('test progress schema', () => {
     ).toMatchObject({ owner: '无人', ownerId: null });
   });
 
+  it('keeps an owner sent by name through the create parsers', async () => {
+    const database = createTestDatabase();
+    await migrateAndSeed(database);
+    const service = createTestProgressService(database);
+    const client = await knex(database);
+    await client('user').insert([
+      { id: 'account-chenlin', name: '陈霖', username: 'chenlin' },
+    ]);
+
+    const dimension = (await service.listFeaturePoints()).find(
+      (item) => item.name === '应用测试',
+    )!;
+
+    // A create that sends a name must not look like "clear the owner": the parser
+    // leaves ownerId undefined so the name resolves to the account.
+    const problemInput = parseProblemInput(
+      { title: '按姓名创建', featurePointId: dimension.id, owner: '陈霖' },
+      { partial: false },
+    );
+    expect(problemInput.ownerId).toBeUndefined();
+    const created = await service.createProblem(problemInput, {
+      id: 'actor',
+      name: 'actor',
+    });
+    expect(created).toMatchObject({
+      owner: '陈霖',
+      ownerId: 'account-chenlin',
+    });
+
+    const featureInput = parseFeaturePointInput(
+      {
+        name: '按姓名建的功能点',
+        level: 'feature',
+        parentId: dimension.id,
+        owner: '陈霖',
+      },
+      { partial: false },
+    );
+    expect(featureInput.ownerId).toBeUndefined();
+    const feature = await service.createFeaturePoint(featureInput);
+    expect(feature).toMatchObject({
+      owner: '陈霖',
+      ownerId: 'account-chenlin',
+    });
+  });
+
   it('records a timeline and treats cancelled as closed', async () => {
     const database = createTestDatabase();
     await migrateAndSeed(database);
