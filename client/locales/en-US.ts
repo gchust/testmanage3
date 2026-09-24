@@ -274,6 +274,14 @@ const enUS = {
         'Both sources are required:\n1. Plugin source docs (README, docs);\n2. Website docs (code/docs).\nEach must be findable, cover the main flow and be verifiable; record whichever is absent as a missing item.',
       scores:
         'Scores run 0–10, higher is better. Bands: >=8 green, 7–8 blue, 6–7 amber, <6 red; an unrated score shows "—".\nEach score follows the score-rubric (design, development completeness, Agent friendliness, output quality) and must cite its evidence.',
+      designScore:
+        'Dimension 1 is decided by the design review; testing does not score it. Use the review conclusion when one exists, otherwise leave it blank.\nTesting only contributes contract checks and boundary questions from the usage side.',
+      developmentScore:
+        'Development completeness = 10 × (passed + 0.5 × partial) ÷ (total scenarios − blocked), one decimal.\n· Failed scenarios count as 0 in the numerator;\n· Blocked scenarios stay out of the division but must be explained;\n· Not-executed scenarios must be 0, otherwise leave the dimension blank.',
+      agentFriendlinessScore:
+        'Agent friendliness = five-dimension total ÷ 10, one decimal.\nFindability, context efficiency, clear recommended path, complete and consistent scenarios, verifiable and debuggable; two checkpoints each at 0/5/10, 100 total.\nLeave blank when any checkpoint is not scored.',
+      outputQualityScore:
+        'Agent output quality = 10 × (passed − 1.5 × open problems this round) ÷ total scenarios, floor 0, one decimal.\n· Only passed scenarios count in the numerator; partial, failed and blocked stay in the denominator;\n· Not-executed scenarios must be 0;\n· Open problems = problems recorded this round and still open (material gaps included, provisional).',
       example:
         'Example acceptance: every capability the docs and Skills describe and the product implements must be identifiable and usable in the Examples template (app-template-examples, a separate template) — a page entry, or a reproducible command and data set. The default template does not demonstrate capabilities.\nCheck item by item against the expected demo points: record anything not demonstrated as an example problem (what is missing, where to find it or how to reproduce), and mark demonstrated ones done.\nThe cell shows "N gaps" while example problems stay open, "Complete" when all are closed, and "Missing" when no example is confirmed.',
     },

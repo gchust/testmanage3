@@ -251,21 +251,25 @@ function FeaturePointDetail({
           <div className='grid gap-4 md:grid-cols-2'>
             <ScoreCard
               label={t('testProgress.scoreDesign')}
+              hint={t('testProgress.hint.designScore')}
               note={data.designNote}
               score={data.designScore}
             />
             <ScoreCard
               label={t('testProgress.scoreDevelopment')}
+              hint={t('testProgress.hint.developmentScore')}
               note={data.developmentNote}
               score={data.developmentScore}
             />
             <ScoreCard
               label={t('testProgress.scoreAgentFriendliness')}
+              hint={t('testProgress.hint.agentFriendlinessScore')}
               note={data.agentFriendlinessNote}
               score={data.agentFriendlinessScore}
             />
             <ScoreCard
               label={t('testProgress.scoreOutputQuality')}
+              hint={t('testProgress.hint.outputQualityScore')}
               note={data.outputQualityNote}
               score={data.outputQualityScore}
             />
@@ -426,10 +430,12 @@ function CriteriaItem({
 
 function ScoreCard({
   label,
+  hint,
   score,
   note,
 }: {
   readonly label: string;
+  readonly hint: string;
   readonly score: number | null;
   readonly note: string | null;
 }): ReactElement {
@@ -437,7 +443,10 @@ function ScoreCard({
   return (
     <div className='rounded-lg border border-border p-4'>
       <div className='flex items-baseline justify-between gap-2'>
-        <p className='text-sm font-medium'>{label}</p>
+        <p className='inline-flex items-center gap-1 text-sm font-medium'>
+          {label}
+          <FieldHint hint={hint} label={label} />
+        </p>
         <p className='font-heading text-2xl font-semibold tabular-nums'>
           <ScoreValue score={score} />
         </p>
