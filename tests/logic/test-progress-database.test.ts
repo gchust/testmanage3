@@ -86,7 +86,7 @@ async function createUsersCollection(database: DatabaseManager): Promise<void> {
   });
 }
 
-async function migrateAndSeed(database: DatabaseManager): Promise<void> {
+async function migrateOnly(database: DatabaseManager): Promise<void> {
   await createUsersCollection(database);
   await migration.up(migrationContext(database));
   await issuesMigration.up(migrationContext(database));
@@ -94,6 +94,10 @@ async function migrateAndSeed(database: DatabaseManager): Promise<void> {
   await problemCommentsMigration.up(migrationContext(database));
   await problemActivitiesMigration.up(migrationContext(database));
   await ownerIdMigration.up(migrationContext(database));
+}
+
+async function migrateAndSeed(database: DatabaseManager): Promise<void> {
+  await migrateOnly(database);
   await seed.run(seedContext(database));
   // The old seed fills missing_items; this pass moves its rows into problems.
   await mergeSeed.run(seedContext(database));
@@ -598,6 +602,53 @@ describe('test progress schema', () => {
         (item) => item.id === featurePoint.id,
       ),
     ).toMatchObject({ owner: '无人', ownerId: null });
+  });
+
+  it('summarizes open problems per owner, most open first', async () => {
+    const database = createTestDatabase();
+    // No seeds: an empty tracker keeps the expected buckets exact.
+    await migrateOnly(database);
+    const service = createTestProgressService(database);
+    const client = await knex(database);
+    await client('user').insert([
+      { id: 'account-chenlin', name: '陈霖', username: 'chenlin' },
+      { id: 'account-gongcheng', name: '龚诚', username: 'gongcheng' },
+    ]);
+
+    const dimension = await service.createFeaturePoint({
+      name: '应用测试',
+      level: 'dimension',
+    });
+    const actor = { id: 'actor', name: 'actor' };
+    const create = (title: string, ownerId?: string) =>
+      service.createProblem(
+        { title, featurePointId: dimension.id, ownerId },
+        actor,
+      );
+
+    // 陈霖: two open (pending, fixing) and one verified.
+    await create('陈霖-待确认', 'account-chenlin');
+    const fixing = await create('陈霖-修复中', 'account-chenlin');
+    await service.updateProblem(fixing.id, { status: 'fixing' }, actor);
+    const verified = await create('陈霖-已验证', 'account-chenlin');
+    await service.updateProblem(verified.id, { status: 'verified' }, actor);
+
+    // 龚诚: one cancelled and one open.
+    const cancelled = await create('龚诚-已取消', 'account-gongcheng');
+    await service.updateProblem(cancelled.id, { status: 'cancelled' }, actor);
+    await create('龚诚-待确认', 'account-gongcheng');
+
+    // 未分配: one open problem.
+    await create('未分配');
+
+    const owners = (await service.getSummary()).owners;
+    expect(
+      owners.map((entry) => [entry.owner, entry.open, entry.total]),
+    ).toEqual([
+      ['陈霖', 2, 3],
+      ['龚诚', 1, 2],
+      [null, 1, 1],
+    ]);
   });
 
   it('keeps an owner sent by name through the create parsers', async () => {

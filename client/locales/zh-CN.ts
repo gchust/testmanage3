@@ -143,6 +143,12 @@ const zhCN: AppResource = {
     statusDistribution: '状态分布',
     entryCriteria: '测试准入条件',
     dimensionProgress: '各维度进展',
+    ownerWorkload: '各责任人未关闭问题',
+    ownerWorkloadHint: '未验证或未取消前都算未关闭；按未关闭数从多到少排列。',
+    columnOpenCount: '未关闭',
+    columnTotalCount: '总数',
+    openProblemCount: '未关闭问题',
+    noOwnerData: '暂无责任人数据。',
     featureCount: '功能点数',
     noDimensions: '暂无大维度数据。',
 

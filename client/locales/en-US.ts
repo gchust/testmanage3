@@ -151,6 +151,13 @@ const enUS = {
     statusDistribution: 'Status distribution',
     entryCriteria: 'Test-entry criteria',
     dimensionProgress: 'Progress by dimension',
+    ownerWorkload: 'Open problems by owner',
+    ownerWorkloadHint:
+      'Problems count as open until they are verified or cancelled; most open first.',
+    columnOpenCount: 'Open',
+    columnTotalCount: 'Total',
+    openProblemCount: 'Open problems',
+    noOwnerData: 'No problem has been recorded with an owner yet.',
     featureCount: 'Feature points',
     noDimensions: 'No dimension has been recorded yet.',
 

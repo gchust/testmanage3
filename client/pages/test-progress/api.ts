@@ -122,6 +122,14 @@ export interface DimensionSummary {
   readonly problems: ProblemCounts;
 }
 
+/** Open problems grouped by owner account; `ownerId: null` is the unassigned bucket. */
+export interface OwnerWorkload {
+  readonly ownerId: string | null;
+  readonly owner: string | null;
+  readonly open: number;
+  readonly total: number;
+}
+
 export interface ProgressSummary {
   readonly totals: {
     readonly dimensions: number;
@@ -140,6 +148,8 @@ export interface ProgressSummary {
   readonly exampleExists: ExampleExistsBreakdown;
   readonly problems: ProblemCountsByType;
   readonly dimensions: readonly DimensionSummary[];
+  /** Per-owner workload, most open problems first. */
+  readonly owners: readonly OwnerWorkload[];
 }
 
 export interface FeaturePointPayload {

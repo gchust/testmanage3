@@ -17,7 +17,19 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
-import { describeApiError, fetchSummary, type ProgressSummary } from './api.js';
+import {
+  describeApiError,
+  fetchSummary,
+  type OwnerWorkload,
+  type ProgressSummary,
+} from './api.js';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import { Bar, BarChart, XAxis, YAxis } from 'recharts';
 import {
   CRITERIA_STATES,
   FEATURE_STATUS_BAR_CLASS,
@@ -28,6 +40,7 @@ import {
   EmptyPanel,
   ErrorPanel,
   FeatureStatusBadge,
+  FieldHint,
 } from './shared.js';
 import { useAsyncResource } from './use-async-resource.js';
 
@@ -153,6 +166,59 @@ function Overview({
 
       <Card>
         <CardHeader>
+          <CardTitle className='flex items-center gap-1.5'>
+            {t('testProgress.ownerWorkload')}
+            <FieldHint
+              hint={t('testProgress.ownerWorkloadHint')}
+              label={t('testProgress.ownerWorkload')}
+            />
+          </CardTitle>
+        </CardHeader>
+        <CardContent className='space-y-6'>
+          {summary.owners.length === 0 ? (
+            <EmptyPanel message={t('testProgress.noOwnerData')} />
+          ) : (
+            <>
+              <OwnerWorkloadChart owners={summary.owners} />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('testProgress.columnOwner')}</TableHead>
+                    <TableHead className='text-right'>
+                      {t('testProgress.columnOpenCount')}
+                    </TableHead>
+                    <TableHead className='text-right'>
+                      {t('testProgress.columnTotalCount')}
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {summary.owners.map((entry) => (
+                    <TableRow
+                      key={
+                        entry.ownerId ?? `name:${entry.owner ?? 'unassigned'}`
+                      }
+                    >
+                      <TableCell className='font-medium'>
+                        {entry.owner ?? t('testProgress.ownerNone')}
+                      </TableCell>
+                      <TableCell className='text-right tabular-nums'>
+                        {entry.open}
+                      </TableCell>
+                      <TableCell className='text-right tabular-nums text-muted-foreground'>
+                        {entry.total}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>{t('testProgress.dimensionProgress')}</CardTitle>
         </CardHeader>
         <CardContent>
@@ -218,6 +284,56 @@ function Overview({
         </CardContent>
       </Card>
     </>
+  );
+}
+
+/**
+ * Horizontal bars, largest first: the API already sorts by open problems and a
+ * vertical Recharts layout draws the first data entry at the top, so the order is
+ * passed through unchanged.
+ */
+function OwnerWorkloadChart({
+  owners,
+}: {
+  readonly owners: readonly OwnerWorkload[];
+}): ReactElement {
+  const { t } = useTranslation();
+  const data = owners.map((entry) => ({
+    name: entry.owner ?? t('testProgress.ownerNone'),
+    open: entry.open,
+    total: entry.total,
+  }));
+  const config = {
+    open: {
+      label: t('testProgress.openProblemCount'),
+      color: 'var(--chart-1)',
+    },
+  } satisfies ChartConfig;
+
+  return (
+    <ChartContainer
+      className='w-full'
+      config={config}
+      style={{ height: `${Math.max(200, owners.length * 36)}px` }}
+    >
+      <BarChart
+        barCategoryGap={6}
+        data={data}
+        layout='vertical'
+        margin={{ bottom: 4, left: 8, right: 16, top: 4 }}
+      >
+        <XAxis allowDecimals={false} axisLine={false} tickLine={false} type='number' />
+        <YAxis
+          axisLine={false}
+          dataKey='name'
+          tickLine={false}
+          type='category'
+          width={96}
+        />
+        <ChartTooltip content={<ChartTooltipContent />} />
+        <Bar dataKey='open' fill='var(--color-open)' radius={[0, 4, 4, 0]} />
+      </BarChart>
+    </ChartContainer>
   );
 }
 

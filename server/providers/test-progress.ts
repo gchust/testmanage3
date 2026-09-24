@@ -261,6 +261,14 @@ export interface DimensionSummary {
   readonly problems: ProblemCounts;
 }
 
+/** Open problems grouped by owner account; `ownerId: null` is the unassigned bucket. */
+export interface OwnerWorkload {
+  readonly ownerId: string | null;
+  readonly owner: string | null;
+  readonly open: number;
+  readonly total: number;
+}
+
 export interface ProgressSummary {
   readonly totals: {
     readonly dimensions: number;
@@ -279,6 +287,8 @@ export interface ProgressSummary {
   readonly exampleExists: ExampleExistsBreakdown;
   readonly problems: Readonly<Record<ProblemType, ProblemCounts>>;
   readonly dimensions: readonly DimensionSummary[];
+  /** Per-owner workload, most open problems first. */
+  readonly owners: readonly OwnerWorkload[];
 }
 
 export interface TestProgressService {
@@ -1565,7 +1575,7 @@ class DefaultTestProgressService implements TestProgressService {
     const problems = await this.database
       .query()
       .selectFrom('issues')
-      .select(['featurePointId', 'type', 'status'])
+      .select(['featurePointId', 'type', 'status', 'owner', 'ownerId'])
       .execute();
 
     const problemsByFeaturePoint = new Map<
@@ -1701,6 +1711,8 @@ class DefaultTestProgressService implements TestProgressService {
         problemsByType.automation.open + problemsByType.manual.open,
     };
 
+    const owners = await this.ownerWorkloads(problems);
+
     return {
       totals,
       statusCounts,
@@ -1708,7 +1720,62 @@ class DefaultTestProgressService implements TestProgressService {
       exampleExists,
       problems: problemsByType,
       dimensions,
+      owners,
     };
+  }
+
+  /**
+   * Groups problems by owner account for the workload view. Rows without an account
+   * but with a legacy name keep their own bucket so no problem disappears from the
+   * total; rows without either land in the unassigned bucket. `open` follows the
+   * shared rule: a problem is open until it is verified or cancelled.
+   */
+  private async ownerWorkloads(rows: readonly Row[]): Promise<OwnerWorkload[]> {
+    const ownerNames = await this.ownerNames();
+    const buckets = new Map<
+      string,
+      {
+        ownerId: string | null;
+        owner: string | null;
+        open: number;
+        total: number;
+      }
+    >();
+
+    for (const row of rows) {
+      const ownerId = asOptionalText(row.ownerId);
+      const ownerText = asOptionalText(row.owner);
+      const key =
+        ownerId !== null
+          ? `id:${ownerId}`
+          : ownerText === null
+            ? 'unassigned'
+            : `name:${ownerText}`;
+      const bucket = buckets.get(key) ?? {
+        ownerId,
+        owner: ownerId !== null ? (ownerNames.get(ownerId) ?? ownerText) : ownerText,
+        open: 0,
+        total: 0,
+      };
+      const status = readEnum(
+        PROBLEM_STATUSES,
+        row.status,
+        'status',
+        'pending',
+      );
+      bucket.total += 1;
+      if (!CLOSED_PROBLEM_STATUSES.includes(status)) {
+        bucket.open += 1;
+      }
+      buckets.set(key, bucket);
+    }
+
+    return [...buckets.values()].sort(
+      (a, b) =>
+        b.open - a.open ||
+        b.total - a.total ||
+        (a.owner ?? '').localeCompare(b.owner ?? ''),
+    );
   }
 
   private async featurePointNames(): Promise<Map<number, string>> {
