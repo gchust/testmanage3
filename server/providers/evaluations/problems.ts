@@ -215,6 +215,7 @@ export async function collectFactoryProblems(
           .where('id', 'in', occurrences)
           .execute()
       : [];
+    // Compatibility only: these historical rows are no longer created or edited.
     // Preserve a human association (including a link to a subsequently deleted
     // problem). Do not recreate or reassign a dismissed finding on retries.
     const handled = findings.find(
@@ -238,30 +239,13 @@ export async function collectFactoryProblems(
         .where('id', '=', problemId)
         .execute();
     } else {
-      const mappings = candidate.subjectKeys.length
-        ? await q
-            .selectFrom('evaluationMappings')
-            .select('featurePointId')
-            .where('sourceInstance', '=', report.source.instance)
-            .where('subjectKey', 'in', candidate.subjectKeys)
-            .execute()
-        : [];
-      const ids = [...new Set(mappings.map((m) => Number(m.featurePointId)))];
-      const mapped =
-        ids.length === 1
-          ? await q
-              .selectFrom('featurePoints')
-              .select('id')
-              .where('id', '=', ids[0])
-              .where('level', '=', 'feature')
-              .executeTakeFirst()
-          : undefined;
       const result = await q
         .insertInto('issues')
         .values({
           title: candidate.title.slice(0, 200),
           description: candidate.description,
-          featurePointId: mapped ? Number(mapped.id) : null,
+          // Staff classify imported problems through the existing Problems page.
+          featurePointId: null,
           type: 'automation',
           status: 'pending',
           owner: null,
@@ -298,21 +282,6 @@ export async function collectFactoryProblems(
           createdAt: now,
         })
         .execute();
-    }
-    for (const f of findings) {
-      if (
-        f.problemId == null &&
-        f.status === 'new' &&
-        !f.note &&
-        (!existing ||
-          (f.reportId === reportId && existing.factoryReportId !== reportId))
-      ) {
-        await q
-          .updateTable('evaluationFindings')
-          .set({ problemId })
-          .where('id', '=', String(f.id))
-          .execute();
-      }
     }
   }
 }

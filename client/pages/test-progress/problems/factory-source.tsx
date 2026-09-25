@@ -1,7 +1,7 @@
 import { useTranslation } from '@nocobase/i18n/client';
 import { ExternalLink, FileDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download } from '../../evaluations/shared.js';
+import { ReportDownload } from './report-download.js';
 import type { Problem } from '../api.js';
 import { ReportPreview } from './report-preview.js';
 import { LinkedReportPreview } from './linked-report-preview.js';
@@ -106,30 +106,18 @@ export function FactorySource({
             </summary>
             <div className='mt-3 flex flex-wrap gap-2'>
               {source.hasArchive !== false && (
-                <Download
-                  problemId={problemId}
-                  reportId={source.reportId}
-                  file='bundle.zip'
-                >
-                  {t('evaluations.downloadBundle')}
-                </Download>
+                <ReportDownload problemId={problemId} file='bundle.zip'>
+                  {t('testProgress.downloadBundle')}
+                </ReportDownload>
               )}
               {source.files.includes('report.html') && (
-                <Download
-                  problemId={problemId}
-                  reportId={source.reportId}
-                  file='report.html'
-                >
-                  {t('evaluations.downloadHtml')}
-                </Download>
+                <ReportDownload problemId={problemId} file='report.html'>
+                  {t('testProgress.downloadHtml')}
+                </ReportDownload>
               )}
-              <Download
-                problemId={problemId}
-                reportId={source.reportId}
-                file='evaluation.json'
-              >
-                {t('evaluations.downloadJson')}
-              </Download>
+              <ReportDownload problemId={problemId} file='evaluation.json'>
+                {t('testProgress.downloadJson')}
+              </ReportDownload>
             </div>
           </details>
         </div>

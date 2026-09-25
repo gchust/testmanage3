@@ -697,7 +697,7 @@ describe('app server', () => {
     expect(rejected.status).toBe(401);
   });
 
-  it('uses native evaluation credentials and permission sets without minting user sessions', async () => {
+  it('uses native factory credentials and integration-only permission sets without minting user sessions', async () => {
     const app = trackCloseable(
       await createInstalledStandaloneServer({ viteDevUrl: false }),
     );
@@ -714,7 +714,7 @@ describe('app server', () => {
       .join('; ');
     const headers = { cookie, 'content-type': 'application/json' };
     expect(
-      (await requestApp(app, baseUrl + 'evaluations/reports')).status,
+      (await requestApp(app, baseUrl + 'evaluations/sources')).status,
     ).toBe(401);
     const created = await requestApp(app, baseUrl + 'evaluations/sources', {
       method: 'POST',
@@ -729,7 +729,7 @@ describe('app server', () => {
     const source = (await created.json()) as {
       data: { id: string; apiKeyId: string; token: string };
     };
-    for (const endpoint of ['auth/get-session', 'users', 'evaluations/reports'])
+    for (const endpoint of ['auth/get-session', 'users', 'evaluations/sources'])
       expect(
         (
           await requestApp(app, baseUrl + endpoint, {
@@ -751,7 +751,7 @@ describe('app server', () => {
       .spyOn(authentication, 'getSession')
       .mockRejectedValueOnce(foreignError);
     expect(
-      (await requestApp(app, baseUrl + 'evaluations/reports')).status,
+      (await requestApp(app, baseUrl + 'evaluations/sources')).status,
     ).toBe(401);
     session.mockRestore();
     for (const endpoint of ['create', 'update', 'delete'])
@@ -778,16 +778,16 @@ describe('app server', () => {
       ).status,
     ).toBe(404);
     expect(
-      (await requestApp(app, baseUrl + 'evaluations/reports', { headers }))
+      (await requestApp(app, baseUrl + 'evaluations/sources', { headers }))
         .status,
     ).toBe(200);
     const registered = await requestApp(app, baseUrl + 'users', {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        username: 'evaluation_reader',
-        email: 'evaluation-reader@example.test',
-        name: 'Evaluation reader',
+        username: 'factory_manager',
+        email: 'factory-manager@example.test',
+        name: 'Factory manager',
         password: 'Test-only-reader-4827',
       }),
     });
@@ -800,7 +800,7 @@ describe('app server', () => {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          username: 'evaluation_reader',
+          username: 'factory_manager',
           password: 'Test-only-reader-4827',
         }),
       },
@@ -815,7 +815,7 @@ describe('app server', () => {
     };
     expect(
       (
-        await requestApp(app, baseUrl + 'evaluations/reports', {
+        await requestApp(app, baseUrl + 'evaluations/sources', {
           headers: memberHeaders,
         })
       ).status,
@@ -823,32 +823,28 @@ describe('app server', () => {
     await app.application.container
       .resolve(authorizationToken)
       .permissionSets.assign({
-        permissionSet: 'evaluation-reader',
+        permissionSet: 'evaluation-manager',
         subject: { type: 'user', id: member.data.id },
       });
-    expect(
-      (
-        await requestApp(app, baseUrl + 'evaluations/reports', {
-          headers: memberHeaders,
-        })
-      ).status,
-    ).toBe(200);
     expect(
       (
         await requestApp(app, baseUrl + 'evaluations/sources', {
           headers: memberHeaders,
         })
       ).status,
-    ).toBe(403);
-    expect(
-      (
-        await requestApp(app, baseUrl + 'evaluations/mappings', {
-          method: 'POST',
-          headers: memberHeaders,
-          body: '{}',
-        })
-      ).status,
-    ).toBe(403);
+    ).toBe(200);
+    for (const path of [
+      'reports',
+      'compare',
+      'mappings',
+      'regressions',
+      'capabilities',
+    ]) {
+      const retired = await requestApp(app, baseUrl + 'evaluations/' + path, {
+        headers,
+      });
+      expect(retired.status).toBe(404);
+    }
 
     expect(
       (

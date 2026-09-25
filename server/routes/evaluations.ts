@@ -42,11 +42,6 @@ function text(value: unknown, max = 300): string {
     return invalid();
   return value.trim();
 }
-function positive(value: unknown): number {
-  const n = Number(value);
-  if (!Number.isSafeInteger(n) || n <= 0) return invalid();
-  return n;
-}
 function repo(value: unknown): string {
   const s = text(value, 255);
   if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(s)) return invalid();
@@ -235,21 +230,12 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
       authz.middleware(),
       bodyLimit({ maxSize: 65536 }),
     );
-    const allowed = async (
-      scope: AuthorizationEnv['Variables']['authz'],
-      action: string,
-    ): Promise<boolean> =>
-      scope.can({ resource: { type: 'resource', id: 'evaluations' }, action });
+    // Integration administration is the only staff surface retained here.
+    // Keep the deployed resource id so existing manager grants remain valid.
     secured.use('*', async (c, next) => {
-      if (c.req.path.endsWith('/capabilities')) return next();
-      const action = c.req.path.includes('/sources')
-        ? 'manage'
-        : c.req.method === 'GET' && !c.req.path.endsWith('/options')
-          ? 'read'
-          : 'review';
       const decision = await c.get('authz').authorize({
         resource: { type: 'resource', id: 'evaluations' },
-        action,
+        action: 'manage',
       });
       const policies =
         decision.conditions?.type === 'resource'
@@ -260,17 +246,10 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
       c.set('evaluation', service.withPolicies(policies));
       await next();
     });
-    secured.get('/capabilities', async (c) =>
-      respond({
-        read: await allowed(c.get('authz'), 'read'),
-        review: await allowed(c.get('authz'), 'review'),
-        manage: await allowed(c.get('authz'), 'manage'),
-      }),
-    );
-    secured.get('/sources', async (c) =>
+    secured.get('/', async (c) =>
       respond(await c.get('evaluation').listSources()),
     );
-    secured.post('/sources', async (c) => {
+    secured.post('/', async (c) => {
       const input = await json(c);
       return respond(
         await c.get('evaluation').createSource(
@@ -284,154 +263,14 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
         201,
       );
     });
-    secured.delete('/sources/:id', async (c) => {
+    secured.delete('/:id', async (c) => {
       await c
         .get('evaluation')
         .disableSource(text(c.req.param('id'), 64), actor(c));
       return c.body(null, 204);
     });
-    secured.get('/reports', async (c) => {
-      const type = c.req.query('type') ?? 'evaluation-report';
-      if (!['evaluation-report', 'evaluation-batch'].includes(type))
-        return invalid();
-      const offset = Number(c.req.query('offset') ?? 0);
-      if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1000000)
-        return invalid();
-      return respond(await c.get('evaluation').listReports(type, offset));
-    });
-    secured.get('/reports/:id', async (c) =>
-      respond(await c.get('evaluation').getReport(text(c.req.param('id'), 64))),
-    );
-    secured.get('/reports/:id/history', async (c) =>
-      respond(await c.get('evaluation').history(text(c.req.param('id'), 64))),
-    );
-    secured.get('/reports/:id/findings', async (c) =>
-      respond(await c.get('evaluation').findings(text(c.req.param('id'), 64))),
-    );
-    secured.get('/reports/:id/samples', async (c) =>
-      respond(
-        await c.get('evaluation').batchSamples(text(c.req.param('id'), 64)),
-      ),
-    );
-    secured.get('/reports/:id/file', async (c) => {
-      const file = text(c.req.query('path'), 300);
-      const result = await c
-        .get('evaluation')
-        .attachment(text(c.req.param('id'), 64), file);
-      // Untrusted HTML is only downloadable; sandbox and nosniff are defense in depth.
-      return new Response(new Uint8Array(result.bytes), {
-        headers: {
-          'content-type': result.contentType,
-          'content-disposition':
-            'attachment; filename="' +
-            (file.endsWith('.png')
-              ? 'evidence.png'
-              : file === 'bundle.zip'
-                ? 'evaluation-bundle.zip'
-                : file === 'report.html'
-                  ? 'report.html'
-                  : 'evaluation.json') +
-            '"',
-          'content-security-policy': "sandbox; default-src 'none'",
-          'x-content-type-options': 'nosniff',
-          'cache-control': 'private, no-store',
-        },
-      });
-    });
-    secured.get('/options', async (c) =>
-      respond(await c.get('evaluation').trackerOptions()),
-    );
-    secured.get('/mappings', async (c) =>
-      respond(await c.get('evaluation').mappings()),
-    );
-    secured.get('/modules', async (c) => {
-      const offset = Number(c.req.query('offset') ?? 0);
-      if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1000000)
-        return invalid();
-      return respond(await c.get('evaluation').modules(offset));
-    });
-    secured.post('/mappings', async (c) => {
-      const input = await json(c);
-      const key = text(input.subjectKey);
-      if (!/^(pkg:@nocobase\/|guide:|skill:)/.test(key)) return invalid();
-      return respond(
-        await c.get('evaluation').mapSubject(
-          {
-            sourceInstance: repo(input.sourceInstance),
-            subjectKey: key,
-            featurePointId: positive(input.featurePointId),
-          },
-          actor(c),
-        ),
-      );
-    });
-    secured.patch('/findings/:id', async (c) => {
-      const body = await json(c),
-        input: { problemId?: number | null; status?: string; note?: string } =
-          {};
-      if ('problemId' in body)
-        input.problemId =
-          body.problemId === null ? null : positive(body.problemId);
-      if ('status' in body) {
-        const status = text(body.status, 20);
-        if (!['new', 'confirmed', 'ignored'].includes(status)) return invalid();
-        input.status = status;
-      }
-      if ('note' in body) {
-        if (typeof body.note !== 'string' || body.note.length > 10000)
-          return invalid();
-        input.note = body.note;
-      }
-      return respond(
-        await c
-          .get('evaluation')
-          .updateFinding(text(c.req.param('id'), 64), input, actor(c)),
-      );
-    });
-    secured.get('/regressions', async (c) =>
-      respond(
-        await c
-          .get('evaluation')
-          .regressions(
-            c.req.query('problemId')
-              ? positive(c.req.query('problemId'))
-              : undefined,
-          ),
-      ),
-    );
-    secured.post('/regressions', async (c) => {
-      const body = await json(c),
-        verdict = text(body.verdict, 20);
-      if (
-        !['passed', 'failed', 'inconclusive'].includes(verdict) ||
-        !Array.isArray(body.evidenceIds) ||
-        body.evidenceIds.length > 200
-      )
-        return invalid();
-      return respond(
-        await c.get('evaluation').recordRegression(
-          {
-            problemId: positive(body.problemId),
-            reportId: text(body.reportId, 64),
-            verdict,
-            note: text(body.note, 10000),
-            evidenceIds: body.evidenceIds.map((id) => text(id, 251)),
-          },
-          actor(c),
-        ),
-        201,
-      );
-    });
-    secured.get('/compare', async (c) => {
-      return respond(
-        await c
-          .get('evaluation')
-          .compare(
-            text(c.req.query('left'), 64),
-            text(c.req.query('right'), 64),
-          ),
-      );
-    });
-    router.route('/evaluations', secured);
+    router.route('/evaluations/sources', secured);
+    // Unknown integration paths must not fall through to the application's SPA.
+    router.all('/evaluations/*', (c) => c.json({ code: 'NOT_FOUND' }, 404));
     return router;
   });

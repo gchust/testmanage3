@@ -12,12 +12,6 @@ import {
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
   {
     auth: 'required',
-    componentLoader: () => import('./pages/evaluations/index.js'),
-    name: 'evaluations',
-    path: '/progress/evaluations',
-  },
-  {
-    auth: 'required',
     authz: 'skip',
     componentLoader: () => import('./pages/home-redirect.js'),
     name: 'homeRedirect',

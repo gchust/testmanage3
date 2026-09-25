@@ -12,7 +12,6 @@ import type {
 import type { ApiKeyService } from '@nocobase/app-plugin-api-keys/server';
 import type { EvaluationBundle } from './contracts/bundle.js';
 import type { EvaluationReceipt } from './contracts/receipt.js';
-import type { EvaluationReport } from './contracts/report.js';
 import {
   EvaluationError,
   deliveryKey,
@@ -25,7 +24,6 @@ import {
   verifyBundle,
   type EvaluationDocument,
 } from './protocol.js';
-import { compareReports } from './comparison.js';
 import {
   collectFactoryProblems,
   recordProblemSubmission,
@@ -51,11 +49,6 @@ export interface StoredReport {
   receivedAt: string;
 }
 type VerifiedBundle = ReturnType<typeof verifyBundle>;
-export const occurrenceId = (
-  document: EvaluationReport,
-  findingId: string,
-): string =>
-  hash([document.source.instance, document.run.key, findingId].join('\n'));
 const notFound = (): never => {
   throw new EvaluationError('NOT_FOUND', 'Record not found.');
 };
@@ -449,32 +442,6 @@ export class EvaluationService {
               .where('id', '=', subjectKey)
               .where('rank', '<', rank)
               .execute();
-          if (document.type === 'evaluation-report')
-            for (const review of document.reviews)
-              for (const finding of review.findings) {
-                const findingKey = occurrenceId(document, finding.id);
-                const exists = await q
-                  .selectFrom('evaluationFindings')
-                  .select('id')
-                  .where('id', '=', findingKey)
-                  .executeTakeFirst();
-                // Machine revisions never overwrite a human disposition, link or note.
-                if (!exists)
-                  await q
-                    .insertInto('evaluationFindings')
-                    .values({
-                      id: findingKey,
-                      sourceInstance: document.source.instance,
-                      runKey: document.run.key,
-                      findingId: finding.id,
-                      reportId: id,
-                      finding: JSON.stringify(finding),
-                      status: 'new',
-                      createdAt: now,
-                      updatedAt: now,
-                    })
-                    .execute();
-              }
           if (
             document.type === 'evaluation-report' &&
             problems &&
@@ -505,73 +472,6 @@ export class EvaluationService {
     });
     return row ? stored(row) : notFound();
   }
-  private async currentRows(type: string, offset = 0, limit = 50) {
-    const subjects = await this.repository('evaluationSubjects').findMany({
-      filter: { type },
-      sort: (s) => s.field('updatedAt').desc(),
-      limit: limit + 1,
-      offset,
-    });
-    const ids = subjects.map((s) => String(s.currentReportId));
-    if (!ids.length) return [];
-    const reports = await this.repository('evaluationReports').findMany({
-      filter: (f) => f.or(ids.map((id) => f.string('id').eq(id))),
-    });
-    return subjects.flatMap((s) => {
-      const report = reports.find((r) => r.id === s.currentReportId);
-      return report ? [report] : [];
-    });
-  }
-  async listReports(type: string, offset = 0, limit = 50) {
-    const rows = await this.currentRows(type, offset, limit);
-    return {
-      items: rows.slice(0, limit).map((row) => {
-        const report = stored(row),
-          d = report.document;
-        return {
-          id: report.id,
-          sourceInstance: d.source.instance,
-          subjectKey: subjectOf(d).key,
-          revision: d.revision,
-          createdAt: d.createdAt,
-          receivedAt: report.receivedAt,
-          title:
-            d.type === 'evaluation-report' ? d.run.task.title : d.batch.key,
-          outcome:
-            d.type === 'evaluation-report'
-              ? d.outcome
-              : { execution: d.state, acceptance: null, delivery: null },
-          tokens:
-            d.type === 'evaluation-report' ? d.metrics.usage.totals : null,
-          review:
-            d.type === 'evaluation-report' ? d.precedence.reviewState : null,
-          baseline: d.baseline,
-        };
-      }),
-      hasMore: rows.length > limit,
-    };
-  }
-  async history(id: string) {
-    const { document } = await this.getReport(id),
-      subject = subjectOf(document);
-    const rows = await this.repository('evaluationReports').findMany({
-      filter: {
-        sourceInstance: subject.sourceInstance,
-        type: subject.type,
-        subjectKey: subject.key,
-      },
-      sort: (s) => s.field('revision').desc(),
-      select: (s) =>
-        s.fields('id', 'revision', 'rank', 'receivedAt', 'bundleSha256'),
-    });
-    const current = await this.repository('evaluationSubjects').findOne({
-      filter: { id: subjectId(document) },
-    });
-    return rows.map((row) => ({
-      ...row,
-      current: row.id === current?.currentReportId,
-    }));
-  }
   async attachment(id: string, file: string) {
     const report = await this.getReport(id);
     if (!report.bundleFileId) {
@@ -597,268 +497,5 @@ export class EvaluationService {
           ? 'text/html; charset=utf-8'
           : 'application/json; charset=utf-8',
     };
-  }
-  async findings(id: string) {
-    const { document } = await this.getReport(id);
-    if (document.type !== 'evaluation-report') return [];
-    const ids = document.reviews.flatMap((r) =>
-      r.findings.map((f) => occurrenceId(document, f.id)),
-    );
-    if (!ids.length) return [];
-    return this.repository('evaluationFindings').findMany({
-      filter: (f) => f.or(ids.map((id) => f.string('id').eq(id))),
-      select: (s) =>
-        s.fields(
-          'id',
-          'findingId',
-          'reportId',
-          'problemId',
-          'status',
-          'note',
-          'updatedAt',
-        ),
-    });
-  }
-  async trackerOptions() {
-    return {
-      features: await this.repository('featurePoints').findMany({
-        filter: { level: 'feature' },
-        select: (s) => s.fields('id', 'name', 'level'),
-      }),
-      problems: await this.repository('issues').findMany({
-        select: (s) => s.fields('id', 'title'),
-      }),
-    };
-  }
-  async mappings() {
-    return this.repository('evaluationMappings').findMany({
-      sort: (s) => s.field('subjectKey').asc(),
-    });
-  }
-  async modules(offset = 0) {
-    const reports = await this.currentRows('evaluation-report', offset);
-    const mappings = await this.mappings();
-    const items = reports.slice(0, 50).flatMap((row) => {
-      const document = validateDocument(JSON.parse(String(row.document)));
-      if (document.type !== 'evaluation-report') return [];
-      return document.reviews
-        .filter((r) => r.selected)
-        .flatMap((r) =>
-          r.modules.map((m) => ({
-            reportId: String(row.id),
-            sourceInstance: document.source.instance,
-            key: m.key,
-            name: m.name,
-            subjectKeys: m.subjectKeys,
-            mapped: mappings.filter(
-              (v) =>
-                v.sourceInstance === document.source.instance &&
-                m.subjectKeys.includes(String(v.subjectKey)),
-            ),
-          })),
-        );
-    });
-    return { items, hasMore: reports.length > 50 };
-  }
-  async compare(leftId: string, rightId: string) {
-    const left = await this.getReport(leftId),
-      right = await this.getReport(rightId);
-    const result = compareReports(left.document, right.document);
-    const fingerprints: Array<string | null> = [];
-    for (const document of [left.document, right.document]) {
-      if (
-        document.type !== 'evaluation-report' ||
-        document.run.kind !== 'batch-sample'
-      )
-        continue;
-      const subject =
-        document.source.instance + '/batches/' + document.run.batchKey;
-      const current = await this.repository('evaluationSubjects').findOne({
-        filter: {
-          sourceInstance: document.source.instance,
-          type: 'evaluation-batch',
-          subjectKey: subject,
-        },
-      });
-      const row = current
-        ? await this.repository('evaluationReports').findOne({
-            filter: { id: String(current.currentReportId) },
-          })
-        : null;
-      const batch = row
-        ? validateDocument(JSON.parse(String(row.document)))
-        : null;
-      const sample =
-        batch?.type === 'evaluation-batch'
-          ? batch.samples.find(
-              (s) =>
-                s.key === document.run.sampleKey &&
-                s.runKey === document.run.key,
-            )
-          : null;
-      fingerprints.push(
-        batch?.type === 'evaluation-batch'
-          ? (batch.baseline.agentConfig?.fingerprint ?? null)
-          : null,
-      );
-      if (
-        !sample ||
-        sample.comparable !== true ||
-        batch?.type !== 'evaluation-batch' ||
-        sample.agentConfigFingerprint !==
-          batch.baseline.agentConfig?.fingerprint
-      )
-        result.reasons.push('batch-comparability:unknown-or-drifted');
-    }
-    if (
-      fingerprints.length &&
-      (fingerprints.length !== 2 ||
-        !fingerprints[0] ||
-        fingerprints[0] !== fingerprints[1])
-    )
-      result.reasons.push('batch-agent-config:unknown-or-different');
-    if (result.reasons.length) {
-      result.comparable = false;
-      for (const m of result.modules) for (const s of m.scores) s.delta = null;
-    }
-    return result;
-  }
-  async mapSubject(
-    input: {
-      sourceInstance: string;
-      subjectKey: string;
-      featurePointId: number;
-    },
-    actorId: string,
-  ) {
-    const feature = await this.repository('featurePoints').findOne({
-      filter: { id: input.featurePointId, level: 'feature' },
-    });
-    if (!feature) return notFound();
-    const id = hash(input.sourceInstance + '\n' + input.subjectKey);
-    return this.database.transaction(async (c) => {
-      const repository = this.repository('evaluationMappings', c);
-      const existing = await repository.findOne({ filter: { id } });
-      const record = { ...input, updatedBy: actorId, updatedAt: new Date() };
-      if (existing)
-        await repository.updateOne({ filter: { id }, values: record });
-      else await repository.createOne({ values: { id, ...record } });
-      await this.audit(c, actorId, 'subject.map', id, record);
-      return { id, ...record };
-    });
-  }
-  async updateFinding(
-    id: string,
-    input: { problemId?: number | null; status?: string; note?: string },
-    actorId: string,
-  ) {
-    return this.database.transaction(async (c) => {
-      const repository = this.repository('evaluationFindings', c);
-      if (!(await repository.findOne({ filter: { id } }))) return notFound();
-      if (
-        input.problemId != null &&
-        !(await this.repository('issues', c).findOne({
-          filter: { id: input.problemId },
-        }))
-      )
-        return notFound();
-      const updated = await repository.updateOne({
-        filter: { id },
-        values: { ...input, updatedAt: new Date() },
-      });
-      await this.audit(c, actorId, 'finding.review', id, input);
-      return updated.record;
-    });
-  }
-  async regressions(problemId?: number) {
-    return this.repository('evaluationRegressions').findMany({
-      ...(problemId === undefined ? {} : { filter: { problemId } }),
-      sort: (s) => s.field('createdAt').desc(),
-      limit: 200,
-    });
-  }
-  async recordRegression(
-    input: {
-      problemId: number;
-      reportId: string;
-      verdict: string;
-      evidenceIds: string[];
-      note: string;
-    },
-    actorId: string,
-  ) {
-    const { document } = await this.getReport(input.reportId);
-    if (
-      document.type !== 'evaluation-report' ||
-      !input.evidenceIds.every((id) =>
-        document.evidence.some((e) => e.id === id),
-      )
-    )
-      throw new EvaluationError(
-        'INVALID_INPUT',
-        'Regression evidence must belong to the selected report.',
-      );
-    return this.database.transaction(async (c) => {
-      if (
-        !(await this.repository('issues', c).findOne({
-          filter: { id: input.problemId },
-        }))
-      )
-        return notFound();
-      const record = {
-        ...input,
-        id: randomUUID(),
-        evidenceIds: JSON.stringify(input.evidenceIds),
-        createdBy: actorId,
-        createdAt: new Date(),
-      };
-      await this.repository('evaluationRegressions', c).createOne({
-        values: record,
-      });
-      await this.audit(c, actorId, 'regression.record', record.id, input);
-      return record;
-    });
-  }
-  async batchSamples(id: string) {
-    const { document } = await this.getReport(id);
-    if (document.type !== 'evaluation-batch')
-      throw new EvaluationError('INVALID_INPUT', 'Expected a batch.');
-    // Use the exact revision named by the coordinator, never a stale attempt or
-    // an arbitrary current run. Every planned sample remains in the result.
-    const keys = document.samples.map((s) => s.runKey);
-    const rows = keys.length
-      ? await this.repository('evaluationReports').findMany({
-          filter: (f) =>
-            f.and([
-              f.string('sourceInstance').eq(document.source.instance),
-              f.string('type').eq('evaluation-report'),
-              f.or(keys.map((key) => f.string('subjectKey').eq(key))),
-            ]),
-          select: (s) => s.fields('id', 'subjectKey', 'revision'),
-        })
-      : [];
-    return document.samples.map((sample) => {
-      const local =
-        sample.report.state === 'available'
-          ? rows.find(
-              (r) =>
-                r.subjectKey === sample.runKey &&
-                r.revision === sample.report.revision,
-            )
-          : undefined;
-      return {
-        ...sample,
-        localReportId: local?.id ?? null,
-        reception: local
-          ? 'stored'
-          : sample.report.state === 'not-applicable'
-            ? 'not-applicable'
-            : sample.state === 'planned'
-              ? 'not-executed'
-              : sample.report.state === 'available'
-                ? 'not-received'
-                : 'report-missing',
-      };
-    });
   }
 }

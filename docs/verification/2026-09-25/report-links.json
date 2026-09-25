@@ -184,10 +184,7 @@
   ],
   "trial": {
     "receiptId": "cb9952ea-7129-40c5-9887-be4d41fe09f9",
-    "statuses": [
-      201,
-      200
-    ],
+    "statuses": [201, 200],
     "payloadBytes": 26845,
     "selectedProblems": 0,
     "reportUrl": "https://gchust.github.io/nb3-factory/reports/issues/333/runs/36132776150/attempt-1/index.html",
@@ -301,10 +298,48 @@
     "collectionsCheck": true,
     "collectionCount": 55,
     "linuxX64Node24Build": true,
-    "factoryPullRequestChecks": [
-      "factory-tests",
-      "browser-preflight"
-    ]
+    "factoryPullRequestChecks": ["factory-tests", "browser-preflight"]
   },
-  "noNewBuildOrModelEvaluationTriggered": true
+  "noNewBuildOrModelEvaluationTriggered": true,
+  "pullRequestCleanup": {
+    "verifiedAt": "2026-09-25T14:13:08.536539+00:00",
+    "pullRequest": "https://github.com/gchust/testmanage3/pull/1",
+    "filesBefore": 252,
+    "filesAfter": 67,
+    "clientServerLinesRemoved": 2823,
+    "generatedSnapshotsKeptLocal": 166,
+    "removed": [
+      "evaluation page and helpers",
+      "standalone report/archive API",
+      "score and batch presentation",
+      "report comparison",
+      "module mapping",
+      "finding review",
+      "regression recording",
+      "retired default permission sets",
+      "superseded acceptance artifacts"
+    ],
+    "preserved": [
+      "factory problem ingestion",
+      "source-bound native API keys",
+      "idempotent receipts",
+      "report iframe and original links",
+      "legacy problem-scoped downloads",
+      "historical migration and seed checksums",
+      "human edits and dispositions"
+    ],
+    "validation": {
+      "testFilesPassed": 46,
+      "testsPassed": 351,
+      "typecheck": true,
+      "lint": true,
+      "locales": true,
+      "linuxX64Node24Build": true,
+      "freshNativeSqliteMigrationsAndSeeds": true,
+      "collectionsGenerateAndCheck": true,
+      "retiredApiReturns404": true,
+      "managerRoleRetained": true
+    },
+    "productionRedeployed": false
+  }
 }

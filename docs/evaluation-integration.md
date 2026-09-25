@@ -1,82 +1,12 @@
-# nb3-factory problem delivery and report archive
+# nb3-factory problem collection
 
-## Factory problems: the user-facing workflow
+## Supported workflow
 
-GitHub Actions owns selecting unresolved review findings and final failed QA checks. It sends an explicit problem submission together with the unchanged complete report bundle. TestManage only validates, stores and displays those submissions in the existing Problems page (`type=automation`, initially `pending`). Uploading a report alone never creates problems. No additional evaluation is run by TestManage.
+GitHub Actions selects unresolved findings and final failed QA checks, then submits explicit problems, structured report metadata and an immutable report URL. TestManage validates and records the submission in the existing Problems page. It does not run another evaluation. New problems are automation/pending and Uncategorized; staff use the existing form to classify them.
 
-Set the factory repository variable `EVALUATION_DELIVERY_FORMAT=testmanage3-problems-v1`. The existing delivery workflow includes a multipart text field `problems` containing `{version: 1, problems: [...]}` alongside `bundle`. Each problem carries a stable key, title, description, subject keys and report finding IDs or a QA criterion ID. The receiver rejects invalid references, oversized submissions and differing issue payloads for the same report revision. Default `bundle-v1` delivery remains compatible with other receivers.
+The problem list and detail distinguish Issue, code PR and PR preview environment links. Reports open in a sandboxed iframe with an “Open original report” link. Missing PR/environment data is shown explicitly. For gchust/nb3-factory, preview URLs follow https://nb3-<PR>.nfvd.net/main/; FACTORY_PREVIEW_DOMAIN can mirror a changed factory domain. A link is not a claim that the preview is currently running.
 
-Issue details open the HTML report directly in an embedded reading area, with optional ZIP, HTML and JSON downloads below. Task Issue, code PR and PR preview environment links are separated from downloads and shown in both the list and detail metadata. Actions run links remain with the report. An absent PR is shown explicitly. Problems without an unambiguous feature mapping enter the same list as Uncategorized; no synthetic feature points are created. Replays do not duplicate problems, resurrect deleted problems, or overwrite human titles, notes, ownership and lifecycle status. Old report revisions cannot replace the current evidence.
-
-The standalone evaluation navigation entry is removed. Its old URL and archival API remain for backward compatibility and to retain already received evidence; ordinary work starts and ends on the existing Problems page. Migration rollback requires categorizing all uncategorized problems first.
-
-## Compatibility archive capabilities
-
-The receiver implements the fixed report, batch, ZIP bundle and top-level receipt v1 contracts from nb3-factory commit `ff7e1e12225bdb868865b36bd4032b423e57e66d`. Original schemas are in `server/providers/evaluations/contracts/`; regenerate TypeScript with `node scripts/generate-evaluation-contracts.mjs`.
-
-- T1: source-bound credentials, strict ZIP/schema/hash validation, archived bundles, database-enforced idempotency, history and current revision selected by protocol precedence.
-- T2: module subject-key mapping to existing feature points, rubric scores, requirements, evidence, findings linked to existing issues and human dispositions.
-- T3: all planned batch samples, missing/not-received/not-executed states, comparable baselines, finding changes and explicit human regression records.
-
-Machine evaluations never update manual scores or issue status. Reviewer claims remain distinct from human disposition. A finding absent in a comparison is “not observed”, never automatically “fixed”. Usage is the cumulative total from one selected revision, never the sum of revisions. Missing baseline identities, incomplete reviews or batch Agent configuration drift suppress score deltas. Modules match exact subject-key sets; findings match subject keys, kind and title.
-
-## Native NocoBase 3 infrastructure
-
-Run `pnpm skills:sync` and follow the application-local Skills. No standalone plugin or replacement authentication, authorization or storage system is introduced.
-
-| Concern                | Native capability                                                                               |
-| ---------------------- | ----------------------------------------------------------------------------------------------- |
-| Composition            | App ServiceProvider and container tokens                                                        |
-| Browser authentication | Authentication `auth.required()`                                                                |
-| Machine credentials    | API Keys `ApiKeyService`, separate non-session `evaluation-import` configuration                |
-| Permissions            | Fluent Authorization business resources, Permission Sets, record scopes and Repository policies |
-| Archive storage        | File Repository uploads/metadata and configured private local Drive disk                        |
-| Database               | App migrations, seeds, transactions and Collection/Repository APIs                              |
-| Client                 | `useApiClient`, application navigation, i18n and shadcn components                              |
-
-Only evaluation protocol validation, revision selection, comparison and review workflows are application-specific. Import needs a custom endpoint because its contract requires versioned link or archive validation, a multi-table transaction and a top-level receipt. Staff endpoints bind the exact database policies returned by the business action; they do not re-resolve broader collection grants. The separate machine path enforces its source/project binding.
-
-## Roles
-
-New editable native Permission Sets are installed once:
-
-- `evaluation-reader`: page and read access to reports, batches, mappings, findings and regressions.
-- `evaluation-reviewer`: reader access plus mapping, finding review and explicit regression records. Existing feature points and issues are read through the review action’s database policies.
-- `evaluation-manager`: reviewer access plus issuing/revoking factory credentials.
-
-Existing administrators retain access through their current unrestricted role. Ordinary users are not silently assigned a new role. Use native Users/Authorization pages to assign the new sets or narrow record scopes. Seeds preserve administrator-edited sets. Report JSON is an atomic evidence document; record permissions do not split individual JSON properties.
-
-These sets control the compatibility archive and integration management. Viewing a collected problem and downloading its attached report uses the existing Problems permission, including its record scope; it does not require a separate evaluation-reader role. The problem-scoped download endpoint resolves the report from the authorized problem instead of accepting a caller-selected report ID.
-
-## Receiver
-
-The configured TestManage link mode uses application/json at the same authenticated import endpoint. Its version-1 envelope contains the structured report document, the factory-selected problems, and the immutable GitHub Pages report URL. The request does not transfer the ZIP, HTML or screenshot bytes, and the receiver does not fetch those files. The problem page embeds the source URL in a sandboxed iframe and offers opening the original report. Existing archived reports keep their original downloads.
-
-JSON is limited to 4 MiB. X-Evaluation-Payload-SHA256 verifies the submitted bytes; the existing source/type/key/revision identity and X-Evaluation-Bundle-SHA256 refer to the registered factory archive. The latter is a producer assertion in link mode, not proof that TestManage downloaded the archive. Metadata and problem payloads cannot change under an existing revision. Source-bound API keys, native read policies, transaction-based receipts and human problem dispositions are unchanged. Empty problem lists store report metadata without creating a problem. Batch metadata has no invented HTML address.
-
-Each factory attempt now defaults to 180 seconds; EVALUATION_TIMEOUT_SECONDS accepts 30–300 seconds. Three bounded attempts remain, and the workflow reserves enough time to write receipts before its overall deadline. The legacy multipart protocol below is still supported. Switching between formats preserves the receipt and existing problems; subsequently supplying a matching archive can add local downloads.
-
-`POST <app-base>/api/evaluations/import` accepts exactly one multipart `bundle` field of type `application/zip` and an optional `problems` text field (at most 1 MiB). Authenticate with the integration token using either `x-api-key` or Bearer, exclusively. Required headers are `Idempotency-Key`, `X-Evaluation-Schema-Version: 1`, `X-Evaluation-Type` and `X-Evaluation-Bundle-SHA256`.
-
-Initial import returns HTTP 201; identical retry returns HTTP 200 and the original receipt ID. Different bytes at the same source/type/key/revision return 409. Receipts are top-level JSON, never wrapped in `data`, and HTTP 202 is never returned. The batch receipt uses its full subject key. Arrival order and largest revision do not determine the current report.
-
-Limits: 64 MiB ZIP, 128 MiB unpacked, 2,048 entries, 4 MiB JSON, 32 MiB HTML, 10 MiB per PNG and 48 MiB PNG total. The store-only ZIP format is checked for local/central header agreement, UTF-8 paths, duplicate names, links, compression, CRC, manifest hashes and evidence references. Four imports per process may run concurrently; overflow receives 429 with `Retry-After: 5`.
-
-Raw HTML is served as an attachment with `nosniff` and CSP sandbox. Bundles/evidence are only available through authenticated report endpoints. File Repository’s generated access path is deliberately not registered as a public route. Native file metadata and private Drive objects are committed before the receipt. Back up the database together with the entire configured storage directory. A failed/uncertain database commit never returns success; interrupted uploads may leave native file metadata that should only be cleaned after checking report references.
-
-## Reading reports and source links
-
-The ordinary Problems list shows a two-line Markdown summary and distinct task links. The detail page separates metadata, the full description, and the complete report. HTML opens automatically; the reading area can expand and download buttons are under an optional disclosure. Loading failures have a retry action, and changing problems cancels stale requests.
-
-For link-backed reports, the inline reader loads the validated GitHub Pages URL directly in an opaque sandboxed iframe with no referrer. The page also offers opening the original report in a new tab. The browser reads the report from its source; TestManage neither imports nor proxies the HTML.
-
-For legacy reports without a source URL, the inline reader retrieves the existing protected attachment with the native API client, removes active elements and event handlers, inserts a restrictive CSP, and displays it in an opaque sandboxed iframe. Scripts, forms, nested frames and external resource requests are disabled in this legacy rendering path. Inline styles and data images preserve the report layout; the original downloadable file is unchanged.
-
-For the known gchust/nb3-factory integration, PR environment addresses follow the factory's preview-host.mjs rule: https://nb3-<PR>.nfvd.net/main/. FACTORY_PREVIEW_DOMAIN on the TestManage server can mirror a changed factory preview domain. These are environment addresses, not a live health assertion; PR environments can be undeployed or reclaimed. Other factory repositories do not inherit this domain. A task without a PR shows explicit missing PR and environment labels.
-
-## Factory configuration
-
-Create a source binding using the actual repository as source instance and project. Configure repository variables:
+## Repository configuration
 
 ```text
 FACTORY_EVALUATION_DELIVERY=true
@@ -86,17 +16,41 @@ EVALUATION_DELIVERY_FORMAT=testmanage3-links-v1
 EVALUATION_TIMEOUT_SECONDS=180
 ```
 
-Store the issued token in the GitHub Actions secret `EVALUATION_TOKEN`. The token is shown once, expires after 365 days and is revocable. It never creates a user session or authorizes ordinary application endpoints. Public API Key self-service requests for the reserved configuration are rejected.
+Keep the source-bound credential in GitHub Actions secret `EVALUATION_TOKEN`. Single-attempt timeouts support 30–300 seconds with up to three bounded attempts. Dispatch `Deliver Evaluation Results` (`deliver-evaluation.yml`) with `mode=replay`, `type=evaluation-report`, the full report key and revision to resend an existing report without another Agent build or model evaluation.
 
-Dispatch `Deliver Evaluation Results` (`deliver-evaluation.yml`) with `mode=replay`, `type=evaluation-report`, full run `key` and `revision`. Replay reads the original registered report without another application build or model usage. With `testmanage3-links-v1`, only structured metadata, selected problems and the report URL are submitted; archive formats still transfer the original ZIP. The existing factory workflow owns retry scheduling; the receiver does not add another scheduler.
+## Receiver and credentials
 
-## Deployment and verification
+`POST <app-base>/api/evaluations/import` accepts `application/json` with `{version: 1, document, reportUrl, problems}`. Required headers are `Idempotency-Key`, `X-Evaluation-Schema-Version: 1`, `X-Evaluation-Type`, `X-Evaluation-Bundle-SHA256` and `X-Evaluation-Payload-SHA256`. Use either `x-api-key` or Bearer, exclusively. JSON is limited to 4 MiB. This mode transfers no ZIP, HTML or screenshot bytes, and the receiver does not fetch the linked report.
 
-Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm nocobase app i18n:check` and `pnpm build --target linux-x64 --node-version 24 --tar`. Migrate/seed using the configured application startup tasks. Regenerate Collection artifacts with `pnpm collections:generate` against an isolated migrated database.
+The payload digest verifies the actual request body. The bundle digest identifies the producer's registered archive; it is a producer assertion in link mode. Report URLs must match the immutable GitHub Pages report location declared by the report. Submitted problems must reference actual selected findings or final failed QA criteria.
 
-On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and the current container identity. Consistently back up SQLite and save compose/deployment metadata before switching images. Keep the previous image for rollback; never restore the old unrelated misdeployment.
+A first import returns HTTP 201 with an unwrapped receipt. Identical retries return HTTP 200 and the original receipt; changed report or problem data under the same source/type/key/revision returns 409. Empty problem lists store metadata without inventing problems. Protocol batch documents are accepted as metadata for producer compatibility; there is no batch dashboard or batch evaluation. Producer chronology chooses the current evidence, preventing late older reports from replacing it.
 
-Verify native credential/session isolation, anonymous/unpermitted access, reader write denial, row/field Repository policies, complete batch samples, source binding, unchanged manual data, concurrent duplicate reception and receipt persistence across restart. Use a real factory artifact with its actual `deliverBundle` sender, then dispatch GitHub delivery against the deployed service. Inspect both its stored receipt and the report page in light/dark themes and English/Chinese.
+Native API Keys use the separate non-session `evaluation-import` configuration and repository/project source binding. Keys cannot authenticate browser sessions or call ordinary APIs. Source management remains at `GET/POST /api/evaluations/sources` and `DELETE /api/evaluations/sources/:id`, protected by native Authentication and Authorization. Create with `{name, sourceInstance, project}`; tokens are returned once, expire after 365 days and can be revoked. The native permission set key `evaluation-manager` is retained for deployed assignments and displayed as “Factory integration manager”; only credential management remains. Staff report access follows the existing Problems permission and record scope.
+
+Use the application-local NocoBase 3 Skills. Credentials, permission sets, policy-bound Repositories, transactions, File Repository, Drive, API client, i18n and UI primitives come from the installed infrastructure. The application owns only the protocol adapter and problem collection behavior.
+
+## Removal and compatibility boundaries
+
+The standalone evaluation page, score/batch display, comparison, module mapping, finding review and regression services/API routes are removed with their helpers, locale strings, browser contracts, tests and obsolete acceptance screenshots. There are no hidden evaluation pages or unadvertised review endpoints. Unknown paths under `/api/evaluations/` return 404.
+
+Historical migrations and seeds have run on 252, so their checksums and stored data are preserved. A new seed removes retired page/read/review grants and empty seeded reader/reviewer roles, preserves custom grants and titles, and retains the deployed manager identity. The original resource declaration is a frozen dependency of the old seed and is never registered in the live authorization model. Historical review tables have no active API; only prior human finding dispositions are read to avoid resurrecting dismissed problems.
+
+The stable import path, source identity, protocol schemas and legacy multipart receiver remain for existing producers and retries. Legacy ZIPs keep authenticated problem-scoped downloads through `/api/test-progress/problems/:id/report`. Linked reports load directly from their source in an opaque sandboxed iframe with no referrer. Legacy inline HTML is sanitized and rendered with restrictive CSP; the original download is unchanged. There is no standalone report archive API. Replays do not duplicate or resurrect deleted problems, or overwrite human titles, descriptions, ownership, classification or lifecycle state.
+
+Full database Collection snapshots are generated tooling output, remain locally available via `pnpm collections:generate` and are gitignored. Migrate and generate before `pnpm collections:generate --check` on a fresh checkout. Application migrations, protocol contracts and regression tests remain tracked.
+
+## Verification and deployment
+
+Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm nocobase app i18n:check` and `pnpm build --target linux-x64 --node-version 24 --tar`. Verify the retirement seed against a real database, preserving custom grants and testing repeat execution. Cover credential isolation, receipts, empty submissions, duplicate prevention, record/field policies, removed routes and ordinary problem report access.
+
+On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and container identity. Back up SQLite consistently before switching images and retain the previous image for rollback. Validate migrations/seeds on an isolated production clone first. Never edit applied migration checksums or clear production data to simplify the PR.
+
+## PR cleanup verification — 2026-09-25
+
+PR #1 is reduced from 252 changed files to 67. Client/server source is reduced by 2,823 lines. The 166 full-database Collection snapshot files are untracked but remain locally generated; the old evaluation UI, review services and superseded evidence are removed. Already-applied migration files and the original permission seed are byte-for-byte unchanged.
+
+Validation passes: 46 test files / 351 tests, typecheck, lint, locale check, Linux x64 / Node 24 production build, and fresh native SQLite migration/seed plus Collection generation/check. Regression coverage includes removed endpoints returning 404, manager access through native permissions, preserved custom grants, no new review rows, historical human dispositions, deleted-problem suppression, link delivery, source links and legacy problem-scoped downloads. These checks validate the cleanup in the PR; the production acceptance below describes the preceding deployed revision. This cleanup has not been redeployed to 252.
 
 ## Report link delivery acceptance — 2026-09-25
 
@@ -104,11 +58,11 @@ Deployed to 252 at 21:45 Singapore time using image `testmanage3:report-links-ca
 
 The report for Issue #333 previously required a 2,287,438-byte ZIP. Its link submission is 26,845 bytes and transfers no ZIP, HTML or screenshot content. The receiver stores its structured metadata and immutable report URL without creating a File Repository archive. Its selected unresolved problem list is empty, so receiving the report correctly creates no problem. This acceptance reuses existing reports and does not trigger another application build or model evaluation.
 
-| Validation | Factory Actions run | Actual result |
-| --- | --- | --- |
-| First formerly failing workflow, attempt 2 | [36138107190](https://github.com/gchust/nb3-factory/actions/runs/36138107190) | Success; one HTTP 201 submission in 2,315 ms |
+| Validation                                  | Factory Actions run                                                           | Actual result                                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| First formerly failing workflow, attempt 2  | [36138107190](https://github.com/gchust/nb3-factory/actions/runs/36138107190) | Success; one HTTP 201 submission in 2,315 ms                                                               |
 | Second formerly failing workflow, attempt 2 | [36138245692](https://github.com/gchust/nb3-factory/actions/runs/36138245692) | Success; scan plans zero pending items after the first run records its receipt, so send/record are skipped |
-| Existing Issue #320 replay, attempt 1 | [36143184418](https://github.com/gchust/nb3-factory/actions/runs/36143184418) | Success; HTTP 200 in 6,106 ms, original receipt and problem preserved |
+| Existing Issue #320 replay, attempt 1       | [36143184418](https://github.com/gchust/nb3-factory/actions/runs/36143184418) | Success; HTTP 200 in 6,106 ms, original receipt and problem preserved                                      |
 
 Issue #333 has exactly one report, receipt `6aeb3205-0a79-492a-9a7f-af70fc8d0b9b`, with no local archive. Issue #320 retains receipt `fe20f948-6625-45d9-9b39-13a93a0d5c73`, its original archive, and problem `187`; replay only adds its report link. All 94 existing problems and the other business rows retain their original content digests. There are now four report records and still three native archive files. SQLite integrity and container health pass.
 
@@ -117,57 +71,3 @@ Production Chrome verifies direct GitHub Pages iframe loading, the original-repo
 An isolated production clone also verifies HTTP 201/200 idempotency, no archive upload, empty problem handling, rejected invalid report URLs, rejected unauthenticated/invalid-key requests, and machine-key isolation. Application validation passes: 47 files / 351 tests, typecheck, lint, locale check, 55 generated Collection definitions and the Linux x64 / Node 24 production build. Factory validation passes: 94 local tests and both PR regression/preflight checks. The rollback backup is `/srv/testmanage3-backups/pre-report-links-20260925T134508Z`.
 
 Evidence: [verification record](verification/2026-09-25/report-links.json), [problem list](verification/2026-09-25/report-links-list-zh.png), [Chinese detail](verification/2026-09-25/report-links-detail-zh.png), [mobile detail](verification/2026-09-25/report-links-mobile.png), and [English dark detail](verification/2026-09-25/report-links-detail-en-dark.png).
-
-## Inline report preview acceptance — 2026-09-25
-
-Deployed to 252 at 20:46 Singapore time using image `testmanage3:report-preview-8243787`, application revision `8243787f2d3fa5b09a153c96d66872643505e733`. The existing problem `187` now opens its full HTML report automatically in an isolated iframe, with an expandable reading area and optional downloads. The list uses a two-line summary; the detail page separates source links, description and report. Issue, code PR and PR preview environment links have distinct labels. This real sample has no published PR, so its PR and environment fields explicitly remain unavailable.
-
-Verified the factory's four delivery variables and the presence of `EVALUATION_TOKEN`; no further factory configuration is required. This acceptance reused the existing production report and did not trigger another factory build or evaluation. The prior GitHub delivery receipt remains unchanged.
-
-Production Chrome checks pass for Chinese/light, English/dark, mobile layout, inline report loading, enlarged reading, source links and the original HTML download. The downloaded HTML is byte-identical to the original. A browser-only hostile HTML probe confirms script and parent-page isolation, zero external requests and preserved inline styles. No page or unexpected HTTP errors occurred. The existing database row digests are unchanged, the container is healthy, and the temporary session was revoked (subsequent access returns 401). The isolated trial database and container were removed.
-
-All 47 test files / 345 tests, typecheck, lint, locale check and the Linux x64 / Node 24 production build pass. The rollback snapshot is `/srv/testmanage3-backups/pre-report-preview-20260925T124640Z`. Evidence: [verification record](verification/2026-09-25/report-preview.json), [problem list](verification/2026-09-25/report-preview-list-zh.png), [Chinese detail](verification/2026-09-25/report-preview-detail-zh.png), [mobile detail](verification/2026-09-25/report-preview-mobile.png), and [English dark detail](verification/2026-09-25/report-preview-detail-en-dark.png).
-
-## Problem delivery acceptance — 2026-09-25
-
-Deployed to 252 at 20:14 Singapore time using image `testmanage3:factory-problems-178d782`, application revision `178d782c8602f7066623e893e4a6e02ff3352e35`. Factory PR `gchust/nb3-factory#334` is merged into `develop` as `b8f6701dd2dac1e69a4dc13e19ecf7e362fa3cb7`. The repository delivery format is `testmanage3-problems-v1`. No scheduled evaluation plans were enabled, and verification reused an existing report without another build or model call.
-
-The real report for `gchust/nb3-factory/issues/320/initial`, revision 1, contains one unresolved improvement and two strengths. The factory selects only the improvement and sends it with the original 280,454-byte ZIP (SHA-256 `e1f527ce40aca80a606d62079ca1e85c8fb7ede35a17a931f1550d95d511ceb1`). TestManage stores it as problem `187`, automation/pending and Uncategorized, in the existing Problems page: `https://test3.nfvd.net/main/progress/problems/187`. The sidebar no longer has a standalone evaluation entry.
-
-| Validation                                      | Factory Actions run | Receiver result                        |
-| ----------------------------------------------- | ------------------- | -------------------------------------- |
-| Original report and explicit problem submission | `36133819280`       | HTTP 201, stored                       |
-| Identical registered revision replay            | `36134139779`       | HTTP 200, same receipt and one problem |
-
-Both runs execute the send and record jobs successfully. The shared receipt is `fe20f948-6625-45d9-9b39-13a93a0d5c73`. Chrome verifies the ordinary Problems list and detail page, Chinese/light and English/dark, Issue and Actions links, and ZIP/HTML/JSON downloads. Downloaded ZIP bytes match the registered hash, and the JSON is semantically identical to the original full report. HTML is attachment-only with CSP sandbox; anonymous report access returns 401. There are no page errors or unexpected HTTP errors. This real task has no published PR, so the page correctly shows “No PR recorded”; report payloads containing a PR URL are covered by automated tests.
-
-An isolated clone of production passed the migration and HTTP import checks before the production switch. The original 33 feature points, 93 issues, 93 missing items, and 97 activity records retain their original row-content digests. After both deliveries there are 94 issues and 98 activities: one new problem and its creation event. SQLite integrity and container health pass. The rollback snapshot is `/srv/testmanage3-backups/pre-factory-problems-20260925T121410Z`.
-
-Application checks pass: 47 files / 339 tests, typecheck, lint, locale check, 55 generated Collection definitions, and the Linux x64 / Node 24 production build. Factory checks pass: 92 tests and both GitHub regression/preflight jobs. Evidence: [factory-problems.json](verification/2026-09-25/factory-problems.json), [problem list](verification/2026-09-25/problems-zh-light.png), [Chinese detail](verification/2026-09-25/problem-zh-light.png), and [English dark detail](verification/2026-09-25/problem-en-dark.png).
-
-## Initial archive-only acceptance — 2026-09-25 (superseded)
-
-Deployed to 252 at 18:41 Singapore time using image `testmanage3:evaluations-ba52b7c`, source revision `ba52b7ce692c8eb260857d3fb2a096b76ab2a043`. The entry is `https://test3.nfvd.net/main/progress/evaluations`. The build targets Linux x64 / glibc / Node 24; the container health check passes.
-
-The real factory report is `gchust/nb3-factory/issues/315/initial`, revision 1. All three deliveries use the original 224,620-byte archive with SHA-256 `45f27de9d4791f6b8060043caf669c4a70615c41623cc6c5218800a14997da7a`. No synthetic fixtures were uploaded to production, and replay did not invoke another Agent build or review.
-
-| Validation                                    | Factory Actions run | Receiver result        |
-| --------------------------------------------- | ------------------- | ---------------------- |
-| First original-bundle delivery                | `36124635435`       | HTTP 201, stored       |
-| Replay from the default `develop` branch      | `36124961001`       | HTTP 200, same receipt |
-| Replay after replacing/restarting the service | `36125384963`       | HTTP 200, same receipt |
-
-The persistent receipt is `850c0eea-d66a-4a3c-ac09-577160a4fe93`. Both the factory outbox and the receiver confirm `stored`. There is one report and one native File Repository archive after retries. The sample deliberately has independent review disabled and incomplete usage; the UI preserves “not reviewed” and “partial” instead of inventing scores or complete usage.
-
-Production verification also covers:
-
-- Original 33 feature points, 93 issues, 93 missing items and 97 activity records remain unchanged, including row-content digests. SQLite integrity passes.
-- Anonymous access and machine-key access to user/session/report APIs return 401. Reserved API-key self-service create/update/delete return 403, and the default key configuration cannot read the integration key (404).
-- Chrome: Chinese/light runs and report details, English/dark report details, all five tabs, original ZIP/JSON/HTML downloads, and attached PNG evidence download. No page errors or unexpected HTTP errors occurred. Downloaded ZIP bytes match the registered hash; HTML remains attachment-only with CSP sandbox.
-- Application: 46 test files / 329 tests, typecheck, lint, Linux production build, locale check and 55 generated Collection definitions all pass. Factory evaluation tests: 88 pass; factory regression CI and browser preflight pass.
-
-Live testing found and fixed a factory workflow dependency bug: a skipped optional backfill incorrectly skipped the send job after successful planning. Factory PR `gchust/nb3-factory#331` is merged into `develop`; the final two runs use that default-branch fix. The App also uses Better Auth's public `isAPIError` guard at its native provider boundary to preserve credential refusal statuses across duplicate deployment package constructors.
-
-Rollback backups are under `/srv/testmanage3-backups/`, including `pre-switch-20260925T102337Z` (before the feature migration) and `received-report-20260925T104107Z` (with the accepted report). Keep configuration and the entire storage tree together. Previous images remain available.
-
-Machine-readable receipts, build identity and checks: [production.json](verification/2026-09-25/production.json). Browser evidence: [Chinese runs](verification/2026-09-25/runs-zh-light.png), [English dark report](verification/2026-09-25/report-en-dark.png). These files contain no credentials.

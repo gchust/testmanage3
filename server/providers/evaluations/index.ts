@@ -10,7 +10,7 @@ import {
 import { driveManagerToken } from '@nocobase/app-server/drive';
 import { serverFileRepositoryManagerToken } from '@nocobase/app-plugin-file/server';
 import { EvaluationArchive } from './archive.js';
-import { evaluationCollections, evaluationResource } from './permissions.js';
+import { factoryIntegrationResource } from './permissions.js';
 import { EvaluationService } from './service.js';
 
 export const evaluationServiceToken =
@@ -38,17 +38,17 @@ export default class EvaluationsProvider extends ServiceProvider<Application> {
     if (!this.app.container.has(authorizationToken)) return;
     const authz = this.app.container.resolve(authorizationToken);
     authz.resourceGroups.add({
-      name: 'evaluations',
-      title: { key: 'evaluations.title', ns: 'app' },
+      name: 'factoryIntegration',
+      title: { key: 'factoryIntegration.title', ns: 'app' },
       category: 'business',
     });
-    authz.pages.add({
-      name: 'evaluations',
-      title: { key: 'evaluations.title', ns: 'app' },
-      actions: ['access'],
-    });
-    for (const name of evaluationCollections)
+    for (const name of [
+      'evaluationReports',
+      'evaluationSources',
+      'evaluationAudit',
+      'evaluationBundleFiles',
+    ])
       authz.db.collections.add({ name });
-    evaluationResource.register(authz.resources);
+    factoryIntegrationResource.register(authz.resources);
   }
 }

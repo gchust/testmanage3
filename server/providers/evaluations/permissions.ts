@@ -1,18 +1,6 @@
 import { defineAuthorizationResource } from '@nocobase/authorization/core';
 import { defineDatabasePermission } from '@nocobase/app-plugin-authorization';
 
-export const evaluationCollections = [
-  'evaluationReports',
-  'evaluationSubjects',
-  'evaluationFindings',
-  'evaluationMappings',
-  'evaluationRegressions',
-  'evaluationSources',
-  'evaluationAudit',
-  'evaluationBundleFiles',
-  'featurePoints',
-  'issues',
-] as const;
 const data = (name: string) =>
   defineDatabasePermission((p) => p.collection(name).read('*'));
 const reports = data('evaluationReports'),
@@ -24,6 +12,8 @@ const reports = data('evaluationReports'),
 const audit = defineDatabasePermission((p) =>
   p.collection('evaluationAudit').read('*').create('*'),
 );
+// Frozen dependency of the already-deployed 202609250001 seed.
+// Do not register these retired review actions in the running application.
 export const evaluationResource = defineAuthorizationResource(
   'evaluations',
   (r) =>
@@ -57,6 +47,21 @@ export const evaluationResource = defineAuthorizationResource(
       .action('manage', (a) =>
         a
           .title({ key: 'evaluations.permissions.manage', ns: 'app' })
+          .grant('sources', sources.create('*').update(['enabled']))
+          .grant('audit', audit),
+      ),
+);
+
+// Keep the deployed resource identity and manager grant slots for existing keys.
+export const factoryIntegrationResource = defineAuthorizationResource(
+  'evaluations',
+  (r) =>
+    r
+      .group('factoryIntegration')
+      .title({ key: 'factoryIntegration.title', ns: 'app' })
+      .action('manage', (a) =>
+        a
+          .title({ key: 'factoryIntegration.manage', ns: 'app' })
           .grant('sources', sources.create('*').update(['enabled']))
           .grant('audit', audit),
       ),

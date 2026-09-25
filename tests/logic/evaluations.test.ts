@@ -33,7 +33,6 @@ import {
 } from '../../server/providers/evaluations/problems.js';
 import {
   EvaluationService,
-  occurrenceId,
   type SourceBinding,
 } from '../../server/providers/evaluations/service.js';
 import {
@@ -47,7 +46,8 @@ import {
   type EvaluationDocument,
 } from '../../server/providers/evaluations/protocol.js';
 import type { EvaluationReport } from '../../server/providers/evaluations/contracts/report.js';
-import { compareReports } from '../../server/providers/evaluations/comparison.js';
+import originalPermissionSeed from '../../database/main/seeds/202609250001_seed_evaluation_permissions.js';
+import retirePermissionSeed from '../../database/main/seeds/202609250002_retire_evaluation_permissions.js';
 import { evaluationRoutes } from '../../server/routes/evaluations.js';
 import { evaluationServiceToken } from '../../server/providers/evaluations/index.js';
 
@@ -511,14 +511,12 @@ describe('durable evaluation reception', () => {
       expect.objectContaining({ actorName: 'GitHub Actions', kind: 'created' }),
     ]);
     expect(
-      (await service.findings(received.receipt.receiptId)).find(
-        (f) => f.findingId === d.reviews[0].findings[1].id,
-      )?.problemId,
-    ).toBe(problem.id);
+      await db.query().selectFrom('evaluationFindings').selectAll().execute(),
+    ).toEqual([]);
   });
 
   it('deduplicates deliveries and reassessments without overwriting human edits', async () => {
-    const { save, db, service } = await setup();
+    const { save, db } = await setup();
     const d = await report();
     const first = await save(d);
     const original = await db
@@ -557,33 +555,91 @@ describe('durable evaluation reception', () => {
       owner: 'Reviewer',
       factoryReportId: next.receipt.receiptId,
     });
-    expect(
-      (await service.findings(next.receipt.receiptId)).find(
-        (f) => f.findingId === d.reviews[0].findings[1].id,
-      )?.problemId,
-    ).toBe(original.id);
     expect(first.receipt.receiptId).not.toBe(next.receipt.receiptId);
   });
 
-  it('uses explicit module mappings and leaves ambiguous or absent mappings uncategorized', async () => {
-    const { save, db, service } = await setup();
-    const d = await report();
-    await service.mapSubject(
-      {
-        sourceInstance: source.sourceInstance,
-        subjectKey: d.reviews[0].findings[1].subjectKeys[0],
-        featurePointId: 1,
-      },
-      'admin',
+  it('does not recreate deleted problems when reports are replayed or revised', async () => {
+    const { save, db } = await setup();
+    const document = await report();
+    await save(document);
+    await db
+      .query()
+      .deleteFrom('issues')
+      .where('type', '=', 'automation')
+      .execute();
+    await save(document);
+    document.revision++;
+    document.precedence.producer.runId++;
+    await save(document);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toEqual([]);
+  });
+
+  it('honors historical human dispositions without creating or updating review rows', async () => {
+    const { save, db } = await setup();
+    const document = await report();
+    const finding = document.reviews
+      .flatMap((review) => review.findings)
+      .find(
+        (item) => item.id === submittedProblems(document)[0].findingIds[0],
+      )!;
+    const id = hash(
+      [document.source.instance, document.run.key, finding.id].join('\n'),
     );
-    await save(d);
+    await db
+      .query()
+      .insertInto('evaluationFindings')
+      .values({
+        id,
+        sourceInstance: document.source.instance,
+        runKey: document.run.key,
+        findingId: finding.id,
+        reportId: 'historical-report',
+        finding: JSON.stringify(finding),
+        status: 'ignored',
+        note: 'Human disposition',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .execute();
+    const before = await db
+      .query()
+      .selectFrom('evaluationFindings')
+      .selectAll()
+      .execute();
+    await save(document);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toEqual([]);
+    expect(
+      await db.query().selectFrom('evaluationFindings').selectAll().execute(),
+    ).toEqual(before);
+  });
+
+  it('leaves new problems uncategorized without running a module mapping workflow', async () => {
+    const { save, db } = await setup();
+    await save(await report());
     const row = await db
       .query()
       .selectFrom('issues')
       .selectAll()
       .where('type', '=', 'automation')
       .executeTakeFirstOrThrow();
-    expect(row.featurePointId).toBe(1);
+    expect(row.featurePointId).toBeNull();
+    expect(
+      await db.query().selectFrom('evaluationMappings').selectAll().execute(),
+    ).toEqual([]);
   });
 
   it('collects final failed QA checks without inventing problems for unknown or repaired checks', async () => {
@@ -715,26 +771,28 @@ describe('durable evaluation reception', () => {
       ),
     ).toBe(p.headers.sha256);
   });
-  it('never lets a larger late revision replace better producer facts', async () => {
-    const { service, save } = await setup();
+  it('never lets a larger late revision replace the current problem report', async () => {
+    const { save, db } = await setup();
     const best = await save(await report());
     await save(await report('report-late-older'));
-    const list = await service.listReports('evaluation-report');
-    expect(list.items).toHaveLength(1);
-    expect(list.items[0].id).toBe(best.receipt.receiptId);
-    expect(
-      (await service.history(best.receipt.receiptId))
-        .filter((r) => r.current)
-        .map((r) => r.revision),
-    ).toEqual([1]);
-    const bestAgain = await report();
-    bestAgain.revision = 3;
-    bestAgain.metrics.usage.totals.total = 999;
-    await save(bestAgain);
-    expect(
-      (await service.listReports('evaluation-report')).items[0].tokens?.total,
-    ).toBe(999);
+    const current = await db
+      .query()
+      .selectFrom('evaluationSubjects')
+      .select('currentReportId')
+      .executeTakeFirstOrThrow();
+    expect(current.currentReportId).toBe(best.receipt.receiptId);
+    const nextDocument = await report();
+    nextDocument.revision = 3;
+    const next = await save(nextDocument);
+    const problem = await db
+      .query()
+      .selectFrom('issues')
+      .select('factoryReportId')
+      .where('type', '=', 'automation')
+      .executeTakeFirstOrThrow();
+    expect(problem.factoryReportId).toBe(next.receipt.receiptId);
   });
+
   it('preserves source bindings and immediately revokes a disabled owner or integration', async () => {
     const { service, db } = await setup(),
       p = packet(await report());
@@ -764,48 +822,16 @@ describe('durable evaluation reception', () => {
       service.importBundle(source, p.bytes, p.verified()),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
-  it('preserves manual scores, issue lifecycle, finding dispositions and regression evidence', async () => {
-    const { service, save, db } = await setup(),
-      d = await report();
-    const result = await save(d);
-    const fid = occurrenceId(d, d.reviews[0].findings[0].id);
-    await service.updateFinding(
-      fid,
-      { problemId: 1, status: 'confirmed', note: 'Human decision' },
-      'admin',
-    );
-    await service.mapSubject(
-      {
-        sourceInstance: source.sourceInstance,
-        subjectKey: d.reviews[0].modules[0].subjectKeys[0],
-        featurePointId: 1,
-      },
-      'admin',
-    );
-    d.revision = 2;
-    d.reviews[0].findings[0].reviewerStatus = 'resolved';
-    await save(d);
+  it('preserves manual scores and existing issues without creating review or regression records', async () => {
+    const { save, db } = await setup();
+    await save(await report());
     expect(
-      (await service.findings(result.receipt.receiptId)).find(
-        (f) => f.id === fid,
-      ),
-    ).toMatchObject({
-      problemId: 1,
-      status: 'confirmed',
-      note: 'Human decision',
-    });
-    await service.recordRegression(
-      {
-        problemId: 1,
-        reportId: result.receipt.receiptId,
-        verdict: 'passed',
-        note: 'Verified by human',
-        evidenceIds: [d.evidence[0].id],
-      },
-      'admin',
-    );
-    expect(
-      await db.query().selectFrom('issues').selectAll().executeTakeFirst(),
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('id', '=', 1)
+        .executeTakeFirst(),
     ).toMatchObject({ status: 'fixing', owner: 'Human' });
     expect(
       await db
@@ -814,96 +840,75 @@ describe('durable evaluation reception', () => {
         .selectAll()
         .executeTakeFirst(),
     ).toMatchObject({ designScore: 8 });
-    expect(await service.regressions(1)).toHaveLength(1);
-    await expect(
-      service.recordRegression(
-        {
-          problemId: 1,
-          reportId: result.receipt.receiptId,
-          verdict: 'passed',
-          note: 'No evidence',
-          evidenceIds: ['missing'],
-        },
-        'admin',
-      ),
-    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    for (const table of [
+      'evaluationFindings',
+      'evaluationMappings',
+      'evaluationRegressions',
+    ])
+      expect(await db.query().selectFrom(table).selectAll().execute()).toEqual(
+        [],
+      );
   });
-  it('applies native record and field policies to reads and manual review writes', async () => {
+
+  it('applies native record and field policies to attached report reads and credential writes', async () => {
     const { service, save } = await setup();
-    const first = await save(await report());
-    const allowedId = first.receipt.receiptId;
+    const { receipt } = await save(await report());
+    await expect(
+      service.withPolicies({}).getReport(receipt.receiptId),
+    ).rejects.toThrow();
     const scoped = service.withPolicies({
       evaluationReports: {
         read: {
-          scope: buildFilter((f) => f.string('id').eq('a-different-report')),
+          scope: buildFilter((f) => f.string('id').eq('another-report')),
           fields: [
             'id',
             'document',
+            'manifest',
             'bundleSha256',
             'bundleFileId',
             'receivedAt',
-            'manifest',
           ],
         },
       },
     });
-    // An explicit deny never falls back to the unrestricted integration service.
-    await expect(
-      service.withPolicies({}).getReport(allowedId),
-    ).rejects.toThrow();
-    const limited = service.withPolicies({
-      evaluationReports: {
-        read: {
-          scope: true,
-          fields: [
-            'id',
-            'document',
-            'bundleSha256',
-            'bundleFileId',
-            'receivedAt',
-            'manifest',
-          ],
-        },
-      },
-      evaluationFindings: {
-        read: true,
-        update: { scope: true, fields: ['status', 'updatedAt'] },
-      },
-      evaluationAudit: { read: true, create: true },
-    });
-    const findings = await limited.findings(allowedId);
-    await expect(
-      limited.updateFinding(
-        String(findings[0].id),
-        { note: 'Forbidden field' },
-        'admin',
-      ),
-    ).rejects.toThrow();
-    await limited.updateFinding(
-      String(findings[0].id),
-      { status: 'confirmed' },
-      'admin',
-    );
-    expect((await service.findings(allowedId))[0].status).toBe('confirmed');
-    await expect(scoped.getReport(allowedId)).rejects.toThrow(
+    await expect(scoped.getReport(receipt.receiptId)).rejects.toThrow(
       'Record not found.',
     );
+    const hiddenDocument = service.withPolicies({
+      evaluationReports: { read: { scope: true, fields: ['id'] } },
+    });
+    await expect(hiddenDocument.getReport(receipt.receiptId)).rejects.toThrow(
+      'outside the permitted field scope',
+    );
+    const readOnly = service.withPolicies({
+      evaluationSources: { read: true },
+    });
+    expect(await readOnly.listSources()).toHaveLength(1);
+    await expect(readOnly.disableSource(source.id, 'admin')).rejects.toThrow();
+    expect(await service.authenticate('integration-secret')).not.toBeNull();
   });
 
-  it('keeps all planned samples and reports batch subject keys in receipts', async () => {
-    const { service, save } = await setup(),
-      batch = await fixture('batch-in-progress');
-    const result = await save(batch);
-    expect(result.receipt.batchKey).toBe(
+  it('accepts compatible batch metadata without producing problems or a batch dashboard', async () => {
+    const { service, save, db } = await setup();
+    const batch = await fixture('batch-in-progress');
+    const { receipt } = await save(batch);
+    expect(receipt.batchKey).toBe(
       'owner/factory/batches/nb3-daily-smoke-20260925',
     );
-    expect(result.receipt.runKey).toBeUndefined();
+    expect(receipt.runKey).toBeUndefined();
+    expect((await service.getReport(receipt.receiptId)).document).toEqual(
+      batch,
+    );
     expect(
-      (await service.batchSamples(result.receipt.receiptId)).map(
-        (s) => s.reception,
-      ),
-    ).toEqual(['not-received', 'report-missing', 'not-executed']);
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toEqual([]);
   });
+
   it('reverses the migration against a real database', async () => {
     const { db, context } = await setup();
     await migration.down!(context);
@@ -978,95 +983,79 @@ describe('evaluation HTTP boundary', () => {
     });
     expect((await app.fetch(request(changed))).status).toBe(409);
   });
-  it('rejects anonymous, invalid credentials, ordinary users and write attempts by readers', async () => {
+  it('limits credential management to permitted users without leaking middleware to other paths', async () => {
     const { service } = await setup(),
       app = await router(service),
       p = packet(await report());
     expect((await app.fetch(request(p, 'wrong'))).status).toBe(401);
-    expect((await app.request('/evaluations/reports')).status).toBe(401);
-    expect(
-      (
-        await app.request('/evaluations/reports', {
-          headers: { 'x-user': 'member' },
-        })
-      ).status,
-    ).toBe(403);
-    expect(
-      (
-        await app.request('/evaluations/reports', {
-          headers: { 'x-user': 'reader' },
-        })
-      ).status,
-    ).toBe(200);
+    expect((await app.request('/evaluations/sources')).status).toBe(401);
+    for (const user of ['member', 'reader']) {
+      expect(
+        (
+          await app.request('/evaluations/sources', {
+            headers: { 'x-user': user },
+          })
+        ).status,
+      ).toBe(403);
+      expect(
+        (
+          await app.request('/evaluations/sources/integration', {
+            method: 'DELETE',
+            headers: { 'x-user': user },
+          })
+        ).status,
+      ).toBe(403);
+    }
     expect(
       (
         await app.request('/evaluations/sources', {
-          headers: { 'x-user': 'reader' },
+          headers: { 'x-user': 'admin' },
         })
       ).status,
-    ).toBe(403);
-    expect(
-      (
-        await app.request('/evaluations/mappings', {
-          method: 'POST',
-          headers: { 'x-user': 'reader' },
-          body: '{}',
-        })
-      ).status,
-    ).toBe(403);
+    ).toBe(200);
     const unrelated = new Hono();
     unrelated.route('/', app);
     unrelated.get('/public', (c) => c.text('ok'));
     expect((await unrelated.request('/public')).status).toBe(200);
   });
-  it('delivers stored HTML as a sandboxed attachment with no active inline script', async () => {
+
+  it('does not expose removed evaluation, review, comparison or standalone archive APIs', async () => {
     const { service } = await setup(),
-      app = await router(service),
-      p = packet(await report(), '<script>alert(document.cookie)</script>');
-    const receipt = (await (await app.fetch(request(p))).json()) as {
-      receiptId: string;
-    };
-    const response = await app.request(
-      '/evaluations/reports/' + receipt.receiptId + '/file?path=report.html',
-      { headers: { 'x-user': 'reader' } },
-    );
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-disposition')).toContain('attachment');
-    expect(response.headers.get('content-security-policy')).toContain(
-      'sandbox',
-    );
+      app = await router(service);
+    for (const path of [
+      'capabilities',
+      'reports',
+      'reports/report-id',
+      'reports/report-id/file',
+      'reports/report-id/history',
+      'reports/report-id/findings',
+      'reports/report-id/samples',
+      'modules',
+      'options',
+      'mappings',
+      'findings/finding-id',
+      'regressions',
+      'compare',
+    ]) {
+      for (const method of ['GET', 'POST', 'PATCH'])
+        expect(
+          (
+            await app.request('/evaluations/' + path, {
+              method,
+              headers: { 'x-user': 'admin' },
+            })
+          ).status,
+        ).toBe(404);
+    }
   });
 });
 
-describe('version comparability', () => {
-  it('shows unknowns and never compares different rubric versions', async () => {
-    const left = await report(),
-      right = structuredClone(left);
-    expect(compareReports(left, right).reasons).toContain(
-      'browser-fixtures:unknown',
-    );
-    left.baseline.environment.browserFixturesSha256 =
-      right.baseline.environment.browserFixturesSha256 = 'a'.repeat(64);
-    expect(compareReports(left, right).comparable).toBe(true);
-    right.baseline.rubric = { id: 'nb3-framework', version: 1 };
-    expect(compareReports(left, right).comparable).toBe(false);
-    expect(
-      compareReports(left, right)
-        .modules.flatMap((m) => m.scores)
-        .every((s) => s.delta === null),
-    ).toBe(true);
-  });
-  it('ranks review chronology ahead of revision and treats disappearance as unobserved', async () => {
-    const left = await report(),
-      right = structuredClone(left);
-    right.revision = 99;
-    right.precedence.review.at = '2020-01-01T00:00:00Z';
-    expect(precedenceRank(left) > precedenceRank(right)).toBe(true);
-    right.reviews[0].findings = [];
-    const diff = compareReports(left, right);
-    expect(diff.findings.notObserved.length).toBeGreaterThan(0);
-    expect(diff.findings).not.toHaveProperty('resolved');
-  });
+it('uses producer chronology rather than revision numbers when choosing the current report', async () => {
+  const left = await report(),
+    right = structuredClone(left);
+  right.revision = 99;
+  right.precedence.review.at = '2020-01-01T00:00:00Z';
+  expect(precedenceRank(left) > precedenceRank(right)).toBe(true);
 });
 
 function linkedRequest(
@@ -1147,14 +1136,14 @@ describe('linked report delivery', () => {
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
     expect(
       (await app.request('/evaluations/reports/' + receipt.receiptId)).status,
-    ).toBe(401);
+    ).toBe(404);
     expect(
       (
         await app.request('/evaluations/reports/' + receipt.receiptId, {
           headers: { 'x-user': 'member' },
         })
       ).status,
-    ).toBe(403);
+    ).toBe(404);
     const changed = structuredClone(p.document);
     changed.createdAt = '2026-09-25T11:00:00Z';
     expect(
@@ -1264,5 +1253,100 @@ describe('linked report delivery', () => {
     await expect(linkMigration.down!(context)).rejects.toThrow(
       'Archive linked reports',
     );
+  });
+});
+
+describe('retiring automatic evaluation permissions', () => {
+  it('removes only retired grants, preserves manager access and custom roles, and is idempotent', async () => {
+    const { db } = await setup();
+    await db.builder().createCollection('authorizationPermissionSets', (c) => {
+      c.string('id', { primaryKey: true });
+      c.string('key');
+      c.text('title');
+      c.text('grants');
+      c.datetime('createdAt');
+      c.datetime('updatedAt');
+    });
+    await db
+      .builder()
+      .createCollection('authorizationPermissionSetAssignments', (c) => {
+        c.string('id', { primaryKey: true });
+        c.string('permissionSetKey');
+      });
+    const context = { query: db.query() } as Parameters<
+      typeof originalPermissionSeed.run
+    >[0];
+    await originalPermissionSeed.run(context);
+    const readRole = await db
+      .query()
+      .selectFrom('authorizationPermissionSets')
+      .selectAll()
+      .where('key', '=', 'evaluation-reader')
+      .executeTakeFirstOrThrow();
+    const customGrant = {
+      resource: { type: 'page', id: 'testProgressProblems' },
+      actions: [{ action: 'access' }],
+    };
+    await db
+      .query()
+      .insertInto('authorizationPermissionSets')
+      .values({
+        id: 'custom',
+        key: 'custom',
+        title: 'My role',
+        grants: JSON.stringify([
+          ...JSON.parse(String(readRole.grants)),
+          customGrant,
+        ]),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .execute();
+    await db
+      .query()
+      .insertInto('authorizationPermissionSetAssignments')
+      .values([
+        { id: 'old-assignment', permissionSetKey: 'evaluation-reader' },
+        { id: 'manager-assignment', permissionSetKey: 'evaluation-manager' },
+        { id: 'custom-assignment', permissionSetKey: 'custom' },
+      ])
+      .execute();
+    await retirePermissionSeed.run(context);
+    const rows = await db
+      .query()
+      .selectFrom('authorizationPermissionSets')
+      .selectAll()
+      .orderBy('key')
+      .execute();
+    expect(rows.map((row) => row.key)).toEqual([
+      'custom',
+      'evaluation-manager',
+    ]);
+    expect(JSON.parse(String(rows[0].grants))).toEqual([customGrant]);
+    expect(rows[0].title).toBe('My role');
+    const manager = JSON.parse(String(rows[1].grants));
+    expect(manager).toHaveLength(1);
+    expect(
+      manager[0].actions.map((action: { action: string }) => action.action),
+    ).toEqual(['manage']);
+    expect(
+      (
+        await db
+          .query()
+          .selectFrom('authorizationPermissionSetAssignments')
+          .select('id')
+          .orderBy('id')
+          .execute()
+      ).map((row) => row.id),
+    ).toEqual(['custom-assignment', 'manager-assignment']);
+    await retirePermissionSeed.run(context);
+    expect(
+      await db
+        .query()
+        .selectFrom('authorizationPermissionSets')
+        .selectAll()
+        .orderBy('key')
+        .execute(),
+    ).toEqual(rows);
   });
 });
