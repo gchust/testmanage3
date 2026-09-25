@@ -1,0 +1,99 @@
+{
+  "productionUrl": "https://test3.nfvd.net/main/progress/problems/187",
+  "deployment": {
+    "image": "testmanage3:report-preview-8243787",
+    "revision": "8243787f2d3fa5b09a153c96d66872643505e733",
+    "bundleSha256": "3a465dbb7f866ea0411c5fa70bf9b53143bb528c3d5786e838d5f80518941eae",
+    "backup": "/srv/testmanage3-backups/pre-report-preview-20260925T124640Z",
+    "deployedAt": "2026-09-25T12:46:48.695752+00:00",
+    "preservedCounts": {
+      "feature_points": 33,
+      "issues": 94,
+      "missing_items": 93,
+      "problem_comments": 0,
+      "problem_activities": 98,
+      "problem_images": 0
+    },
+    "imageId": "sha256:88b6d727d9390b9b03ac7069781d1c5a230b627b6c36515f81a4224414993a3b"
+  },
+  "browser": {
+    "summaryLineClamp": "2",
+    "listSourceVisible": true,
+    "inlineReportVisible": true,
+    "parentAccessBlocked": true,
+    "expandedReadingArea": true,
+    "originalHtmlUnchanged": true,
+    "mobileNoPageOverflow": true,
+    "englishDark": true,
+    "isolationProbe": {
+      "parentUntouched": true,
+      "externalRequests": 0,
+      "inlineStylePreserved": true
+    },
+    "errors": []
+  },
+  "isolation": {
+    "externalRequests": 0,
+    "parentAccessDenied": true,
+    "parentUntouched": true,
+    "stylesPreserved": true
+  },
+  "preDeploymentTrial": {
+    "receiptId": "fe20f948-6625-45d9-9b39-13a93a0d5c73",
+    "problemId": 187,
+    "singleProblem": true,
+    "bundleSha256": "e1f527ce40aca80a606d62079ca1e85c8fb7ede35a17a931f1550d95d511ceb1",
+    "htmlAttachmentSandbox": true,
+    "machineKeyIsolation": true
+  },
+  "cleanup": {
+    "verifiedAt": "2026-09-25T12:55:46.215010+00:00",
+    "signoutStatus": 200,
+    "revokedSessionStatus": 401,
+    "sessionFileRemoved": true,
+    "trialContainerRemoved": true,
+    "trialDirectoryRemoved": true,
+    "production": {
+      "image": "testmanage3:report-preview-8243787",
+      "status": "running",
+      "health": "healthy"
+    }
+  },
+  "checks": {
+    "testFilesPassed": 47,
+    "testsPassed": 345,
+    "typecheck": "passed",
+    "lint": "passed",
+    "i18n": "passed",
+    "productionBuild": "passed",
+    "buildTarget": "linux-x64",
+    "nodeMajor": 24
+  },
+  "factoryConfiguration": {
+    "repository": "gchust/nb3-factory",
+    "variables": {
+      "FACTORY_EVALUATION_DELIVERY": "true",
+      "EVALUATION_ENDPOINT": "https://test3.nfvd.net/main/api/evaluations/import",
+      "EVALUATION_AUTH_MODE": "x-api-key",
+      "EVALUATION_DELIVERY_FORMAT": "testmanage3-problems-v1"
+    },
+    "tokenSecretName": "EVALUATION_TOKEN",
+    "tokenConfigured": true
+  },
+  "sample": {
+    "problemId": 187,
+    "issueUrl": "https://github.com/gchust/nb3-factory/issues/320",
+    "prUrl": null,
+    "environmentUrl": null,
+    "delivery": "not-published",
+    "receiptId": "fe20f948-6625-45d9-9b39-13a93a0d5c73",
+    "htmlSha256": "cf0912f2870a8649274604a6fff7d170a91bb80c73226f861df43a697aff515b"
+  },
+  "screenshots": [
+    "report-preview-list-zh.png",
+    "report-preview-detail-zh.png",
+    "report-preview-mobile.png",
+    "report-preview-detail-en-dark.png"
+  ],
+  "newFactoryBuildOrEvaluationStarted": false
+}

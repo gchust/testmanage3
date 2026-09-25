@@ -89,6 +89,16 @@ On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and the cur
 
 Verify native credential/session isolation, anonymous/unpermitted access, reader write denial, row/field Repository policies, complete batch samples, source binding, unchanged manual data, concurrent duplicate reception and receipt persistence across restart. Use a real factory artifact with its actual `deliverBundle` sender, then dispatch GitHub delivery against the deployed service. Inspect both its stored receipt and the report page in light/dark themes and English/Chinese.
 
+## Inline report preview acceptance — 2026-09-25
+
+Deployed to 252 at 20:46 Singapore time using image `testmanage3:report-preview-8243787`, application revision `8243787f2d3fa5b09a153c96d66872643505e733`. The existing problem `187` now opens its full HTML report automatically in an isolated iframe, with an expandable reading area and optional downloads. The list uses a two-line summary; the detail page separates source links, description and report. Issue, code PR and PR preview environment links have distinct labels. This real sample has no published PR, so its PR and environment fields explicitly remain unavailable.
+
+Verified the factory's four delivery variables and the presence of `EVALUATION_TOKEN`; no further factory configuration is required. This acceptance reused the existing production report and did not trigger another factory build or evaluation. The prior GitHub delivery receipt remains unchanged.
+
+Production Chrome checks pass for Chinese/light, English/dark, mobile layout, inline report loading, enlarged reading, source links and the original HTML download. The downloaded HTML is byte-identical to the original. A browser-only hostile HTML probe confirms script and parent-page isolation, zero external requests and preserved inline styles. No page or unexpected HTTP errors occurred. The existing database row digests are unchanged, the container is healthy, and the temporary session was revoked (subsequent access returns 401). The isolated trial database and container were removed.
+
+All 47 test files / 345 tests, typecheck, lint, locale check and the Linux x64 / Node 24 production build pass. The rollback snapshot is `/srv/testmanage3-backups/pre-report-preview-20260925T124640Z`. Evidence: [verification record](verification/2026-09-25/report-preview.json), [problem list](verification/2026-09-25/report-preview-list-zh.png), [Chinese detail](verification/2026-09-25/report-preview-detail-zh.png), [mobile detail](verification/2026-09-25/report-preview-mobile.png), and [English dark detail](verification/2026-09-25/report-preview-detail-en-dark.png).
+
 ## Problem delivery acceptance — 2026-09-25
 
 Deployed to 252 at 20:14 Singapore time using image `testmanage3:factory-problems-178d782`, application revision `178d782c8602f7066623e893e4a6e02ff3352e35`. Factory PR `gchust/nb3-factory#334` is merged into `develop` as `b8f6701dd2dac1e69a4dc13e19ecf7e362fa3cb7`. The repository delivery format is `testmanage3-problems-v1`. No scheduled evaluation plans were enabled, and verification reused an existing report without another build or model call.
