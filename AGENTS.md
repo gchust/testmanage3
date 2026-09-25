@@ -355,6 +355,8 @@ GitHub Actions selects and submits problems; TestManage receives them in its exi
 
 The compatible protocol retains its deployed names: `server/providers/evaluations/`, `server/routes/evaluations.ts`, `/api/evaluations/import` and `evaluation-import`. Reuse native API Keys, Authorization, policy-bound Repositories, File Repository and Drive. Keep top-level receipts, source binding, immutable revisions, duplicate prevention and existing human edits. New imported problems are Uncategorized; staff classify them in the existing Problems page. See `docs/evaluation-integration.md`.
 
+New deliveries use `testmanage3-links-v1` JSON only. Validate consumed metadata in `document.ts`; keep producer scoring fields opaque and preserve the original JSON for replay comparisons. Do not reintroduce full evaluation schemas, code generation, ZIP uploads or archive writes. File Repository and Drive are read-only compatibility for already-stored archives.
+
 Already-deployed migrations and the original permission seed remain immutable. The old resource declaration in `permissions.ts` exists only for that seed; runtime registers only `factoryIntegrationResource`. The follow-up seed retires removed grants without replacing custom grants or integration-manager access. Historical review tables remain stored but have no registered UI/API. The receiver only reads old finding dispositions to prevent resurrecting dismissed problems, and never writes new review records. Downloads are available only through the authorized problem; never expose the archive File Repository access path publicly.
 
 ## Development logging

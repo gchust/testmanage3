@@ -15,13 +15,8 @@ import { Hono, type Context } from 'hono';
 import { RepositoryError } from '@nocobase/db';
 import { bodyLimit } from 'hono/body-limit';
 import { evaluationServiceToken } from '../providers/evaluations/index.js';
-import { parseProblemSubmission } from '../providers/evaluations/problems.js';
 import { parseLinkedReport } from '../providers/evaluations/report-links.js';
-import {
-  EvaluationError,
-  LIMITS,
-  verifyBundle,
-} from '../providers/evaluations/protocol.js';
+import { EvaluationError } from '../providers/evaluations/protocol.js';
 
 type Env = AuthEnv &
   AuthorizationEnv & {
@@ -68,12 +63,12 @@ function actor(c: Context<Env>): string {
 }
 async function boundedBody(
   request: Request,
-  maxSize = LIMITS.zip + 65536,
+  maxSize = 4 * 1024 ** 2,
 ): Promise<Buffer> {
   const reader = (
     request.body as ReadableStream<Uint8Array> | null
   )?.getReader();
-  if (!reader) return invalid('Missing bundle body.');
+  if (!reader) return invalid('Missing request body.');
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
@@ -138,87 +133,30 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
       if (!source) return c.json({ code: 'UNAUTHORIZED' }, 401);
       if (importing >= 4)
         return c.json({ code: 'BUSY' }, 429, { 'Retry-After': '5' });
-      const linked =
-        c.req.header('content-type')?.split(';')[0].trim() ===
-        'application/json';
       if (
-        !linked &&
-        !c.req.header('content-type')?.startsWith('multipart/form-data;')
+        c.req.header('content-type')?.split(';')[0].trim() !==
+        'application/json'
       )
-        return c.json({ code: 'INVALID_MULTIPART' }, 400);
+        return c.json(
+          {
+            code: 'UNSUPPORTED_MEDIA_TYPE',
+            message: 'Use testmanage3-links-v1 JSON delivery.',
+          },
+          415,
+        );
       importing++;
       try {
-        if (linked) {
-          const bytes = await boundedBody(c.req.raw, 4 * 1024 * 1024);
-          const input = parseLinkedReport(bytes, {
-            version: c.req.header('X-Evaluation-Schema-Version') ?? '',
-            type: c.req.header('X-Evaluation-Type') ?? '',
-            sha256: c.req.header('X-Evaluation-Bundle-SHA256') ?? '',
-            payloadSha256: c.req.header('X-Evaluation-Payload-SHA256') ?? '',
-            idempotencyKey: c.req.header('Idempotency-Key') ?? '',
-          });
-          const result = await service.importLinkedReport(source, input);
-          return c.json(result.receipt, result.duplicate ? 200 : 201);
-        }
         const bytes = await boundedBody(c.req.raw);
-        let form: FormData;
-        try {
-          form = await new Response(new Uint8Array(bytes), {
-            headers: { 'content-type': c.req.header('content-type')! },
-          }).formData();
-        } catch {
-          return c.json({ code: 'INVALID_MULTIPART' }, 400);
-        }
-        const entries = [...form.entries()];
-        if (
-          entries.length < 1 ||
-          entries.length > 2 ||
-          entries.some(([key]) => !['bundle', 'problems'].includes(key)) ||
-          form.getAll('bundle').length !== 1 ||
-          form.getAll('problems').length > 1 ||
-          typeof form.get('bundle') === 'string' ||
-          !form.get('bundle')
-        )
-          return c.json({ code: 'INVALID_MULTIPART' }, 400);
-        const file = form.get('bundle') as File;
-        if (file.type !== 'application/zip')
-          return c.json({ code: 'INVALID_MULTIPART' }, 400);
-        if (file.size > LIMITS.zip)
-          throw new EvaluationError('TOO_LARGE', 'Bundle exceeds 64 MiB.');
-        const zip = Buffer.from(await file.arrayBuffer());
-        const verified = verifyBundle(zip, {
-          sha256: c.req.header('X-Evaluation-Bundle-SHA256') ?? '',
-          idempotencyKey: c.req.header('Idempotency-Key') ?? '',
-          type: c.req.header('X-Evaluation-Type') ?? '',
+        const input = parseLinkedReport(bytes, {
           version: c.req.header('X-Evaluation-Schema-Version') ?? '',
+          type: c.req.header('X-Evaluation-Type') ?? '',
+          sha256: c.req.header('X-Evaluation-Bundle-SHA256') ?? '',
+          payloadSha256: c.req.header('X-Evaluation-Payload-SHA256') ?? '',
+          idempotencyKey: c.req.header('Idempotency-Key') ?? '',
         });
-        let problems;
-        const submission = form.get('problems');
-        if (submission !== null) {
-          if (
-            typeof submission !== 'string' ||
-            Buffer.byteLength(submission) > 1024 * 1024
-          )
-            return c.json({ code: 'INVALID_MULTIPART' }, 400);
-          let value: unknown;
-          try {
-            value = JSON.parse(submission);
-          } catch {
-            return c.json({ code: 'INVALID_INPUT' }, 400);
-          }
-          problems = parseProblemSubmission(value, verified.document);
-        }
-        const result = await service.importBundle(
-          source,
-          zip,
-          verified,
-          problems,
-        );
-        // The factory requires a top-level receipt, without the application's data envelope.
-        return new Response(JSON.stringify(result.receipt), {
-          status: result.duplicate ? 200 : 201,
-          headers: { 'content-type': 'application/json; charset=utf-8' },
-        });
+        const result = await service.importLinkedReport(source, input);
+        // Factory receipts are top-level, without the ordinary data envelope.
+        return c.json(result.receipt, result.duplicate ? 200 : 201);
       } finally {
         importing--;
       }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { parseLinkedReport } from './report-links.js';
-import type { EvaluationArchive } from './archive.js';
+import { readArchive, type EvaluationArchive } from './archive.js';
 import { setTimeout as pause } from 'node:timers/promises';
 import type {
   DatabaseManager,
@@ -10,25 +10,18 @@ import type {
   Row,
 } from '@nocobase/db';
 import type { ApiKeyService } from '@nocobase/app-plugin-api-keys/server';
-import type { EvaluationBundle } from './contracts/bundle.js';
-import type { EvaluationReceipt } from './contracts/receipt.js';
+import type { ArchiveManifest, EvaluationReceipt } from './document.js';
 import {
   EvaluationError,
   deliveryKey,
   hash,
   precedenceRank,
-  readArchive,
   subjectId,
   subjectOf,
   validateDocument,
-  verifyBundle,
   type EvaluationDocument,
 } from './protocol.js';
-import {
-  collectFactoryProblems,
-  recordProblemSubmission,
-  type SubmittedProblem,
-} from './problems.js';
+import { collectFactoryProblems, recordProblemSubmission } from './problems.js';
 
 export interface SourceBinding {
   id: string;
@@ -48,7 +41,6 @@ export interface StoredReport {
   files: string[];
   receivedAt: string;
 }
-type VerifiedBundle = ReturnType<typeof verifyBundle>;
 const notFound = (): never => {
   throw new EvaluationError('NOT_FOUND', 'Record not found.');
 };
@@ -79,7 +71,7 @@ function stored(row: Row): StoredReport {
     files:
       row.bundleFileId == null
         ? ['evaluation.json']
-        : (JSON.parse(String(row.manifest)) as EvaluationBundle).files.map(
+        : (JSON.parse(String(row.manifest)) as ArchiveManifest).files.map(
             (file) => file.path,
           ),
     receivedAt: new Date(String(row.receivedAt)).toISOString(),
@@ -222,43 +214,11 @@ export class EvaluationService {
     return owner ? binding(row) : null;
   }
 
-  async importBundle(
-    source: SourceBinding,
-    bytes: Buffer,
-    verified: VerifiedBundle,
-    problems?: SubmittedProblem[],
-  ): Promise<{ duplicate: boolean; receipt: EvaluationReceipt }> {
-    const { document, manifest, sha256 } = verified;
-    return this.importReport(
-      source,
-      { document, manifest, sha256, bytes, reportUrl: null },
-      problems,
-    );
-  }
-
   async importLinkedReport(
     source: SourceBinding,
     input: ReturnType<typeof parseLinkedReport>,
-  ) {
-    return this.importReport(
-      source,
-      { ...input, manifest: null, bytes: null },
-      input.problems,
-    );
-  }
-
-  private async importReport(
-    source: SourceBinding,
-    input: {
-      document: EvaluationDocument;
-      manifest: EvaluationBundle | null;
-      sha256: string;
-      bytes: Buffer | null;
-      reportUrl: string | null;
-    },
-    problems?: SubmittedProblem[],
   ): Promise<{ duplicate: boolean; receipt: EvaluationReceipt }> {
-    const { document, manifest, sha256, bytes, reportUrl } = input;
+    const { document, sha256, reportUrl, problems } = input;
     const subject = subjectOf(document);
     if (
       source.sourceInstance !== document.source.instance ||
@@ -268,23 +228,6 @@ export class EvaluationService {
         'FORBIDDEN',
         'Credential is not bound to this source and project.',
       );
-    const existingBytes = await this.database
-      .query()
-      .selectFrom('evaluationReports')
-      .select(['bundleSha256', 'bundleFileId'])
-      .where('idempotencyKey', '=', deliveryKey(subject))
-      .executeTakeFirst();
-    if (existingBytes && existingBytes.bundleSha256 !== sha256)
-      throw new EvaluationError(
-        'CONFLICT',
-        'This subject revision already contains different bytes.',
-      );
-    // Native File Repository durably writes its metadata and object before any receipt.
-    // A duplicate already owns an archive; only a new revision uploads a new object.
-    const bundleFileId =
-      !bytes || existingBytes?.bundleFileId
-        ? null
-        : await this.archive.store(bytes, sha256);
     const id = randomUUID(),
       rank = precedenceRank(document),
       subjectKey = subjectId(document);
@@ -298,16 +241,7 @@ export class EvaluationService {
         ? { runKey: subject.key }
         : { batchKey: subject.key }),
     };
-    const key =
-      'nb3-eval-v1-' +
-      hash(
-        [
-          subject.sourceInstance,
-          subject.type,
-          subject.key,
-          subject.revision,
-        ].join('\n'),
-      );
+    const key = deliveryKey(subject);
     // Database uniqueness is the lock. Retrying the whole transaction also covers
     // two workers racing to create a subject; no process-local idempotency cache.
     for (let attempt = 0; ; attempt++) {
@@ -327,13 +261,7 @@ export class EvaluationService {
             );
           const existing = await q
             .selectFrom('evaluationReports')
-            .select([
-              'bundleSha256',
-              'receipt',
-              'document',
-              'reportUrl',
-              'bundleFileId',
-            ])
+            .select(['bundleSha256', 'receipt', 'document', 'reportUrl'])
             .where('idempotencyKey', '=', key)
             .executeTakeFirst();
           if (existing) {
@@ -354,25 +282,18 @@ export class EvaluationService {
             const receipt = JSON.parse(
               String(existing.receipt),
             ) as EvaluationReceipt;
-            const archiveKept = !!bundleFileId && !existing.bundleFileId;
-            if (archiveKept || (reportUrl && !existing.reportUrl)) {
+            if (reportUrl && !existing.reportUrl) {
               await q
                 .updateTable('evaluationReports')
-                .set({
-                  ...(archiveKept
-                    ? { bundleFileId, manifest: JSON.stringify(manifest) }
-                    : {}),
-                  ...(reportUrl && !existing.reportUrl ? { reportUrl } : {}),
-                })
+                .set({ reportUrl })
                 .where('idempotencyKey', '=', key)
                 .execute();
             }
-            if (problems)
-              await recordProblemSubmission(
-                connection,
-                receipt.receiptId,
-                problems,
-              );
+            await recordProblemSubmission(
+              connection,
+              receipt.receiptId,
+              problems,
+            );
             const current = await q
               .selectFrom('evaluationSubjects')
               .select('currentReportId')
@@ -380,7 +301,6 @@ export class EvaluationService {
               .executeTakeFirst();
             if (
               document.type === 'evaluation-report' &&
-              problems &&
               current?.currentReportId === receipt.receiptId
             ) {
               await collectFactoryProblems(
@@ -393,7 +313,6 @@ export class EvaluationService {
             return {
               duplicate: true,
               receipt,
-              archiveKept,
             };
           }
           const now = new Date();
@@ -408,11 +327,11 @@ export class EvaluationService {
               revision: document.revision,
               idempotencyKey: key,
               bundleSha256: sha256,
-              bundleFileId,
+              bundleFileId: null,
               reportUrl,
               rank,
               document: JSON.stringify(document),
-              manifest: JSON.stringify(manifest),
+              manifest: JSON.stringify(null),
               receipt: JSON.stringify(receipt),
               receivedAt: now,
             })
@@ -444,20 +363,17 @@ export class EvaluationService {
               .execute();
           if (
             document.type === 'evaluation-report' &&
-            problems &&
             (!current || String(current.rank) < rank)
           ) {
             await collectFactoryProblems(connection, document, id, problems);
           }
-          if (problems) await recordProblemSubmission(connection, id, problems);
+          await recordProblemSubmission(connection, id, problems);
           await this.audit(connection, source.id, 'report.import', id, {
             bundleSha256: sha256,
             revision: document.revision,
           });
-          return { duplicate: false, receipt, archiveKept: !!bundleFileId };
+          return { duplicate: false, receipt };
         });
-        if (!result.archiveKept && bundleFileId)
-          await this.archive.discard(bundleFileId);
         return { duplicate: result.duplicate, receipt: result.receipt };
       } catch (error) {
         if (attempt >= 5 || !retryable(error)) throw error;

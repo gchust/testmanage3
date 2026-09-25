@@ -98,8 +98,7 @@
     "tw-animate-css": "^1.2.5",
     "typescript": "^6.0.3",
     "vite": "^6.3.5",
-    "vitest": "^4.1.10",
-    "zod": "^4.6.5"
+    "vitest": "^4.1.10"
   },
   "files": [
     ".prettierignore",
@@ -171,11 +170,10 @@
     "@nocobase/service-provider": "^0.0.2-beta.1",
     "@nocobase/snowflake": "^1.0.0-beta.3",
     "@oclif/core": "^4.14.0",
-    "ajv": "^8.20.0",
-    "ajv-formats": "^3.0.1",
     "better-auth": "^1.7.1",
     "cn": "^0.3.0",
-    "hono": "^4.13.2"
+    "hono": "^4.13.2",
+    "zod": "^4.6.5"
   },
   "scripts": {
     "dev": "tsx ./scripts/dev.mjs",

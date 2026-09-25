@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { DatabaseConnection } from '@nocobase/db';
-import type { EvaluationReport } from './contracts/report.js';
+import type { EvaluationReport } from './document.js';
 import { EvaluationError, type EvaluationDocument } from './protocol.js';
 
 export interface SubmittedProblem {

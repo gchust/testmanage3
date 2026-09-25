@@ -4,7 +4,7 @@ import {
   type FactoryProblemSource,
 } from './evaluations/problems.js';
 import { validateDocument } from './evaluations/protocol.js';
-import type { EvaluationBundle } from './evaluations/contracts/bundle.js';
+import type { ArchiveManifest } from './evaluations/document.js';
 import {
   databaseManagerToken,
   type DatabaseManager,
@@ -1292,7 +1292,7 @@ class DefaultTestProgressService implements TestProgressService {
               row.bundleFileId == null
                 ? ['evaluation.json']
                 : (
-                    JSON.parse(String(row.manifest)) as EvaluationBundle
+                    JSON.parse(String(row.manifest)) as ArchiveManifest
                   ).files.map((file) => file.path),
               typeof row.reportUrl === 'string' ? row.reportUrl : null,
               row.bundleFileId != null,

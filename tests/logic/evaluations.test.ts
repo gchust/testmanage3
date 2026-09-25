@@ -13,12 +13,12 @@ import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import type { Application } from '@nocobase/app-server/application';
 import { ServiceContainer } from '@nocobase/service-provider';
 import type { ApiKeyService } from '@nocobase/app-plugin-api-keys/server';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { crc32 } from 'node:zlib';
 import { Hono, type Context } from 'hono';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202609250001_create_evaluations.js';
 import issuesMigration from '../../database/main/migrations/202609210003_create_issues.js';
 import issueTypesMigration from '../../database/main/migrations/202609220001_add_issue_type_and_owner.js';
@@ -27,7 +27,6 @@ import factoryMigration from '../../database/main/migrations/202609250002_collec
 import linkMigration from '../../database/main/migrations/202609250003_reference_factory_reports.js';
 import { createTestProgressService } from '../../server/providers/test-progress.js';
 import {
-  parseProblemSubmission,
   factoryProblemSource,
   type SubmittedProblem,
 } from '../../server/providers/evaluations/problems.js';
@@ -38,14 +37,16 @@ import {
 import {
   deliveryKey,
   hash,
-  readArchive,
   subjectOf,
+  subjectId,
   validateDocument,
-  verifyBundle,
   precedenceRank,
   type EvaluationDocument,
 } from '../../server/providers/evaluations/protocol.js';
-import type { EvaluationReport } from '../../server/providers/evaluations/contracts/report.js';
+import type { EvaluationReport } from '../../server/providers/evaluations/document.js';
+import { readArchive } from '../../server/providers/evaluations/archive.js';
+import { parseLinkedReport } from '../../server/providers/evaluations/report-links.js';
+import reportFixture from '../fixtures/factory-report.json';
 import originalPermissionSeed from '../../database/main/seeds/202609250001_seed_evaluation_permissions.js';
 import retirePermissionSeed from '../../database/main/seeds/202609250002_retire_evaluation_permissions.js';
 import { evaluationRoutes } from '../../server/routes/evaluations.js';
@@ -68,50 +69,34 @@ const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jK9sAAAAASUVORK5CYII=',
   'base64',
 );
-async function fixture(name = 'report-completed'): Promise<EvaluationDocument> {
-  return validateDocument(
-    JSON.parse(
-      await readFile(
-        new URL('../fixtures/evaluations/' + name + '.json', import.meta.url),
-        'utf8',
-      ),
-    ),
-  );
+function report(): EvaluationReport {
+  return validateDocument(structuredClone(reportFixture)) as EvaluationReport;
 }
-async function report(name = 'report-completed'): Promise<EvaluationReport> {
-  const d = await fixture(name);
-  if (d.type !== 'evaluation-report')
-    throw new Error('Expected report fixture');
-  return d;
+function batch(): EvaluationDocument {
+  return {
+    schemaVersion: 1,
+    type: 'evaluation-batch',
+    revision: 1,
+    source: report().source,
+    batch: {
+      subjectKey: 'owner/factory/batches/nb3-daily-smoke-20260925',
+      sequence: 4,
+    },
+  };
 }
-
-/** Explicit producer payload for the fixture; the receiver does not infer these issues. */
+/** Problems are explicitly supplied by Actions; no local finding/QA selection. */
 function submittedProblems(d: EvaluationDocument): SubmittedProblem[] {
-  if (d.type !== 'evaluation-report') return [];
-  const finding = d.reviews
-    .filter((r) => r.selected)
-    .flatMap((r) => r.findings)
-    .find((f) => f.localId === 'F2' && f.reviewerStatus === 'open');
-  if (finding)
-    return [
-      {
-        key: hash('fixture-finding'),
-        title: finding.title,
-        description: finding.detail,
-        subjectKeys: finding.subjectKeys,
-        findingIds: [finding.id],
-      },
-    ];
-  return d.qa.criteria
-    .filter((c) => c.finalFull === 'failed')
-    .map((c) => ({
-      key: hash(c.id),
-      title: c.text,
-      description: c.text,
-      subjectKeys: [],
-      findingIds: [],
-      qaCriterionId: c.id,
-    }));
+  return d.type === 'evaluation-report'
+    ? [
+        {
+          key: hash('fixture-finding'),
+          title: 'Factory reported problem',
+          description: 'Steps and evidence',
+          subjectKeys: [],
+          findingIds: [d.reviews[0].findings[0].id],
+        },
+      ]
+    : [];
 }
 
 /** Minimal independent protocol writer; intentionally allows malformed names for negative tests. */
@@ -154,71 +139,27 @@ function zip(entries: Array<{ path: string; data: Buffer }>): Buffer {
   end.writeUInt32LE(offset, 16);
   return Buffer.concat([...local, directory, end]);
 }
-function packet(original: EvaluationDocument, html?: string) {
+function packet(original: EvaluationDocument) {
   const document = structuredClone(original);
-  const attachments: Array<{
-    path: string;
-    data: Buffer;
-    role: string;
-    mediaType: string;
-  }> = [];
-  if (document.type === 'evaluation-report')
-    for (const e of document.evidence)
-      if (e.availability === 'attached' && e.attachment) {
-        e.sha256 = hash(png);
-        if (!attachments.some((a) => a.path === e.attachment))
-          attachments.push({
-            path: e.attachment,
-            data: png,
-            role: 'evidence',
-            mediaType: 'image/png',
-          });
-      }
-  if (html)
-    attachments.push({
-      path: 'report.html',
-      data: Buffer.from(html),
-      role: 'report-html',
-      mediaType: 'text/html',
-    });
-  const files = [
-    {
-      path: 'evaluation.json',
-      data: Buffer.from(JSON.stringify(document)),
-      role: document.type,
-      mediaType: 'application/json',
-    },
-    ...attachments,
-  ];
-  const manifest = {
-    schemaVersion: 1,
-    type: 'evaluation-bundle',
-    subject: subjectOf(document),
-    files: files.map((f) => ({
-      path: f.path,
-      role: f.role,
-      mediaType: f.mediaType,
-      size: f.data.length,
-      sha256: hash(f.data),
-    })),
-  };
-  const bytes = zip([
-    ...files,
-    { path: 'manifest.json', data: Buffer.from(JSON.stringify(manifest)) },
-  ]);
   const headers = {
     version: '1',
     type: document.type,
-    sha256: hash(bytes),
+    sha256: hash(JSON.stringify(document)),
     idempotencyKey: deliveryKey(subjectOf(document)),
   };
-  return {
-    bytes,
-    headers,
-    document,
-    verified: () => verifyBundle(bytes, headers),
-  };
+  return { document, headers };
 }
+async function linkedInput(
+  p: ReturnType<typeof packet>,
+  problems = submittedProblems(p.document),
+) {
+  const request = linkedRequest(p, 'integration-secret', { problems });
+  return parseLinkedReport(Buffer.from(await request.arrayBuffer()), {
+    ...p.headers,
+    payloadSha256: request.headers.get('X-Evaluation-Payload-SHA256')!,
+  });
+}
+
 async function setup() {
   const root = await mkdtemp(path.join(tmpdir(), 'testmanage3-evaluations-'));
   cleanup.push(() => rm(root, { recursive: true, force: true }));
@@ -303,17 +244,90 @@ async function setup() {
     drive,
   );
   const service = new EvaluationService(db, archive, keys);
-  const save = async (document: EvaluationDocument) => {
-    const p = packet(document);
-    return service.importBundle(
+  const save = async (
+    document: EvaluationDocument,
+    problems = submittedProblems(document),
+  ) =>
+    service.importLinkedReport(
       source,
-      p.bytes,
-      p.verified(),
-      submittedProblems(document),
+      await linkedInput(packet(document), problems),
     );
+  // Historical files are fixture data, not a still-supported upload API.
+  const legacy = async (document: EvaluationDocument) => {
+    const p = packet(document);
+    const entries = [
+      { path: 'evaluation.json', data: Buffer.from(JSON.stringify(document)) },
+      {
+        path: 'report.html',
+        data: Buffer.from('<html>Original archived report</html>'),
+      },
+    ];
+    const bytes = zip(entries);
+    p.headers.sha256 = hash(bytes);
+    const id = 'historical-receipt';
+    const receipt = {
+      receiptId: id,
+      sourceInstance: source.sourceInstance,
+      runKey: subjectOf(document).key,
+      revision: document.revision,
+      bundleSha256: hash(bytes),
+      state: 'stored',
+    };
+    const files = new ServerFileRepositoryManager(db, drive).repository(
+      'evaluationBundleFiles',
+      {
+        connection: 'main',
+        disk: 'local',
+        accessPath: '/evaluations/archive',
+        policy: { read: true, create: true, update: false, delete: false },
+      },
+    );
+    const { record } = await files.uploadOne({
+      file: new File([new Uint8Array(bytes)], 'legacy.zip', {
+        type: 'application/zip',
+      }),
+    });
+    await db
+      .query()
+      .insertInto('evaluationReports')
+      .values({
+        id,
+        sourceInstance: source.sourceInstance,
+        project: source.project,
+        type: document.type,
+        subjectKey: subjectOf(document).key,
+        revision: document.revision,
+        idempotencyKey: p.headers.idempotencyKey,
+        bundleSha256: hash(bytes),
+        bundleFileId: record.id,
+        reportUrl: null,
+        rank: precedenceRank(document),
+        document: JSON.stringify(document),
+        manifest: JSON.stringify({
+          files: entries.map(({ path }) => ({ path })),
+        }),
+        receipt: JSON.stringify(receipt),
+        receivedAt: new Date(),
+      })
+      .execute();
+    await db
+      .query()
+      .insertInto('evaluationSubjects')
+      .values({
+        id: subjectId(document),
+        sourceInstance: source.sourceInstance,
+        type: document.type,
+        subjectKey: subjectOf(document).key,
+        currentReportId: id,
+        rank: precedenceRank(document),
+        updatedAt: new Date(),
+      })
+      .execute();
+    return { p, bytes, receipt };
   };
-  return { db, service, save, context, root, archive };
+  return { db, service, save, context, root, archive, legacy };
 }
+
 async function router(service: EvaluationService) {
   const container = new ServiceContainer();
   container.instance(evaluationServiceToken, service);
@@ -365,45 +379,7 @@ async function router(service: EvaluationService) {
   >);
   return evaluationRoutes.createRouter({ container } as Application);
 }
-function request(
-  p: ReturnType<typeof packet>,
-  credential = 'integration-secret',
-  problems?: unknown,
-): Request {
-  const body = new FormData();
-  if (problems !== undefined) body.set('problems', JSON.stringify(problems));
-  body.set(
-    'bundle',
-    new Blob([new Uint8Array(p.bytes)], { type: 'application/zip' }),
-    'evaluation-bundle.zip',
-  );
-  return new Request('http://localhost/evaluations/import', {
-    method: 'POST',
-    body,
-    headers: {
-      'x-api-key': credential,
-      'X-Evaluation-Schema-Version': p.headers.version,
-      'X-Evaluation-Type': p.headers.type,
-      'X-Evaluation-Bundle-SHA256': p.headers.sha256,
-      'Idempotency-Key': p.headers.idempotencyKey,
-    },
-  });
-}
-
-describe('evaluation protocol', () => {
-  it.each([
-    'report-completed',
-    'report-failed',
-    'report-blocked',
-    'report-partial-handoff',
-    'report-legacy-v1-with-v2',
-    'report-late-older',
-    'batch-in-progress',
-  ])('accepts pinned %s contract', async (name) => {
-    expect(packet(await fixture(name)).verified().document.type).toMatch(
-      /^evaluation-/,
-    );
-  });
+describe('legacy archive reading', () => {
   it.each([
     '../outside',
     '/evaluation.json',
@@ -437,25 +413,9 @@ describe('evaluation protocol', () => {
     }
     for (const bytes of bad) expect(() => readArchive(bytes)).toThrow();
   });
-  it('rejects wrong request digest, identity, type and unsupported schema', async () => {
-    const p = packet(await report());
-    for (const delta of [
-      { sha256: 'f'.repeat(64) },
-      { idempotencyKey: 'wrong' },
-      { version: '2' },
-      { type: 'evaluation-batch' },
-    ])
-      expect(() => verifyBundle(p.bytes, { ...p.headers, ...delta })).toThrow();
-  });
-  it('rejects unsupported document properties and dangling evidence', async () => {
-    const d = await report();
-    expect(() => validateDocument({ ...d, invented: true })).toThrow();
-    d.reviews[0].findings[0].evidence.push('review/missing');
-    expect(() => packet(d).verified()).toThrow();
-  });
 });
 
-describe('durable evaluation reception', () => {
+describe('factory problem reception', () => {
   it('keeps source Issue, code PR and known factory preview URLs distinct', async () => {
     const d = await report();
     expect(factoryProblemSource('id', d, []).environmentUrl).toBeNull();
@@ -470,49 +430,29 @@ describe('durable evaluation reception', () => {
     expect(factoryProblemSource('id', d, []).environmentUrl).toBeNull();
   });
 
-  it('collects unresolved findings into the ordinary problem list with full reports and source links', async () => {
-    const { service, db } = await setup();
-    const d = await report();
-    const p = packet(d, '<html>Full original report</html>');
-    const received = await service.importBundle(
-      source,
-      p.bytes,
-      p.verified(),
-      submittedProblems(d),
-    );
-    const rows = await db
-      .query()
-      .selectFrom('issues')
-      .selectAll()
-      .where('type', '=', 'automation')
-      .execute();
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({
-      title: d.reviews[0].findings[1].title,
+  it('collects submitted problems into the ordinary list with source and report links', async () => {
+    const { save, db } = await setup();
+    const d = report();
+    const received = await save(d);
+    const tracker = createTestProgressService(db);
+    const [problem] = await tracker.listProblems({ type: 'automation' });
+    expect(problem).toMatchObject({
+      title: submittedProblems(d)[0].title,
       featurePointId: null,
       status: 'pending',
-      factoryReportId: received.receipt.receiptId,
     });
-    const tracker = createTestProgressService(db);
-    const problem = await tracker.getProblem(Number(rows[0].id));
     expect(problem.factorySource).toMatchObject({
       issueUrl: 'https://github.com/owner/factory/issues/146',
       pullRequestUrl: 'https://github.com/owner/factory/pull/150',
       reportId: received.receipt.receiptId,
+      hasArchive: false,
     });
-    expect(problem.factorySource?.files).toContain('report.html');
-    expect(
-      (await tracker.listProblems({ type: 'automation' }))[0].factorySource,
-    ).toEqual(problem.factorySource);
-    expect(
-      (await tracker.listProblems({ type: 'automation' }))[0].featurePointId,
-    ).toBeNull();
+    expect((await tracker.getProblem(problem.id)).factorySource).toEqual(
+      problem.factorySource,
+    );
     expect(await tracker.listProblemActivities(problem.id)).toEqual([
       expect.objectContaining({ actorName: 'GitHub Actions', kind: 'created' }),
     ]);
-    expect(
-      await db.query().selectFrom('evaluationFindings').selectAll().execute(),
-    ).toEqual([]);
   });
 
   it('deduplicates deliveries and reassessments without overwriting human edits', async () => {
@@ -539,7 +479,7 @@ describe('durable evaluation reception', () => {
     expect((await save(d)).duplicate).toBe(true);
     d.revision++;
     d.precedence.producer.runId++;
-    d.reviews[0].findings[1].id += '-reassessment';
+    d.reviews[0].findings[0].id += '-reassessment';
     const next = await save(d);
     const rows = await db
       .query()
@@ -627,63 +567,31 @@ describe('durable evaluation reception', () => {
     ).toEqual(before);
   });
 
-  it('leaves new problems uncategorized without running a module mapping workflow', async () => {
+  it('accepts explicit QA references and creates no problems from an empty submission', async () => {
     const { save, db } = await setup();
-    await save(await report());
-    const row = await db
-      .query()
-      .selectFrom('issues')
-      .selectAll()
-      .where('type', '=', 'automation')
-      .executeTakeFirstOrThrow();
-    expect(row.featurePointId).toBeNull();
+    const d = report();
+    await save(d, []);
     expect(
-      await db.query().selectFrom('evaluationMappings').selectAll().execute(),
+      await createTestProgressService(db).listProblems({ type: 'automation' }),
     ).toEqual([]);
+    d.revision++;
+    await save(d, [
+      {
+        ...submittedProblems(d)[0],
+        findingIds: [],
+        qaCriterionId: d.qa.criteria[0].id,
+      },
+    ]);
+    expect(
+      await createTestProgressService(db).listProblems({ type: 'automation' }),
+    ).toHaveLength(1);
   });
 
-  it('collects final failed QA checks without inventing problems for unknown or repaired checks', async () => {
-    const { save, db } = await setup();
-    const d = await report();
-    d.reviews[0].findings = [];
-    d.qa.criteria[0].finalFull = 'failed';
-    d.qa.criteria[1].finalFull = 'unknown';
-    d.outcome.pullRequest = null;
-    await save(d);
-    const rows = await db
-      .query()
-      .selectFrom('issues')
-      .selectAll()
-      .where('type', '=', 'automation')
-      .execute();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].title).toBe(d.qa.criteria[0].text);
-    expect(
-      (await createTestProgressService(db).getProblem(Number(rows[0].id)))
-        .factorySource?.pullRequestUrl,
-    ).toBeNull();
-    await db
-      .query()
-      .deleteFrom('issues')
-      .where('id', '=', Number(rows[0].id))
-      .execute();
-    await save(d);
-    expect(
-      await db
-        .query()
-        .selectFrom('issues')
-        .selectAll()
-        .where('type', '=', 'automation')
-        .execute(),
-    ).toHaveLength(0);
-  });
-
-  it('does not create problems from superseded reports or non-selected reviews', async () => {
+  it('does not create problems from superseded reports', async () => {
     const { save, db } = await setup();
     const current = await report();
     current.precedence.producer.runId += 10;
-    current.reviews[0].selected = false;
-    await save(current);
+    await save(current, []);
     const old = await report();
     old.revision = 2;
     await save(old);
@@ -736,12 +644,12 @@ describe('durable evaluation reception', () => {
     ).toHaveLength(2);
   });
 
-  it('keeps one persistent receipt for concurrent retries and rejects same-key changed bytes', async () => {
-    const { service, db, archive } = await setup(),
-      p = packet(await report());
+  it('keeps one persistent receipt for concurrent retries and rejects same-key changed data', async () => {
+    const { service, db, archive } = await setup();
+    const input = await linkedInput(packet(report()));
     const results = await Promise.all(
       Array.from({ length: 8 }, () =>
-        service.importBundle(source, p.bytes, p.verified()),
+        service.importLinkedReport(source, input),
       ),
     );
     expect(results.filter((r) => !r.duplicate)).toHaveLength(1);
@@ -750,31 +658,25 @@ describe('durable evaluation reception', () => {
       await db
         .query()
         .selectFrom('evaluationBundleFiles')
-        .select('id')
+        .selectAll()
         .execute(),
-    ).toHaveLength(1);
+    ).toEqual([]);
     const restart = new EvaluationService(db, archive);
-    expect(
-      (await restart.importBundle(source, p.bytes, p.verified())).receipt,
-    ).toEqual(results[0].receipt);
-    const changed = packet({
-      ...p.document,
-      createdAt: '2026-09-25T09:00:00Z',
-    });
+    expect((await restart.importLinkedReport(source, input)).receipt).toEqual(
+      results[0].receipt,
+    );
     await expect(
-      service.importBundle(source, changed.bytes, changed.verified()),
+      service.importLinkedReport(source, { ...input, sha256: 'f'.repeat(64) }),
     ).rejects.toMatchObject({ code: 'CONFLICT' });
-    expect(
-      hash(
-        (await service.attachment(results[0].receipt.receiptId, 'bundle.zip'))
-          .bytes,
-      ),
-    ).toBe(p.headers.sha256);
   });
+
   it('never lets a larger late revision replace the current problem report', async () => {
     const { save, db } = await setup();
     const best = await save(await report());
-    await save(await report('report-late-older'));
+    const late = report();
+    late.revision = 99;
+    late.precedence.producer.runId--;
+    await save(late);
     const current = await db
       .query()
       .selectFrom('evaluationSubjects')
@@ -797,10 +699,9 @@ describe('durable evaluation reception', () => {
     const { service, db } = await setup(),
       p = packet(await report());
     await expect(
-      service.importBundle(
+      service.importLinkedReport(
         { ...source, project: 'other/repo' },
-        p.bytes,
-        p.verified(),
+        await linkedInput(p),
       ),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(await service.authenticate('integration-secret')).not.toBeNull();
@@ -819,7 +720,7 @@ describe('durable evaluation reception', () => {
       .where('id', '=', source.id)
       .execute();
     await expect(
-      service.importBundle(source, p.bytes, p.verified()),
+      service.importLinkedReport(source, await linkedInput(p)),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
   it('preserves manual scores and existing issues without creating review or regression records', async () => {
@@ -890,14 +791,14 @@ describe('durable evaluation reception', () => {
 
   it('accepts compatible batch metadata without producing problems or a batch dashboard', async () => {
     const { service, save, db } = await setup();
-    const batch = await fixture('batch-in-progress');
-    const { receipt } = await save(batch);
+    const document = batch();
+    const { receipt } = await save(document);
     expect(receipt.batchKey).toBe(
       'owner/factory/batches/nb3-daily-smoke-20260925',
     );
     expect(receipt.runKey).toBeUndefined();
     expect((await service.getReport(receipt.receiptId)).document).toEqual(
-      batch,
+      document,
     );
     expect(
       await db
@@ -923,71 +824,49 @@ describe('durable evaluation reception', () => {
 });
 
 describe('evaluation HTTP boundary', () => {
-  it('creates issues only from an explicit factory submission and binds retries to that payload', async () => {
-    const { service, db } = await setup(),
-      app = await router(service),
-      d = await report(),
-      p = packet(d);
-    expect((await app.fetch(request(p))).status).toBe(201);
-    expect(
-      await db
-        .query()
-        .selectFrom('issues')
-        .selectAll()
-        .where('type', '=', 'automation')
-        .execute(),
-    ).toHaveLength(0);
-    const submission = { version: 1, problems: submittedProblems(d) };
-    expect(parseProblemSubmission(submission, d)).toEqual(submission.problems);
-    expect((await app.fetch(request(p, 'wrong', submission))).status).toBe(401);
-    expect(
-      (await app.fetch(request(p, 'integration-secret', submission))).status,
-    ).toBe(200);
-    expect(
-      (await app.fetch(request(p, 'integration-secret', submission))).status,
-    ).toBe(200);
-    expect(
-      await db
-        .query()
-        .selectFrom('issues')
-        .selectAll()
-        .where('type', '=', 'automation')
-        .execute(),
-    ).toHaveLength(1);
-    const invalid = structuredClone(submission);
-    invalid.problems[0].findingIds = ['unknown/finding'];
-    expect(
-      (await app.fetch(request(p, 'integration-secret', invalid))).status,
-    ).toBe(400);
-    const changed = structuredClone(submission);
-    changed.problems[0].title = 'Different issue payload';
-    expect(
-      (await app.fetch(request(p, 'integration-secret', changed))).status,
-    ).toBe(409);
-  });
-  it('uses real multipart requests and returns unwrapped 201/200/409 receipts', async () => {
+  it('rejects changed problem payloads and missing evidence references', async () => {
     const { service } = await setup(),
       app = await router(service),
-      p = packet(await report());
-    const first = await app.fetch(request(p));
-    expect(first.status).toBe(201);
-    const receipt = await first.json();
-    expect(receipt).toHaveProperty('receiptId');
-    expect(receipt).not.toHaveProperty('data');
-    const repeat = await app.fetch(request(p));
-    expect(repeat.status).toBe(200);
-    expect(await repeat.json()).toEqual(receipt);
-    const changed = packet({
-      ...p.document,
-      createdAt: '2026-09-25T11:00:00Z',
-    });
-    expect((await app.fetch(request(changed))).status).toBe(409);
+      p = packet(report());
+    expect((await app.fetch(linkedRequest(p))).status).toBe(201);
+    const problems = submittedProblems(p.document);
+    problems[0].title = 'Changed payload';
+    expect(
+      (await app.fetch(linkedRequest(p, 'integration-secret', { problems })))
+        .status,
+    ).toBe(409);
+    problems[0].findingIds = ['unknown/finding'];
+    expect(
+      (await app.fetch(linkedRequest(p, 'integration-secret', { problems })))
+        .status,
+    ).toBe(400);
   });
+
+  it('rejects retired ZIP uploads with a clear format error', async () => {
+    const { service } = await setup(),
+      app = await router(service);
+    const body = new FormData();
+    body.set(
+      'bundle',
+      new Blob(['zip'], { type: 'application/zip' }),
+      'report.zip',
+    );
+    const response = await app.request('/evaluations/import', {
+      method: 'POST',
+      body,
+      headers: { 'x-api-key': 'integration-secret' },
+    });
+    expect(response.status).toBe(415);
+    expect(await response.json()).toMatchObject({
+      code: 'UNSUPPORTED_MEDIA_TYPE',
+    });
+  });
+
   it('limits credential management to permitted users without leaking middleware to other paths', async () => {
     const { service } = await setup(),
       app = await router(service),
       p = packet(await report());
-    expect((await app.fetch(request(p, 'wrong'))).status).toBe(401);
+    expect((await app.fetch(linkedRequest(p, 'wrong'))).status).toBe(401);
     expect((await app.request('/evaluations/sources')).status).toBe(401);
     for (const user of ['member', 'reader']) {
       expect(
@@ -1054,7 +933,7 @@ it('uses producer chronology rather than revision numbers when choosing the curr
   const left = await report(),
     right = structuredClone(left);
   right.revision = 99;
-  right.precedence.review.at = '2020-01-01T00:00:00Z';
+  right.precedence.review!.at = '2020-01-01T00:00:00Z';
   expect(precedenceRank(left) > precedenceRank(right)).toBe(true);
 });
 
@@ -1097,9 +976,131 @@ function linkedRequest(
 }
 
 describe('linked report delivery', () => {
+  it('validates consumed metadata while preserving opaque producer details', async () => {
+    const d = report();
+    d.scores = { futureRubric: { data: ['owned by the producer'] } };
+    expect(validateDocument(d)).toBe(d);
+    const input = await linkedInput(packet(d));
+    expect(input.document).toEqual(d);
+    for (const document of [
+      { ...d, schemaVersion: 2 },
+      { ...d, revision: 0 },
+      { ...d, source: { ...d.source, instance: 'bad/repo/extra' } },
+      { ...d, run: { ...d.run, key: 'invalid\nkey' } },
+      { ...d, precedence: { ...d.precedence, reviewState: 'invented' } },
+      {
+        ...d,
+        precedence: {
+          ...d.precedence,
+          producer: {
+            ...d.precedence.producer,
+            runId: Number.MAX_SAFE_INTEGER + 1,
+          },
+        },
+      },
+      { ...d, reviews: [{ findings: [{ id: 5 }] }] },
+      { ...d, qa: { criteria: null } },
+    ])
+      expect(() => validateDocument(document)).toThrow();
+  });
+
+  it('rejects missing identities, mismatched headers, malformed and oversized JSON', async () => {
+    const { service, db } = await setup(),
+      app = await router(service),
+      p = packet(report());
+    for (const headers of [
+      { 'Idempotency-Key': 'wrong' },
+      { 'X-Evaluation-Schema-Version': '2' },
+      { 'X-Evaluation-Type': 'evaluation-batch' },
+      { 'X-Evaluation-Bundle-SHA256': 'bad' },
+    ])
+      expect(
+        (await app.fetch(linkedRequest(p, 'integration-secret', {}, headers)))
+          .status,
+      ).toBe(400);
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(
+            p,
+            'integration-secret',
+            {},
+            { authorization: 'Bearer integration-secret' },
+          ),
+        )
+      ).status,
+    ).toBe(401);
+    for (const [body, status] of [
+      ['{invalid', 400],
+      ['x'.repeat(4 * 1024 ** 2 + 1), 413],
+    ] as const) {
+      const original = linkedRequest(p);
+      expect(
+        (
+          await app.request('/evaluations/import', {
+            method: 'POST',
+            headers: original.headers,
+            body,
+          })
+        ).status,
+      ).toBe(status);
+    }
+    for (const patch of [
+      { problems: null },
+      { unexpected: true },
+      { document: { type: 'evaluation-report' } },
+    ]) {
+      expect(
+        (await app.fetch(linkedRequest(p, 'integration-secret', patch))).status,
+      ).toBeGreaterThanOrEqual(400);
+    }
+    expect(
+      await db.query().selectFrom('evaluationReports').selectAll().execute(),
+    ).toEqual([]);
+  });
+
+  it('rejects unsafe report paths and duplicate or invalid problem references', async () => {
+    const { service } = await setup(),
+      app = await router(service),
+      d = report();
+    for (const path of [
+      'reports/../outside.html',
+      'reports/%2e%2e/out.html',
+      'reports/file.html?query',
+      'https://other.test/file',
+    ]) {
+      const changed = structuredClone(d);
+      changed.links[0].path = path;
+      expect((await app.fetch(linkedRequest(packet(changed)))).status).toBe(
+        400,
+      );
+    }
+    const problems = submittedProblems(d);
+    for (const invalid of [
+      [...problems, ...problems],
+      [{ ...problems[0], key: 'bad' }],
+      [{ ...problems[0], findingIds: [], qaCriterionId: 'missing' }],
+    ])
+      expect(
+        (
+          await app.fetch(
+            linkedRequest(packet(d), 'integration-secret', {
+              problems: invalid,
+            }),
+          )
+        ).status,
+      ).toBe(400);
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(packet(batch()), 'integration-secret', { problems }),
+        )
+      ).status,
+    ).toBe(400);
+  });
+
   it('stores JSON metadata and problems with one receipt and no uploaded file', async () => {
-    const { service, db, archive } = await setup();
-    const store = vi.spyOn(archive, 'store');
+    const { service, db } = await setup();
     const app = await router(service),
       p = packet(await report());
     const first = await app.fetch(linkedRequest(p));
@@ -1108,7 +1109,13 @@ describe('linked report delivery', () => {
     const repeat = await app.fetch(linkedRequest(p));
     expect(repeat.status).toBe(200);
     expect(await repeat.json()).toEqual(receipt);
-    expect(store).not.toHaveBeenCalled();
+    expect(
+      await db
+        .query()
+        .selectFrom('evaluationBundleFiles')
+        .selectAll()
+        .execute(),
+    ).toEqual([]);
     const saved = await service.getReport(receipt.receiptId);
     expect(saved.bundleFileId).toBeNull();
     expect(saved.files).toEqual(['evaluation.json']);
@@ -1155,36 +1162,27 @@ describe('linked report delivery', () => {
     ).toBe(409);
   });
 
-  it('keeps the same receipt and problem when transitioning between archive and link formats', async () => {
-    for (const linkFirst of [true, false]) {
-      const { service, db } = await setup(),
-        app = await router(service),
-        p = packet(await report());
-      const multipart = () =>
-        request(p, 'integration-secret', {
-          version: 1,
-          problems: submittedProblems(p.document),
-        });
-      const first = await app.fetch(linkFirst ? linkedRequest(p) : multipart());
-      expect(first.status).toBe(201);
-      const receipt = (await first.json()) as { receiptId: string };
-      const second = await app.fetch(
-        linkFirst ? multipart() : linkedRequest(p),
-      );
-      expect(second.status).toBe(200);
-      expect(await second.json()).toEqual(receipt);
-      expect(
-        await createTestProgressService(db).listProblems({
-          type: 'automation',
-        }),
-      ).toHaveLength(1);
-      expect(
-        (await service.attachment(receipt.receiptId, 'bundle.zip')).bytes,
-      ).toEqual(p.bytes);
-      expect(
-        (await service.getReport(receipt.receiptId)).reportUrl,
-      ).toBeTruthy();
+  it('replays historical archives through link delivery without losing files or changing receipts', async () => {
+    const { service, db, legacy } = await setup(),
+      app = await router(service);
+    const { p, bytes, receipt } = await legacy(report());
+    for (let retry = 0; retry < 2; retry++) {
+      const response = await app.fetch(linkedRequest(p));
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(receipt);
     }
+    expect(
+      await createTestProgressService(db).listProblems({ type: 'automation' }),
+    ).toHaveLength(1);
+    expect(
+      (await service.attachment(receipt.receiptId, 'bundle.zip')).bytes,
+    ).toEqual(bytes);
+    expect(
+      (
+        await service.attachment(receipt.receiptId, 'report.html')
+      ).bytes.toString(),
+    ).toContain('Original archived report');
+    expect((await service.getReport(receipt.receiptId)).reportUrl).toBeTruthy();
   });
 
   it('rejects invalid credentials, unbound sources, altered payloads and unrelated report URLs', async () => {
@@ -1227,14 +1225,14 @@ describe('linked report delivery', () => {
   it('retains batch metadata without inventing a batch HTML link', async () => {
     const { service } = await setup(),
       app = await router(service);
-    const p = packet(await fixture('batch-in-progress'));
+    const p = packet(batch());
     expect((await app.fetch(linkedRequest(p))).status).toBe(201);
   });
 
   it('migrates existing archives reversibly and refuses to discard link-only records', async () => {
-    const { service, context, db, save } = await setup();
+    const { service, context, db, legacy } = await setup();
     const d = await report();
-    await save(d);
+    await legacy(d);
     await linkMigration.down!(context);
     await linkMigration.up(context);
     expect(
