@@ -83,10 +83,12 @@ export function Choice({
 }
 export function Download({
   reportId,
+  problemId,
   file,
   children,
 }: {
   reportId: string;
+  problemId?: number;
   file: string;
   children: ReactNode;
 }) {
@@ -95,7 +97,10 @@ export function Download({
   async function download() {
     try {
       const stream = await api.stream({
-        path: 'evaluations/reports/' + encodeURIComponent(reportId) + '/file',
+        path:
+          problemId === undefined
+            ? 'evaluations/reports/' + encodeURIComponent(reportId) + '/file'
+            : 'test-progress/problems/' + problemId + '/report',
         query: { path: file },
       });
       const blob = await new Response(stream).blob();

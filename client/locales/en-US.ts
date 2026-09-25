@@ -1,7 +1,7 @@
 import type { LocaleResource } from '@nocobase/i18n';
 
 const enUS = {
-  'evaluations.title': 'Automated evaluations',
+  'evaluations.title': 'Factory report archive',
   'evaluations.description':
     'Factory evidence, module reviews and regression tracking. Machine scores stay separate from human scores.',
   'evaluations.reports': 'Runs',
@@ -421,6 +421,13 @@ const enUS = {
     fieldExampleCurrent: 'Current example state',
     fieldRemark: 'Remark',
     fieldFeaturePoint: 'Feature point',
+    uncategorized: 'Uncategorized',
+    factorySourceTitle: 'GitHub Actions · report and source',
+    factoryIssue: 'GitHub Issue',
+    factoryPullRequest: 'GitHub PR',
+    factoryNoPullRequest: 'No PR recorded',
+    factoryRun: 'Actions run',
+    factoryReport: 'Full report',
     selectPlaceholder: 'Select…',
     scorePlaceholder: '0–10',
     notePlaceholder: 'Notes',

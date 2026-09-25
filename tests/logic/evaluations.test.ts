@@ -20,6 +20,15 @@ import { crc32 } from 'node:zlib';
 import { Hono, type Context } from 'hono';
 import { afterEach, describe, expect, it } from 'vitest';
 import migration from '../../database/main/migrations/202609250001_create_evaluations.js';
+import issuesMigration from '../../database/main/migrations/202609210003_create_issues.js';
+import issueTypesMigration from '../../database/main/migrations/202609220001_add_issue_type_and_owner.js';
+import activityMigration from '../../database/main/migrations/202609220003_create_problem_activities.js';
+import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
+import { createTestProgressService } from '../../server/providers/test-progress.js';
+import {
+  parseProblemSubmission,
+  type SubmittedProblem,
+} from '../../server/providers/evaluations/problems.js';
 import {
   EvaluationService,
   occurrenceId,
@@ -72,6 +81,35 @@ async function report(name = 'report-completed'): Promise<EvaluationReport> {
   if (d.type !== 'evaluation-report')
     throw new Error('Expected report fixture');
   return d;
+}
+
+/** Explicit producer payload for the fixture; the receiver does not infer these issues. */
+function submittedProblems(d: EvaluationDocument): SubmittedProblem[] {
+  if (d.type !== 'evaluation-report') return [];
+  const finding = d.reviews
+    .filter((r) => r.selected)
+    .flatMap((r) => r.findings)
+    .find((f) => f.localId === 'F2' && f.reviewerStatus === 'open');
+  if (finding)
+    return [
+      {
+        key: hash('fixture-finding'),
+        title: finding.title,
+        description: finding.detail,
+        subjectKeys: finding.subjectKeys,
+        findingIds: [finding.id],
+      },
+    ];
+  return d.qa.criteria
+    .filter((c) => c.finalFull === 'failed')
+    .map((c) => ({
+      key: hash(c.id),
+      title: c.text,
+      description: c.text,
+      subjectKeys: [],
+      findingIds: [],
+      qaCriterionId: c.id,
+    }));
 }
 
 /** Minimal independent protocol writer; intentionally allows malformed names for negative tests. */
@@ -197,6 +235,9 @@ async function setup() {
     c.string('id', { primaryKey: true });
     c.datetime('disabledAt');
     c.datetime('deletedAt');
+    c.string('name');
+    c.string('username');
+    c.string('email');
   });
   await db.builder().createCollection('featurePoints', (c) => {
     c.increments('id');
@@ -204,12 +245,13 @@ async function setup() {
     c.string('name');
     c.integer('designScore');
   });
-  await db.builder().createCollection('issues', (c) => {
-    c.increments('id');
-    c.string('title');
-    c.string('status');
-    c.string('owner');
+  await issuesMigration.up(context);
+  await issueTypesMigration.up(context);
+  await activityMigration.up(context);
+  await db.builder().alterCollection('issues', (c) => {
+    c.string('ownerId');
   });
+  await factoryMigration.up(context);
   await db.query().insertInto('user').values({ id: 'admin' }).execute();
   await db
     .query()
@@ -229,6 +271,9 @@ async function setup() {
       title: 'Existing problem',
       status: 'fixing',
       owner: 'Human',
+      featurePointId: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     })
     .execute();
   await db
@@ -257,7 +302,12 @@ async function setup() {
   const service = new EvaluationService(db, archive, keys);
   const save = async (document: EvaluationDocument) => {
     const p = packet(document);
-    return service.importBundle(source, p.bytes, p.verified());
+    return service.importBundle(
+      source,
+      p.bytes,
+      p.verified(),
+      submittedProblems(document),
+    );
   };
   return { db, service, save, context, root, archive };
 }
@@ -315,8 +365,10 @@ async function router(service: EvaluationService) {
 function request(
   p: ReturnType<typeof packet>,
   credential = 'integration-secret',
+  problems?: unknown,
 ): Request {
   const body = new FormData();
+  if (problems !== undefined) body.set('problems', JSON.stringify(problems));
   body.set(
     'bundle',
     new Blob([new Uint8Array(p.bytes)], { type: 'application/zip' }),
@@ -401,6 +453,212 @@ describe('evaluation protocol', () => {
 });
 
 describe('durable evaluation reception', () => {
+  it('collects unresolved findings into the ordinary problem list with full reports and source links', async () => {
+    const { service, db } = await setup();
+    const d = await report();
+    const p = packet(d, '<html>Full original report</html>');
+    const received = await service.importBundle(
+      source,
+      p.bytes,
+      p.verified(),
+      submittedProblems(d),
+    );
+    const rows = await db
+      .query()
+      .selectFrom('issues')
+      .selectAll()
+      .where('type', '=', 'automation')
+      .execute();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      title: d.reviews[0].findings[1].title,
+      featurePointId: null,
+      status: 'pending',
+      factoryReportId: received.receipt.receiptId,
+    });
+    const tracker = createTestProgressService(db);
+    const problem = await tracker.getProblem(Number(rows[0].id));
+    expect(problem.factorySource).toMatchObject({
+      issueUrl: 'https://github.com/owner/factory/issues/146',
+      pullRequestUrl: 'https://github.com/owner/factory/pull/150',
+      reportId: received.receipt.receiptId,
+    });
+    expect(problem.factorySource?.files).toContain('report.html');
+    expect(
+      (await tracker.listProblems({ type: 'automation' }))[0].featurePointId,
+    ).toBeNull();
+    expect(await tracker.listProblemActivities(problem.id)).toEqual([
+      expect.objectContaining({ actorName: 'GitHub Actions', kind: 'created' }),
+    ]);
+    expect(
+      (await service.findings(received.receipt.receiptId)).find(
+        (f) => f.findingId === d.reviews[0].findings[1].id,
+      )?.problemId,
+    ).toBe(problem.id);
+  });
+
+  it('deduplicates deliveries and reassessments without overwriting human edits', async () => {
+    const { save, db, service } = await setup();
+    const d = await report();
+    const first = await save(d);
+    const original = await db
+      .query()
+      .selectFrom('issues')
+      .selectAll()
+      .where('type', '=', 'automation')
+      .executeTakeFirstOrThrow();
+    await db
+      .query()
+      .updateTable('issues')
+      .set({
+        title: 'Human title',
+        description: 'Human notes',
+        status: 'verified',
+        owner: 'Reviewer',
+      })
+      .where('id', '=', Number(original.id))
+      .execute();
+    expect((await save(d)).duplicate).toBe(true);
+    d.revision++;
+    d.precedence.producer.runId++;
+    d.reviews[0].findings[1].id += '-reassessment';
+    const next = await save(d);
+    const rows = await db
+      .query()
+      .selectFrom('issues')
+      .selectAll()
+      .where('type', '=', 'automation')
+      .execute();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      title: 'Human title',
+      description: 'Human notes',
+      status: 'verified',
+      owner: 'Reviewer',
+      factoryReportId: next.receipt.receiptId,
+    });
+    expect(
+      (await service.findings(next.receipt.receiptId)).find(
+        (f) => f.findingId === d.reviews[0].findings[1].id,
+      )?.problemId,
+    ).toBe(original.id);
+    expect(first.receipt.receiptId).not.toBe(next.receipt.receiptId);
+  });
+
+  it('uses explicit module mappings and leaves ambiguous or absent mappings uncategorized', async () => {
+    const { save, db, service } = await setup();
+    const d = await report();
+    await service.mapSubject(
+      {
+        sourceInstance: source.sourceInstance,
+        subjectKey: d.reviews[0].findings[1].subjectKeys[0],
+        featurePointId: 1,
+      },
+      'admin',
+    );
+    await save(d);
+    const row = await db
+      .query()
+      .selectFrom('issues')
+      .selectAll()
+      .where('type', '=', 'automation')
+      .executeTakeFirstOrThrow();
+    expect(row.featurePointId).toBe(1);
+  });
+
+  it('collects final failed QA checks without inventing problems for unknown or repaired checks', async () => {
+    const { save, db } = await setup();
+    const d = await report();
+    d.reviews[0].findings = [];
+    d.qa.criteria[0].finalFull = 'failed';
+    d.qa.criteria[1].finalFull = 'unknown';
+    d.outcome.pullRequest = null;
+    await save(d);
+    const rows = await db
+      .query()
+      .selectFrom('issues')
+      .selectAll()
+      .where('type', '=', 'automation')
+      .execute();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe(d.qa.criteria[0].text);
+    expect(
+      (await createTestProgressService(db).getProblem(Number(rows[0].id)))
+        .factorySource?.pullRequestUrl,
+    ).toBeNull();
+    await db
+      .query()
+      .deleteFrom('issues')
+      .where('id', '=', Number(rows[0].id))
+      .execute();
+    await save(d);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toHaveLength(0);
+  });
+
+  it('does not create problems from superseded reports or non-selected reviews', async () => {
+    const { save, db } = await setup();
+    const current = await report();
+    current.precedence.producer.runId += 10;
+    current.reviews[0].selected = false;
+    await save(current);
+    const old = await report();
+    old.revision = 2;
+    await save(old);
+    await save(old);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toHaveLength(0);
+  });
+
+  it('rolls back the report and receipt if problem persistence fails', async () => {
+    const { save, db } = await setup();
+    await db.builder().dropCollection('problemActivities');
+    await expect(save(await report())).rejects.toThrow();
+    expect(
+      await db.query().selectFrom('evaluationReports').selectAll().execute(),
+    ).toHaveLength(0);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toHaveLength(0);
+  });
+
+  it('reverses factory columns safely and refuses to discard uncategorized problems', async () => {
+    const { save, db, context } = await setup();
+    await save(await report());
+    await expect(factoryMigration.down!(context)).rejects.toThrow('Classify');
+    await db
+      .query()
+      .updateTable('issues')
+      .set({ featurePointId: 1 })
+      .where('featurePointId', 'is', null)
+      .execute();
+    await factoryMigration.down!(context);
+    expect(
+      (await db.query().selectFrom('issues').selectAll().execute())[0],
+    ).not.toHaveProperty('factoryKey');
+    await factoryMigration.up(context);
+    expect(
+      await db.query().selectFrom('issues').selectAll().execute(),
+    ).toHaveLength(2);
+  });
+
   it('keeps one persistent receipt for concurrent retries and rejects same-key changed bytes', async () => {
     const { service, db, archive } = await setup(),
       p = packet(await report());
@@ -639,6 +897,48 @@ describe('durable evaluation reception', () => {
 });
 
 describe('evaluation HTTP boundary', () => {
+  it('creates issues only from an explicit factory submission and binds retries to that payload', async () => {
+    const { service, db } = await setup(),
+      app = await router(service),
+      d = await report(),
+      p = packet(d);
+    expect((await app.fetch(request(p))).status).toBe(201);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toHaveLength(0);
+    const submission = { version: 1, problems: submittedProblems(d) };
+    expect(parseProblemSubmission(submission, d)).toEqual(submission.problems);
+    expect((await app.fetch(request(p, 'wrong', submission))).status).toBe(401);
+    expect(
+      (await app.fetch(request(p, 'integration-secret', submission))).status,
+    ).toBe(200);
+    expect(
+      (await app.fetch(request(p, 'integration-secret', submission))).status,
+    ).toBe(200);
+    expect(
+      await db
+        .query()
+        .selectFrom('issues')
+        .selectAll()
+        .where('type', '=', 'automation')
+        .execute(),
+    ).toHaveLength(1);
+    const invalid = structuredClone(submission);
+    invalid.problems[0].findingIds = ['unknown/finding'];
+    expect(
+      (await app.fetch(request(p, 'integration-secret', invalid))).status,
+    ).toBe(400);
+    const changed = structuredClone(submission);
+    changed.problems[0].title = 'Different issue payload';
+    expect(
+      (await app.fetch(request(p, 'integration-secret', changed))).status,
+    ).toBe(409);
+  });
   it('uses real multipart requests and returns unwrapped 201/200/409 receipts', async () => {
     const { service } = await setup(),
       app = await router(service),

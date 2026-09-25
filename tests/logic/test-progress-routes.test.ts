@@ -16,6 +16,8 @@ import {
   type TestProgressService,
 } from '../../server/providers/test-progress.js';
 import { testProgressApiRoutes } from '../../server/routes/test-progress.js';
+import { evaluationServiceToken } from '../../server/providers/evaluations/index.js';
+import type { EvaluationService } from '../../server/providers/evaluations/service.js';
 
 const AUTHORIZED_HEADERS = { 'x-test-user': 'tester' };
 
@@ -71,12 +73,19 @@ function createStubService(
   };
 }
 
-async function createRouter(service: TestProgressService): Promise<{
+async function createRouter(
+  service: TestProgressService,
+  attachment?: EvaluationService['attachment'],
+): Promise<{
   request: (input: string, init?: RequestInit) => Response | Promise<Response>;
 }> {
   const container = new ServiceContainer();
   container.instance(authenticationToken, createFakeAuth());
   container.instance(testProgressServiceToken, service);
+  if (attachment)
+    container.instance(evaluationServiceToken, {
+      attachment,
+    } as EvaluationService);
 
   return testProgressApiRoutes.createRouter({
     container,
@@ -84,6 +93,43 @@ async function createRouter(service: TestProgressService): Promise<{
 }
 
 describe('test progress API routes', () => {
+  it('downloads the problem report after authentication and rejects arbitrary file paths', async () => {
+    const attachment = vi.fn(async () => ({
+      bytes: Buffer.from('<html>Report</html>'),
+      contentType: 'text/html',
+    }));
+    const service = createStubService({
+      getProblem: vi.fn(
+        async () =>
+          ({ id: 12, factorySource: { reportId: 'report-12' } }) as never,
+      ),
+    });
+    const router = await createRouter(service, attachment);
+    expect(
+      (await router.request('/test-progress/problems/12/report')).status,
+    ).toBe(401);
+    expect(attachment).not.toHaveBeenCalled();
+    const response = await router.request(
+      '/test-progress/problems/12/report?path=report.html',
+      { headers: AUTHORIZED_HEADERS },
+    );
+    expect(response.status).toBe(200);
+    expect(attachment).toHaveBeenCalledWith('report-12', 'report.html');
+    expect(response.headers.get('content-disposition')).toBe(
+      'attachment; filename="report.html"',
+    );
+    expect(response.headers.get('content-security-policy')).toContain(
+      'sandbox',
+    );
+    expect(
+      (
+        await router.request(
+          '/test-progress/problems/12/report?path=../../config.yml',
+          { headers: AUTHORIZED_HEADERS },
+        )
+      ).status,
+    ).toBe(404);
+  });
   it('rejects anonymous requests before reaching the service', async () => {
     const service = createStubService();
     const router = await createRouter(service);
@@ -303,21 +349,17 @@ describe('test progress API routes', () => {
     );
     expect(anonymous.status).toBe(401);
 
-    const listed = await router.request(
-      '/test-progress/problems/3/comments',
-      { headers: AUTHORIZED_HEADERS },
-    );
+    const listed = await router.request('/test-progress/problems/3/comments', {
+      headers: AUTHORIZED_HEADERS,
+    });
     expect(listed.status).toBe(200);
     expect(service.listProblemComments).toHaveBeenCalledWith(3);
 
-    const created = await router.request(
-      '/test-progress/problems/3/comments',
-      {
-        method: 'POST',
-        headers: { ...AUTHORIZED_HEADERS, 'content-type': 'application/json' },
-        body: JSON.stringify({ content: '**复现了**' }),
-      },
-    );
+    const created = await router.request('/test-progress/problems/3/comments', {
+      method: 'POST',
+      headers: { ...AUTHORIZED_HEADERS, 'content-type': 'application/json' },
+      body: JSON.stringify({ content: '**复现了**' }),
+    });
     expect(created.status).toBe(201);
     expect(service.createProblemComment).toHaveBeenCalledWith(
       3,
@@ -332,10 +374,10 @@ describe('test progress API routes', () => {
     });
     expect(empty.status).toBe(400);
 
-    const deleted = await router.request(
-      '/test-progress/problem-comments/21',
-      { method: 'DELETE', headers: AUTHORIZED_HEADERS },
-    );
+    const deleted = await router.request('/test-progress/problem-comments/21', {
+      method: 'DELETE',
+      headers: AUTHORIZED_HEADERS,
+    });
     expect(deleted.status).toBe(204);
     expect(service.deleteProblemComment).toHaveBeenCalledWith(21, {
       id: 'user-tester',

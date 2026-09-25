@@ -38,7 +38,7 @@
         "columnName": "feature_point_id",
         "dataType": "integer",
         "nativeType": "INTEGER",
-        "nullable": false,
+        "nullable": true,
         "ordinalPosition": 4
       },
       {
@@ -106,10 +106,40 @@
         "nativeType": "varchar(64)",
         "nullable": true,
         "ordinalPosition": 10
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "factory_key",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "factory_report_id",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": true,
+        "ordinalPosition": 12
       }
     ],
     "foreignKeys": [],
     "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "factory_key",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_issues_factory_key",
+        "unique": true
+      },
       {
         "keys": [
           {

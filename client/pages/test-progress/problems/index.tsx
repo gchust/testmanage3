@@ -129,7 +129,6 @@ export default function ProblemsPage(): ReactElement {
     setSearchParams(next, { replace: true });
   }
 
-
   return (
     <PageContainer>
       <PageHeader
@@ -241,12 +240,18 @@ export default function ProblemsPage(): ReactElement {
                         {problem.owner ?? '—'}
                       </TableCell>
                       <TableCell>
-                        <Link
-                          className='text-primary underline-offset-4 hover:underline'
-                          to={`/progress/features/${problem.featurePointId}`}
-                        >
-                          {problem.featurePointName ?? '—'}
-                        </Link>
+                        {problem.featurePointId == null ? (
+                          <span className='text-muted-foreground'>
+                            {t('testProgress.uncategorized')}
+                          </span>
+                        ) : (
+                          <Link
+                            className='text-primary underline-offset-4 hover:underline'
+                            to={`/progress/features/${problem.featurePointId}`}
+                          >
+                            {problem.featurePointName ?? '—'}
+                          </Link>
+                        )}
                       </TableCell>
                       <TableCell
                         className={PROBLEM_STATUS_CELL_CLASS[problem.status]}

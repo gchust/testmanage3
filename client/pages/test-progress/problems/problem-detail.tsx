@@ -36,6 +36,7 @@ import {
 } from '../shared.js';
 import { useAsyncResource } from '../use-async-resource.js';
 import { useRefetchOnReturn } from '../use-refetch-on-return.js';
+import { FactorySource } from './factory-source.js';
 
 export default function ProblemDetailPage(): ReactElement {
   const { t } = useTranslation();
@@ -126,12 +127,16 @@ function ProblemDetail({
               <ProblemStatusBadge status={problem.status} />
             </DefinitionItem>
             <DefinitionItem label={t('testProgress.fieldFeaturePoint')}>
-              <Link
-                className='text-primary underline-offset-4 hover:underline'
-                to={`/progress/features/${problem.featurePointId}`}
-              >
-                {problem.featurePointName ?? '—'}
-              </Link>
+              {problem.featurePointId == null ? (
+                <span>{t('testProgress.uncategorized')}</span>
+              ) : (
+                <Link
+                  className='text-primary underline-offset-4 hover:underline'
+                  to={`/progress/features/${problem.featurePointId}`}
+                >
+                  {problem.featurePointName ?? '—'}
+                </Link>
+              )}
             </DefinitionItem>
             <DefinitionItem label={t('testProgress.fieldOwner')}>
               <span>{problem.owner ?? '—'}</span>
@@ -141,14 +146,20 @@ function ProblemDetail({
             <p className='whitespace-pre-wrap'>{problem.title}</p>
           </DefinitionItem>
           <DefinitionItem label={t('testProgress.fieldProblemDescription')}>
-            {problem.description === null || problem.description.trim() === '' ? (
-              <p className='text-muted-foreground'>{t('testProgress.noNote')}</p>
+            {problem.description === null ||
+            problem.description.trim() === '' ? (
+              <p className='text-muted-foreground'>
+                {t('testProgress.noNote')}
+              </p>
             ) : (
               <MarkdownContent content={problem.description} />
             )}
           </DefinitionItem>
         </CardContent>
       </Card>
+      {problem.factorySource && (
+        <FactorySource source={problem.factorySource} problemId={problem.id} />
+      )}
     </div>
   );
 }
@@ -195,7 +206,9 @@ function CopyForAgentButton({
       `- ${t('testProgress.fieldOwner')}: ${problem.owner ?? '—'}`,
       '',
       `## ${t('testProgress.fieldProblemDescription')}`,
-      description.trim() === '' ? t('testProgress.noNote') : resolvedDescription,
+      description.trim() === ''
+        ? t('testProgress.noNote')
+        : resolvedDescription,
     ];
 
     if (images.length > 0) {

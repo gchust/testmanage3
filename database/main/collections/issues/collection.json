@@ -6,6 +6,14 @@
           "id"
         ],
         "type": "primary"
+      },
+      {
+        "fields": [
+          "factoryKey"
+        ],
+        "mode": "index",
+        "name": "idx_issues_factory_key",
+        "type": "unique"
       }
     ],
     "db": {
@@ -55,7 +63,7 @@
           "physicalDataType": "integer"
         },
         "name": "featurePointId",
-        "nullable": false,
+        "nullable": true,
         "type": "integer"
       },
       {
@@ -133,6 +141,30 @@
         "type": "string"
       },
       {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(64)",
+          "physicalDataType": "string"
+        },
+        "length": 64,
+        "name": "factoryKey",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(64)",
+          "physicalDataType": "string"
+        },
+        "length": 64,
+        "name": "factoryReportId",
+        "nullable": true,
+        "type": "string"
+      },
+      {
         "foreignKey": "featurePointId",
         "name": "featurePoint",
         "target": "featurePoints",
@@ -141,6 +173,24 @@
       }
     ],
     "indexes": [
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "factoryKey",
+              "order": "asc"
+            }
+          ],
+          "unique": true
+        },
+        "fields": [
+          "factoryKey"
+        ],
+        "name": "idx_issues_factory_key",
+        "order": {
+          "factoryKey": "asc"
+        }
+      },
       {
         "db": {
           "keys": [

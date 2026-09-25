@@ -7,6 +7,12 @@
       "description": {
         "type": "text"
       },
+      "factoryKey": {
+        "type": "string"
+      },
+      "factoryReportId": {
+        "type": "string"
+      },
       "featurePointId": {
         "type": "integer"
       },

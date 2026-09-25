@@ -15,6 +15,7 @@ import { Hono, type Context } from 'hono';
 import { RepositoryError } from '@nocobase/db';
 import { bodyLimit } from 'hono/body-limit';
 import { evaluationServiceToken } from '../providers/evaluations/index.js';
+import { parseProblemSubmission } from '../providers/evaluations/problems.js';
 import {
   EvaluationError,
   LIMITS,
@@ -153,12 +154,16 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
         }
         const entries = [...form.entries()];
         if (
-          entries.length !== 1 ||
-          entries[0][0] !== 'bundle' ||
-          typeof entries[0][1] === 'string'
+          entries.length < 1 ||
+          entries.length > 2 ||
+          entries.some(([key]) => !['bundle', 'problems'].includes(key)) ||
+          form.getAll('bundle').length !== 1 ||
+          form.getAll('problems').length > 1 ||
+          typeof form.get('bundle') === 'string' ||
+          !form.get('bundle')
         )
           return c.json({ code: 'INVALID_MULTIPART' }, 400);
-        const file = entries[0][1];
+        const file = form.get('bundle') as File;
         if (file.type !== 'application/zip')
           return c.json({ code: 'INVALID_MULTIPART' }, 400);
         if (file.size > LIMITS.zip)
@@ -170,7 +175,28 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
           type: c.req.header('X-Evaluation-Type') ?? '',
           version: c.req.header('X-Evaluation-Schema-Version') ?? '',
         });
-        const result = await service.importBundle(source, zip, verified);
+        let problems;
+        const submission = form.get('problems');
+        if (submission !== null) {
+          if (
+            typeof submission !== 'string' ||
+            Buffer.byteLength(submission) > 1024 * 1024
+          )
+            return c.json({ code: 'INVALID_MULTIPART' }, 400);
+          let value: unknown;
+          try {
+            value = JSON.parse(submission);
+          } catch {
+            return c.json({ code: 'INVALID_INPUT' }, 400);
+          }
+          problems = parseProblemSubmission(value, verified.document);
+        }
+        const result = await service.importBundle(
+          source,
+          zip,
+          verified,
+          problems,
+        );
         // The factory requires a top-level receipt, without the application's data envelope.
         return new Response(JSON.stringify(result.receipt), {
           status: result.duplicate ? 200 : 201,

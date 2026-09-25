@@ -1,7 +1,7 @@
 import type { AppResource } from './en-US.js';
 
 const zhCN: AppResource = {
-  'evaluations.title': '自动评测',
+  'evaluations.title': '工厂报告归档',
   'evaluations.description':
     '工厂运行证据、模块评审与回归跟踪；机器评分与人工评分独立保存。',
   'evaluations.reports': '运行报告',
@@ -403,6 +403,13 @@ const zhCN: AppResource = {
     fieldExampleCurrent: 'Example 已有情况',
     fieldRemark: '备注',
     fieldFeaturePoint: '所属功能点',
+    uncategorized: '待归类',
+    factorySourceTitle: 'GitHub Actions · 报告与来源',
+    factoryIssue: 'GitHub Issue',
+    factoryPullRequest: 'GitHub PR',
+    factoryNoPullRequest: '暂无 PR 记录',
+    factoryRun: 'Actions 运行记录',
+    factoryReport: '完整报告',
     selectPlaceholder: '请选择…',
     scorePlaceholder: '0–10',
     notePlaceholder: '说明',

@@ -24,6 +24,11 @@ import {
   type EvaluationDocument,
 } from './protocol.js';
 import { compareReports } from './comparison.js';
+import {
+  collectFactoryProblems,
+  recordProblemSubmission,
+  type SubmittedProblem,
+} from './problems.js';
 
 export interface SourceBinding {
   id: string;
@@ -220,6 +225,7 @@ export class EvaluationService {
     source: SourceBinding,
     bytes: Buffer,
     verified: VerifiedBundle,
+    problems?: SubmittedProblem[],
   ): Promise<{ duplicate: boolean; receipt: EvaluationReceipt }> {
     const { document, manifest, sha256 } = verified;
     const subject = subjectOf(document);
@@ -298,11 +304,35 @@ export class EvaluationService {
                 'CONFLICT',
                 'This subject revision already contains different bytes.',
               );
+            const receipt = JSON.parse(
+              String(existing.receipt),
+            ) as EvaluationReceipt;
+            if (problems)
+              await recordProblemSubmission(
+                connection,
+                receipt.receiptId,
+                problems,
+              );
+            const current = await q
+              .selectFrom('evaluationSubjects')
+              .select('currentReportId')
+              .where('id', '=', subjectKey)
+              .executeTakeFirst();
+            if (
+              document.type === 'evaluation-report' &&
+              problems &&
+              current?.currentReportId === receipt.receiptId
+            ) {
+              await collectFactoryProblems(
+                connection,
+                document,
+                receipt.receiptId,
+                problems,
+              );
+            }
             return {
               duplicate: true,
-              receipt: JSON.parse(
-                String(existing.receipt),
-              ) as EvaluationReceipt,
+              receipt,
             };
           }
           const now = new Date();
@@ -327,7 +357,7 @@ export class EvaluationService {
             .execute();
           const current = await q
             .selectFrom('evaluationSubjects')
-            .select('id')
+            .select(['id', 'rank'])
             .where('id', '=', subjectKey)
             .executeTakeFirst();
           if (!current)
@@ -376,6 +406,14 @@ export class EvaluationService {
                     })
                     .execute();
               }
+          if (
+            document.type === 'evaluation-report' &&
+            problems &&
+            (!current || String(current.rank) < rank)
+          ) {
+            await collectFactoryProblems(connection, document, id, problems);
+          }
+          if (problems) await recordProblemSubmission(connection, id, problems);
           await this.audit(connection, source.id, 'report.import', id, {
             bundleSha256: sha256,
             revision: document.revision,

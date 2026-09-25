@@ -19,6 +19,7 @@ import problemTypeMigration from '../../database/main/migrations/202609220001_ad
 import problemCommentsMigration from '../../database/main/migrations/202609220002_create_problem_comments.js';
 import problemActivitiesMigration from '../../database/main/migrations/202609220003_create_problem_activities.js';
 import ownerIdMigration from '../../database/main/migrations/202609220006_add_owner_id.js';
+import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
 import seed from '../../database/main/seeds/202609210002_seed_test_progress_data.js';
 import mergeSeed from '../../database/main/seeds/202609220003_seed_merge_missing_items_into_problems.js';
 import ownerBackfillSeed from '../../database/main/seeds/202609220008_seed_backfill_owner_ids.js';
@@ -94,6 +95,7 @@ async function migrateOnly(database: DatabaseManager): Promise<void> {
   await problemCommentsMigration.up(migrationContext(database));
   await problemActivitiesMigration.up(migrationContext(database));
   await ownerIdMigration.up(migrationContext(database));
+  await factoryMigration.up(migrationContext(database));
 }
 
 async function migrateAndSeed(database: DatabaseManager): Promise<void> {
@@ -201,7 +203,9 @@ describe('test progress schema', () => {
 
     const examples = await service.listProblems({ type: 'example' });
     expect(examples).toHaveLength(50);
-    expect(examples.every((problem) => problem.status === 'pending')).toBe(true);
+    expect(examples.every((problem) => problem.status === 'pending')).toBe(
+      true,
+    );
 
     // A second run must not duplicate anything, and must not overwrite edits.
     const target = first.find((item) => item.name === '数据库');
@@ -392,7 +396,9 @@ describe('test progress schema', () => {
       featurePointName: '认证',
     });
 
-    const fixing = await service.updateProblem(created.id, { status: 'fixing' });
+    const fixing = await service.updateProblem(created.id, {
+      status: 'fixing',
+    });
     expect(fixing.status).toBe('fixing');
 
     const listed = await service.listProblems({
@@ -410,7 +416,10 @@ describe('test progress schema', () => {
       }),
     ).toHaveLength(1);
     expect(
-      await service.listProblems({ featurePointId: feature.id, type: 'skills' }),
+      await service.listProblems({
+        featurePointId: feature.id,
+        type: 'skills',
+      }),
     ).toHaveLength(0);
 
     const open = (await service.listFeaturePoints()).find(
@@ -508,7 +517,7 @@ describe('test progress schema', () => {
     expect(
       (await service.listProblems({ owner: '陈霖' })).map((p) => p.title),
     ).toEqual(['陈霖的问题']);
-    expect((await service.listProblems({ owner: '无人' }))).toHaveLength(0);
+    expect(await service.listProblems({ owner: '无人' })).toHaveLength(0);
     // 50 problems come from the workbook seed; the three above are added here.
     expect(await service.listProblems()).toHaveLength(53);
   });
@@ -813,10 +822,7 @@ describe('test progress schema', () => {
       parseFeaturePointInput({ name: '' }, { partial: false }),
     ).toThrow(TestProgressValidationError);
     expect(() =>
-      parseProblemInput(
-        { title: 'x', featurePointId: 0 },
-        { partial: false },
-      ),
+      parseProblemInput({ title: 'x', featurePointId: 0 }, { partial: false }),
     ).toThrow(TestProgressValidationError);
     expect(() =>
       parseProblemInput(

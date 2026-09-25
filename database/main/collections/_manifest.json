@@ -59,6 +59,6 @@
   "connection": "main",
   "dialect": "sqlite",
   "formatVersion": 1,
-  "migrationHead": "202609250001_create_evaluations",
+  "migrationHead": "202609250002_collect_factory_problems",
   "schemaManagement": "managed"
 }

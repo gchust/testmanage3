@@ -1,5 +1,11 @@
 import type { Application } from '@nocobase/app-server/application';
 import {
+  factoryProblemSource,
+  type FactoryProblemSource,
+} from './evaluations/problems.js';
+import { validateDocument } from './evaluations/protocol.js';
+import type { EvaluationBundle } from './evaluations/contracts/bundle.js';
+import {
   databaseManagerToken,
   type DatabaseManager,
   type Row,
@@ -133,12 +139,13 @@ export interface ProblemRecord {
   readonly id: number;
   readonly title: string;
   readonly description: string | null;
-  readonly featurePointId: number;
+  readonly featurePointId: number | null;
   readonly featurePointName: string | null;
   readonly type: ProblemType;
   readonly status: ProblemStatus;
   readonly owner: string | null;
   readonly ownerId: string | null;
+  readonly factorySource?: FactoryProblemSource;
 }
 
 /** One comment under a problem; `authorId` is the Better Auth user id. */
@@ -211,7 +218,7 @@ export interface FeaturePointInput {
 export interface ProblemInput {
   title?: string;
   description?: string | null;
-  featurePointId?: number;
+  featurePointId?: number | null;
   type?: ProblemType;
   status?: ProblemStatus;
   /** Account association; authoritative, and refreshes the legacy `owner` text. */
@@ -610,11 +617,14 @@ export function parseProblemInput(
     input.description = readNullableString(
       record.description,
       'description',
-      10000,
+      100000,
     );
   }
   if (write('featurePointId')) {
-    input.featurePointId = readId(record.featurePointId, 'featurePointId');
+    input.featurePointId =
+      record.featurePointId === null
+        ? null
+        : readId(record.featurePointId, 'featurePointId');
   }
   if (write('type')) {
     input.type = readEnum(PROBLEM_TYPES, record.type, 'type', 'manual');
@@ -641,7 +651,9 @@ export function parseProblemInput(
 }
 
 /** Validates one comment payload; the author always comes from the session. */
-export function parseProblemCommentInput(payload: unknown): ProblemCommentInput {
+export function parseProblemCommentInput(
+  payload: unknown,
+): ProblemCommentInput {
   const record = requireRecord(payload);
   return {
     content: readRequiredString(record.content, 'content', 20000),
@@ -837,7 +849,8 @@ function toProblemRecord(
     id: Number(row.id),
     title: asText(row.title),
     description: asOptionalText(row.description),
-    featurePointId: Number(row.featurePointId),
+    featurePointId:
+      row.featurePointId == null ? null : Number(row.featurePointId),
     featurePointName,
     type: readEnum(PROBLEM_TYPES, row.type, 'type', 'manual'),
     status: readEnum(PROBLEM_STATUSES, row.status, 'status', 'pending'),
@@ -862,12 +875,7 @@ function toProblemActivityRecord(row: Row): ProblemActivityRecord {
     problemId: Number(row.problemId),
     actorId: asOptionalText(row.actorId),
     actorName: asText(row.actorName),
-    kind: readEnum(
-      PROBLEM_ACTIVITY_KINDS,
-      row.kind,
-      'kind',
-      'created',
-    ),
+    kind: readEnum(PROBLEM_ACTIVITY_KINDS, row.kind, 'kind', 'created'),
     fromStatus:
       row.fromStatus === null || row.fromStatus === undefined
         ? null
@@ -913,7 +921,8 @@ class DefaultTestProgressService implements TestProgressService {
     >();
     for (const problem of problemRows) {
       const key = Number(problem.featurePointId);
-      const grouped = problemsByFeaturePoint.get(key) ?? emptyProblemCountsByType();
+      const grouped =
+        problemsByFeaturePoint.get(key) ?? emptyProblemCountsByType();
       const type = readEnum(PROBLEM_TYPES, problem.type, 'type', 'manual');
       const status = readEnum(
         PROBLEM_STATUSES,
@@ -1224,6 +1233,7 @@ class DefaultTestProgressService implements TestProgressService {
         'status',
         'owner',
         'ownerId',
+        'factoryReportId',
       ])
       .where('id', '=', id)
       .executeTakeFirst();
@@ -1233,11 +1243,35 @@ class DefaultTestProgressService implements TestProgressService {
     }
 
     const names = await this.featurePointNames();
-    return toProblemRecord(
+    const record = toProblemRecord(
       row,
       names.get(Number(row.featurePointId)) ?? null,
       await this.ownerNames(),
     );
+    if (typeof row.factoryReportId === 'string' && row.factoryReportId) {
+      const stored = await this.database
+        .query()
+        .selectFrom('evaluationReports')
+        .select(['document', 'manifest'])
+        .where('id', '=', String(row.factoryReportId))
+        .executeTakeFirst();
+      if (stored) {
+        const document = validateDocument(JSON.parse(String(stored.document)));
+        if (document.type === 'evaluation-report') {
+          return {
+            ...record,
+            factorySource: factoryProblemSource(
+              String(row.factoryReportId),
+              document,
+              (
+                JSON.parse(String(stored.manifest)) as EvaluationBundle
+              ).files.map((file) => file.path),
+            ),
+          };
+        }
+      }
+    }
+    return record;
   }
 
   public async createProblem(
@@ -1253,7 +1287,7 @@ class DefaultTestProgressService implements TestProgressService {
       throw new TestProgressValidationError('featurePointId is required.');
     }
 
-    await this.requireFeaturePoint(featurePointId);
+    if (featurePointId !== null) await this.requireFeaturePoint(featurePointId);
     const now = new Date();
     const owner = await this.resolveOwnerFields(input);
     const result = await this.database
@@ -1317,7 +1351,8 @@ class DefaultTestProgressService implements TestProgressService {
       set.ownerId = owner.ownerId;
     }
     if (patch.featurePointId !== undefined) {
-      await this.requireFeaturePoint(patch.featurePointId);
+      if (patch.featurePointId !== null)
+        await this.requireFeaturePoint(patch.featurePointId);
       set.featurePointId = patch.featurePointId;
     }
 
@@ -1628,7 +1663,8 @@ class DefaultTestProgressService implements TestProgressService {
         'unspecified',
       );
       const grouped =
-        problemsByFeaturePoint.get(Number(row.id)) ?? emptyProblemCountsByType();
+        problemsByFeaturePoint.get(Number(row.id)) ??
+        emptyProblemCountsByType();
 
       if (level === 'dimension') {
         dimensionById.set(Number(row.id), {
@@ -1753,7 +1789,8 @@ class DefaultTestProgressService implements TestProgressService {
             : `name:${ownerText}`;
       const bucket = buckets.get(key) ?? {
         ownerId,
-        owner: ownerId !== null ? (ownerNames.get(ownerId) ?? ownerText) : ownerText,
+        owner:
+          ownerId !== null ? (ownerNames.get(ownerId) ?? ownerText) : ownerText,
         open: 0,
         total: 0,
       };

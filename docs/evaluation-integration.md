@@ -1,5 +1,15 @@
 # nb3-factory evaluation integration
 
+## Factory problems: the user-facing workflow
+
+GitHub Actions owns selecting unresolved review findings and final failed QA checks. It sends an explicit problem submission together with the unchanged complete report bundle. TestManage only validates, stores and displays those submissions in the existing Problems page (`type=automation`, initially `pending`). Uploading a report alone never creates problems. No additional evaluation is run by TestManage.
+
+Set the factory repository variable `EVALUATION_DELIVERY_FORMAT=testmanage3-problems-v1`. The existing delivery workflow includes a multipart text field `problems` containing `{version: 1, problems: [...]}` alongside `bundle`. Each problem carries a stable key, title, description, subject keys and report finding IDs or a QA criterion ID. The receiver rejects invalid references, oversized submissions and differing issue payloads for the same report revision. Default `bundle-v1` delivery remains compatible with other receivers.
+
+Issue details include the original ZIP, HTML and JSON reports, GitHub task Issue, PR when recorded, and Actions run links. An absent PR is shown explicitly. Problems without an unambiguous feature mapping enter the same list as Uncategorized; no synthetic feature points are created. Replays do not duplicate problems, resurrect deleted problems, or overwrite human titles, notes, ownership and lifecycle status. Old report revisions cannot replace the current evidence.
+
+The standalone evaluation navigation entry is removed. Its old URL and archival API remain for backward compatibility and to retain already received evidence; ordinary work starts and ends on the existing Problems page. Migration rollback requires categorizing all uncategorized problems first.
+
 ## Scope
 
 The receiver implements the fixed report, batch, ZIP bundle and top-level receipt v1 contracts from nb3-factory commit `ff7e1e12225bdb868865b36bd4032b423e57e66d`. Original schemas are in `server/providers/evaluations/contracts/`; regenerate TypeScript with `node scripts/generate-evaluation-contracts.mjs`.

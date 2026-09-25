@@ -1,10 +1,4 @@
-import {
-  Gauge,
-  FlaskConical,
-  ListChecks,
-  Palette,
-  TriangleAlert,
-} from 'lucide-react';
+import { Gauge, ListChecks, Palette, TriangleAlert } from 'lucide-react';
 import {
   defineAppRoutes,
   defineDevRoutes,
@@ -20,7 +14,6 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
     auth: 'required',
     componentLoader: () => import('./pages/evaluations/index.js'),
     name: 'evaluations',
-    navigation: { title: 'evaluations.title', icon: FlaskConical },
     path: '/progress/evaluations',
   },
   {

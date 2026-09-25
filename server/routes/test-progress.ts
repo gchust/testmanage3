@@ -9,6 +9,8 @@ import {
 } from '@nocobase/app-server/router';
 import { Hono, type Context } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { evaluationServiceToken } from '../providers/evaluations/index.js';
+import { EvaluationError } from '../providers/evaluations/protocol.js';
 
 import {
   PROBLEM_STATUSES,
@@ -96,8 +98,7 @@ function readIdParam(context: Context, name: string): number {
 function readActor(context: Context): ProblemActor {
   const session = (context as Context<AuthEnv>).get('auth');
   const user = session?.user as
-    | { id?: unknown; name?: unknown; username?: unknown }
-    | undefined;
+    { id?: unknown; name?: unknown; username?: unknown } | undefined;
   const id = typeof user?.id === 'string' && user.id !== '' ? user.id : null;
   // The display name is what the team reads; the username is the fallback for
   // accounts that never set one.
@@ -242,6 +243,36 @@ export const testProgressApiRoutes: AppApiRouteContribution<Application> =
         201,
       ),
     );
+    // The attachment belongs to the already-readable problem; callers cannot choose a report ID.
+    router.get('/test-progress/problems/:problemId/report', async (context) => {
+      try {
+        const problem = await service.getProblem(
+          readIdParam(context, 'problemId'),
+        );
+        const file = context.req.query('path') ?? 'bundle.zip';
+        if (
+          !problem.factorySource ||
+          !['bundle.zip', 'report.html', 'evaluation.json'].includes(file)
+        )
+          return context.json({ code: 'NOT_FOUND' }, 404);
+        const result = await app.container
+          .resolve(evaluationServiceToken)
+          .attachment(problem.factorySource.reportId, file);
+        return new Response(new Uint8Array(result.bytes), {
+          headers: {
+            'content-type': result.contentType,
+            'content-disposition': `attachment; filename="${file}"`,
+            'content-security-policy': "sandbox; default-src 'none'",
+            'x-content-type-options': 'nosniff',
+            'cache-control': 'private, no-store',
+          },
+        });
+      } catch (error) {
+        if (error instanceof EvaluationError && error.code === 'NOT_FOUND')
+          return context.json({ code: 'NOT_FOUND' }, 404);
+        return toErrorResponse(context, error);
+      }
+    });
     router.patch('/test-progress/problems/:problemId', (context) =>
       respond(context, async () =>
         service.updateProblem(
@@ -279,15 +310,13 @@ export const testProgressApiRoutes: AppApiRouteContribution<Application> =
         201,
       ),
     );
-    router.delete(
-      '/test-progress/problem-comments/:commentId',
-      (context) =>
-        respondNoContent(context, () =>
-          service.deleteProblemComment(
-            readIdParam(context, 'commentId'),
-            readActor(context),
-          ),
+    router.delete('/test-progress/problem-comments/:commentId', (context) =>
+      respondNoContent(context, () =>
+        service.deleteProblemComment(
+          readIdParam(context, 'commentId'),
+          readActor(context),
         ),
+      ),
     );
 
     return router;
