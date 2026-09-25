@@ -1,0 +1,79 @@
+{
+  "document": {
+    "fields": {
+      "appName": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "cron": {
+        "type": "string"
+      },
+      "deactivatedAt": {
+        "type": "datetimeTz"
+      },
+      "definitionHash": {
+        "type": "string"
+      },
+      "description": {
+        "type": "text"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "fromDate": {
+        "type": "datetimeTz"
+      },
+      "id": {
+        "type": "string"
+      },
+      "inactiveReason": {
+        "type": "string"
+      },
+      "key": {
+        "type": "string"
+      },
+      "lastSeenManifest": {
+        "type": "text"
+      },
+      "lifecycleState": {
+        "type": "string"
+      },
+      "runLimit": {
+        "type": "integer"
+      },
+      "sourceType": {
+        "type": "string"
+      },
+      "syncError": {
+        "type": "text"
+      },
+      "syncStatus": {
+        "type": "string"
+      },
+      "targetConfig": {
+        "type": "json"
+      },
+      "targetType": {
+        "type": "string"
+      },
+      "timezone": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "toDate": {
+        "type": "datetimeTz"
+      },
+      "updatedAt": {
+        "type": "datetimeTz"
+      }
+    },
+    "name": "scheduleDefinitions",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "scheduleDefinitions"
+}

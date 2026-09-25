@@ -1,0 +1,25 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "defaultLlmService": {
+        "type": "string"
+      },
+      "defaultModel": {
+        "type": "string"
+      },
+      "options": {
+        "type": "json"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "aiSettings",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiSettings"
+}

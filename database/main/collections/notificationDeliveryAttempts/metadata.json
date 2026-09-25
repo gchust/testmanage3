@@ -1,0 +1,50 @@
+{
+  "document": {
+    "fields": {
+      "deliveryId": {
+        "type": "string"
+      },
+      "errorCategory": {
+        "type": "string"
+      },
+      "errorCode": {
+        "type": "string"
+      },
+      "errorMessage": {
+        "type": "text"
+      },
+      "finishedAt": {
+        "type": "datetimeTz"
+      },
+      "id": {
+        "type": "string"
+      },
+      "providerMessageId": {
+        "type": "string"
+      },
+      "providerName": {
+        "type": "string"
+      },
+      "providerType": {
+        "type": "string"
+      },
+      "retryResolution": {
+        "type": "json"
+      },
+      "sequence": {
+        "type": "integer"
+      },
+      "startedAt": {
+        "type": "datetimeTz"
+      },
+      "status": {
+        "type": "string"
+      }
+    },
+    "name": "notificationDeliveryAttempts",
+    "relations": {},
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "notificationDeliveryAttempts"
+}

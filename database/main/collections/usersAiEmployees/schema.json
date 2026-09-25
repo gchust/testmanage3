@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "name": "usersAiEmployees",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "user_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "ai_employee",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "sort",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "prompt",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 6
+      }
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ai_employee"
+        ],
+        "onDelete": "cascade",
+        "onUpdate": "noAction",
+        "referencedCollection": {
+          "schema": "main",
+          "tableName": "ai_employees"
+        },
+        "referencedColumns": [
+          "username"
+        ]
+      }
+    ],
+    "indexes": [
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "user_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "ai_employee",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_users_ai_employees_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "user_id",
+        "ai_employee"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "users_ai_employees",
+    "uniqueConstraints": []
+  }
+}

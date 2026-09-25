@@ -1,0 +1,31 @@
+{
+  "document": {
+    "fields": {
+      "authorId": {
+        "type": "string"
+      },
+      "authorName": {
+        "type": "string"
+      },
+      "content": {
+        "type": "text"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "problemId": {
+        "type": "integer"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "problemComments",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "problemComments"
+}

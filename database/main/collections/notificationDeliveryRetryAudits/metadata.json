@@ -1,0 +1,25 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "deliveryId": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "providerIdempotency": {
+        "type": "json"
+      },
+      "resolution": {
+        "type": "json"
+      }
+    },
+    "name": "notificationDeliveryRetryAudits",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "notificationDeliveryRetryAudits"
+}

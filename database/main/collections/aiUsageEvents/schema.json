@@ -1,0 +1,389 @@
+{
+  "formatVersion": 1,
+  "name": "aiUsageEvents",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "occurred_at",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "session_id",
+        "dataType": "char",
+        "length": 36,
+        "nativeType": "char(36)",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "message_id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "user_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "ai_employee_username",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "from",
+        "dataType": "string",
+        "default": {
+          "expression": "'main-agent'",
+          "value": "main-agent"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "category",
+        "dataType": "string",
+        "default": {
+          "expression": "'chat'",
+          "value": "chat"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "event_type",
+        "dataType": "string",
+        "default": {
+          "expression": "'llm_message'",
+          "value": "llm_message"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "role",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "provider",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "llm_service",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "model",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "input_tokens",
+        "dataType": "bigInt",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 14
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "output_tokens",
+        "dataType": "bigInt",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 15
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "total_tokens",
+        "dataType": "bigInt",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 16
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "cached_tokens",
+        "dataType": "bigInt",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 17
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "reasoning_tokens",
+        "dataType": "bigInt",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 18
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "tool_call_count",
+        "dataType": "integer",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 19
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "auto_tool_call_count",
+        "dataType": "integer",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 20
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "string",
+        "default": {
+          "expression": "'success'",
+          "value": "success"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 21
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "raw_usage_metadata",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 22
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "raw_response_metadata",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 23
+      }
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ai_employee_username"
+        ],
+        "onDelete": "noAction",
+        "onUpdate": "noAction",
+        "referencedCollection": {
+          "schema": "main",
+          "tableName": "ai_employees"
+        },
+        "referencedColumns": [
+          "username"
+        ]
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "onDelete": "noAction",
+        "onUpdate": "noAction",
+        "referencedCollection": {
+          "schema": "main",
+          "tableName": "user"
+        },
+        "referencedColumns": [
+          "id"
+        ]
+      }
+    ],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "session_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_ai_usage_events_session",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "ai_employee_username",
+            "order": "asc"
+          },
+          {
+            "columnName": "occurred_at",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_ai_usage_events_employee_occurred",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "user_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "occurred_at",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_ai_usage_events_user_occurred",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "occurred_at",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_ai_usage_events_occurred",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "message_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "event_type",
+            "order": "asc"
+          }
+        ],
+        "name": "uq_ai_usage_events_message_type",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "schema": "main",
+    "strict": false,
+    "tableName": "ai_usage_events",
+    "uniqueConstraints": []
+  }
+}

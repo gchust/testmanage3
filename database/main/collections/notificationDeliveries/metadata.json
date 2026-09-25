@@ -1,0 +1,62 @@
+{
+  "document": {
+    "fields": {
+      "attemptCount": {
+        "type": "integer"
+      },
+      "channel": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "id": {
+        "type": "string"
+      },
+      "lastError": {
+        "type": "json"
+      },
+      "leaseExpiresAt": {
+        "type": "datetimeTz"
+      },
+      "leaseToken": {
+        "type": "string"
+      },
+      "messageSnapshot": {
+        "type": "json"
+      },
+      "nextRunAt": {
+        "type": "datetimeTz"
+      },
+      "notificationId": {
+        "type": "string"
+      },
+      "providerIdempotency": {
+        "type": "json"
+      },
+      "providerName": {
+        "type": "string"
+      },
+      "providerType": {
+        "type": "string"
+      },
+      "recipientSnapshot": {
+        "type": "json"
+      },
+      "retryResolution": {
+        "type": "json"
+      },
+      "status": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetimeTz"
+      }
+    },
+    "name": "notificationDeliveries",
+    "relations": {},
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "notificationDeliveries"
+}

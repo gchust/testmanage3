@@ -1,0 +1,187 @@
+{
+  "formatVersion": 1,
+  "name": "workflows",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "integer",
+        "autoIncrement": true,
+        "columnName": "id",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "key",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "hash",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "version",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "title",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "enabled",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "description",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "input_schema",
+        "dataType": "json",
+        "default": {
+          "expression": "'{\"type\":\"object\"}'",
+          "value": "{\"type\":\"object\"}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "parameters_schema",
+        "dataType": "json",
+        "default": {
+          "expression": "'{}'",
+          "value": "{}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "parameter_values",
+        "dataType": "json",
+        "default": {
+          "expression": "'{}'",
+          "value": "{}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "current",
+        "dataType": "boolean",
+        "nativeType": "boolean",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "options",
+        "dataType": "json",
+        "default": {
+          "expression": "'{\"timeout\":0}'",
+          "value": "{\"timeout\":0}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 12
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "key",
+            "order": "asc"
+          },
+          {
+            "columnName": "current",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflows_key_current",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "workflows",
+    "uniqueConstraints": []
+  }
+}

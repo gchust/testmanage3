@@ -1,0 +1,60 @@
+{
+  "document": {
+    "fields": {
+      "error": {
+        "type": "text"
+      },
+      "expiresAt": {
+        "type": "datetimeTz"
+      },
+      "finishedAt": {
+        "type": "datetimeTz"
+      },
+      "id": {
+        "type": "bigInt"
+      },
+      "log": {
+        "type": "text"
+      },
+      "meta": {
+        "type": "json"
+      },
+      "nodeId": {
+        "type": "bigInt"
+      },
+      "nodeKey": {
+        "type": "string"
+      },
+      "result": {
+        "type": "json"
+      },
+      "startedAt": {
+        "type": "datetimeTz"
+      },
+      "status": {
+        "type": "integer"
+      },
+      "workflowRunId": {
+        "type": "bigInt"
+      }
+    },
+    "name": "workflowNodeRuns",
+    "relations": {
+      "node": {
+        "foreignKey": "nodeId",
+        "target": "workflowNodes",
+        "targetKey": "id",
+        "type": "belongsTo"
+      },
+      "workflowRun": {
+        "foreignKey": "workflowRunId",
+        "target": "workflowRuns",
+        "targetKey": "id",
+        "type": "belongsTo"
+      }
+    },
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "workflowNodeRuns"
+}

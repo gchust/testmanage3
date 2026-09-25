@@ -1,0 +1,223 @@
+{
+  "formatVersion": 1,
+  "name": "aiToolMessages",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "session_id",
+        "dataType": "char",
+        "length": 36,
+        "nativeType": "char(36)",
+        "nullable": true,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "message_id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "tool_call_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "tool_name",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "content",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "invoke_status",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "invoke_start_time",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "invoke_end_time",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "auto",
+        "dataType": "boolean",
+        "nativeType": "boolean",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "execution",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "interrupt_action_order",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "interrupt_action",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 14
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "user_decision",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 15
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 16
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 17
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "tool_call_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_ai_tool_messages_tool_call_id",
+        "unique": true
+      },
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "id",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_ai_tool_messages_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "ai_tool_messages",
+    "uniqueConstraints": []
+  }
+}

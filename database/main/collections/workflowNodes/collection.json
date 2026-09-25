@@ -1,0 +1,252 @@
+{
+  "collection": {
+    "constraints": [
+      {
+        "fields": [
+          "id"
+        ],
+        "type": "primary"
+      },
+      {
+        "fields": [
+          "workflowId",
+          "key"
+        ],
+        "mode": "index",
+        "name": "idx_workflow_nodes_workflow_id_key",
+        "type": "unique"
+      }
+    ],
+    "db": {
+      "schema": "main",
+      "strict": false
+    },
+    "fields": [
+      {
+        "autoIncrement": true,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "INTEGER",
+          "physicalDataType": "integer"
+        },
+        "name": "id",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "key",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "title",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "description",
+        "nullable": true,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "workflowId",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "upstreamKey",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "branchKey",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "downstreamKey",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "type",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'{}'",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "defaultValue": {},
+        "name": "config",
+        "nullable": false,
+        "type": "json"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'{}'",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "defaultValue": {},
+        "name": "options",
+        "nullable": false,
+        "type": "json"
+      },
+      {
+        "foreignKey": "workflowId",
+        "name": "workflow",
+        "target": "workflows",
+        "targetKey": "id",
+        "type": "belongsTo"
+      },
+      {
+        "foreignKey": "upstreamKey",
+        "name": "branches",
+        "sourceKey": "key",
+        "target": "workflowNodes",
+        "type": "hasMany"
+      }
+    ],
+    "indexes": [
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "workflowId",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "workflowId"
+        ],
+        "name": "idx_workflow_nodes_workflow_id",
+        "order": {
+          "workflowId": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "workflowId",
+              "order": "asc"
+            },
+            {
+              "field": "key",
+              "order": "asc"
+            }
+          ],
+          "unique": true
+        },
+        "fields": [
+          "workflowId",
+          "key"
+        ],
+        "name": "idx_workflow_nodes_workflow_id_key",
+        "order": {
+          "key": "asc",
+          "workflowId": "asc"
+        }
+      }
+    ],
+    "kind": "table",
+    "name": "workflowNodes",
+    "naming": {
+      "tablePrefix": "",
+      "underscored": true
+    }
+  },
+  "formatVersion": 1,
+  "name": "workflowNodes",
+  "warnings": [
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_PARTIAL",
+      "message": "Physical Schema aspect \"checkConstraints\" is partial.",
+      "path": [
+        "inspection",
+        "aspects",
+        "checkConstraints"
+      ]
+    },
+    {
+      "aspect": "comments",
+      "code": "COLLECTION_INSPECTION_UNSUPPORTED",
+      "message": "Physical Schema aspect \"comments\" is unsupported.",
+      "path": [
+        "inspection",
+        "aspects",
+        "comments"
+      ]
+    },
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_WARNING",
+      "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete.",
+      "sourceCode": "SQLITE_CHECK_CONSTRAINT_PARTIAL"
+    }
+  ]
+}

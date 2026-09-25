@@ -1,0 +1,56 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "createdById": {
+        "type": "string"
+      },
+      "disk": {
+        "type": "string"
+      },
+      "extname": {
+        "type": "string"
+      },
+      "filename": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "meta": {
+        "type": "json"
+      },
+      "mimetype": {
+        "type": "string"
+      },
+      "path": {
+        "type": "text"
+      },
+      "preview": {
+        "type": "text"
+      },
+      "size": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "updatedById": {
+        "type": "string"
+      },
+      "url": {
+        "type": "text"
+      }
+    },
+    "name": "aiFiles",
+    "relations": {},
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiFiles"
+}

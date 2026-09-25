@@ -1,0 +1,84 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "dispatched": {
+        "type": "boolean"
+      },
+      "eventKey": {
+        "type": "string"
+      },
+      "expiresAt": {
+        "type": "datetimeTz"
+      },
+      "finishedAt": {
+        "type": "datetimeTz"
+      },
+      "hash": {
+        "type": "string"
+      },
+      "id": {
+        "type": "bigInt"
+      },
+      "input": {
+        "type": "json"
+      },
+      "manually": {
+        "type": "boolean"
+      },
+      "output": {
+        "type": "json"
+      },
+      "parameters": {
+        "type": "json"
+      },
+      "parentRunId": {
+        "type": "bigInt"
+      },
+      "reason": {
+        "type": "string"
+      },
+      "sourceId": {
+        "type": "string"
+      },
+      "sourceType": {
+        "type": "string"
+      },
+      "stack": {
+        "type": "json"
+      },
+      "startedAt": {
+        "type": "datetimeTz"
+      },
+      "status": {
+        "type": "integer"
+      },
+      "workflowId": {
+        "type": "bigInt"
+      },
+      "workflowKey": {
+        "type": "string"
+      }
+    },
+    "name": "workflowRuns",
+    "relations": {
+      "nodeRuns": {
+        "foreignKey": "workflowRunId",
+        "sourceKey": "id",
+        "target": "workflowNodeRuns",
+        "type": "hasMany"
+      },
+      "workflow": {
+        "foreignKey": "workflowId",
+        "target": "workflows",
+        "targetKey": "id",
+        "type": "belongsTo"
+      }
+    },
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "workflowRuns"
+}

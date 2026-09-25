@@ -1,0 +1,132 @@
+{
+  "formatVersion": 1,
+  "name": "lcCheckpointBlobs",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "thread_id",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "checkpoint_ns",
+        "dataType": "string",
+        "default": {
+          "expression": "''",
+          "value": ""
+        },
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "channel",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "version",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "type",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "blob",
+        "autoIncrement": false,
+        "columnName": "blob",
+        "dataType": "blob",
+        "nativeType": "BLOB",
+        "nullable": true,
+        "ordinalPosition": 6
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "thread_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "checkpoint_ns",
+            "order": "asc"
+          },
+          {
+            "columnName": "channel",
+            "order": "asc"
+          },
+          {
+            "columnName": "version",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_lc_checkpoint_blobs_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "thread_id",
+        "checkpoint_ns",
+        "channel",
+        "version"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "lc_checkpoint_blobs",
+    "uniqueConstraints": []
+  }
+}

@@ -1,0 +1,319 @@
+{
+  "formatVersion": 1,
+  "name": "workflowRuns",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "integer",
+        "autoIncrement": true,
+        "columnName": "id",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "workflow_id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "workflow_key",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "hash",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "event_key",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "input",
+        "dataType": "json",
+        "default": {
+          "expression": "'{}'",
+          "value": "{}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "parameters",
+        "dataType": "json",
+        "default": {
+          "expression": "'{}'",
+          "value": "{}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "dispatched",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "parent_run_id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "stack",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "output",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "started_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "finished_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 14
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "expires_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 15
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 16
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "manually",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 17
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "reason",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 18
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "source_type",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 19
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "source_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 20
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "source_type",
+            "order": "asc"
+          },
+          {
+            "columnName": "source_id",
+            "order": "asc"
+          }
+        ],
+        "name": "workflow_runs_source_idx",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "workflow_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_runs_workflow_id",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "parent_run_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "status",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_runs_parent_run_id_status",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "status",
+            "order": "asc"
+          },
+          {
+            "columnName": "expires_at",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_runs_status_expires_at",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "dispatched",
+            "order": "asc"
+          },
+          {
+            "columnName": "id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_runs_dispatched_id",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "event_key",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_runs_event_key",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "workflow_runs",
+    "uniqueConstraints": []
+  }
+}

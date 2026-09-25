@@ -1,0 +1,43 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "finding": {
+        "type": "text"
+      },
+      "findingId": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "note": {
+        "type": "text"
+      },
+      "problemId": {
+        "type": "integer"
+      },
+      "reportId": {
+        "type": "string"
+      },
+      "runKey": {
+        "type": "string"
+      },
+      "sourceInstance": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "evaluationFindings",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "evaluationFindings"
+}

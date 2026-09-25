@@ -1,0 +1,28 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "permissionSetKey": {
+        "type": "string"
+      },
+      "subjectId": {
+        "type": "string"
+      },
+      "subjectType": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "authorizationPermissionSetAssignments",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "authorizationPermissionSetAssignments"
+}

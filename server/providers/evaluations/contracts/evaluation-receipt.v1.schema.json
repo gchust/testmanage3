@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gchust/nb3-factory/.github/contracts/evaluation-receipt.v1.schema.json",
+  "title": "Evaluation Import v1 receiver receipt",
+  "description": "JSON body a receiver returns with HTTP 200 (already stored) or 201 (stored now) after it durably persisted the bundle. Every identity field must echo the sent bundle. 202 is not a v1 receipt. Receivers may add fields; the factory stores only receiptId and state.",
+  "type": "object",
+  "required": ["receiptId", "sourceInstance", "revision", "bundleSha256", "state"],
+  "properties": {
+    "receiptId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "sourceInstance": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "runKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,299}$" },
+    "batchKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,299}$" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "bundleSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "state": { "const": "stored" }
+  },
+  "oneOf": [
+    { "required": ["runKey"] },
+    { "required": ["batchKey"] }
+  ]
+}

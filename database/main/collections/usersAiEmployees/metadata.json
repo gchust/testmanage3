@@ -1,0 +1,28 @@
+{
+  "document": {
+    "fields": {
+      "aiEmployee": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "prompt": {
+        "type": "text"
+      },
+      "sort": {
+        "type": "integer"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "userId": {
+        "type": "string"
+      }
+    },
+    "name": "usersAiEmployees",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "usersAiEmployees"
+}

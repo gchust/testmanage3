@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "type": "evaluation-report",
+  "source": {
+    "producer": "nb3-factory",
+    "instance": "owner/factory",
+    "project": "owner/factory",
+    "exporter": {
+      "version": 1,
+      "controlSha": "0000000000000000000000000000000000000001",
+      "runId": 1000900,
+      "attempt": 1
+    }
+  },
+  "run": {
+    "key": "owner/factory/issues/146/initial",
+    "kind": "initial",
+    "identity": "recorded",
+    "batchKey": null,
+    "caseKey": null,
+    "sampleIndex": null,
+    "sampleKey": null,
+    "task": {
+      "repository": "owner/factory",
+      "issue": 146,
+      "buildCommentId": null,
+      "title": "客户资料管理"
+    },
+    "case": {
+      "source": "preset",
+      "presetIssueNumber": 155,
+      "capturedAt": "2026-09-24T10:00:00Z",
+      "inputHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "reviewHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  },
+  "revision": 1,
+  "createdAt": "2026-09-25T08:00:00Z",
+  "precedence": {
+    "producer": {
+      "runId": 100,
+      "attempt": 1,
+      "startedAt": "2026-09-21T14:13:20Z"
+    },
+    "executionOrder": 1,
+    "knownLaterExecutions": 0,
+    "chainTerminal": true,
+    "reviewRubric": 0,
+    "reviewState": "not-reviewed",
+    "review": {
+      "kind": null,
+      "at": null,
+      "runId": null,
+      "attempt": null
+    },
+    "qaCoverage": "none"
+  },
+  "baseline": {
+    "track": "published-template",
+    "application": {
+      "baseRef": "develop",
+      "baseSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "candidate": {
+        "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+        "headSha": null
+      }
+    },
+    "factory": {
+      "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "entrySha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "template": {
+      "creatorVersion": "0.1.0-beta.20",
+      "templateVersion": "1.0.0-beta.45"
+    },
+    "dependencies": {
+      "lockfileSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "baselineFingerprint": "4444444444444444444444444444444444444444444444444444444444444444",
+      "packages": [
+        {
+          "name": "@nocobase/example-data",
+          "version": "0.0.0-fixture"
+        },
+        {
+          "name": "@nocobase/example-router",
+          "version": "0.0.0-fixture"
+        }
+      ]
+    },
+    "skills": {
+      "fingerprint": "efba61fee7d460e06da019d9df7dba7c26f7176187709c0fda920774fb9959e4",
+      "files": 2
+    },
+    "sourceSnapshot": null,
+    "inputs": {
+      "taskInputHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "pipelineInputHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "reviewHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "reviewCriteriaHash": "36e46a4a6be5674a47db438455a98c0d7cad6a6a2638a344da3f1d6acc710782",
+      "prompts": [
+        {
+          "phase": "implementation",
+          "path": "agent-implement.jsonl.invocation.json",
+          "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+        }
+      ]
+    },
+    "rubric": {
+      "id": "nb3-framework",
+      "version": 2
+    },
+    "agent": {
+      "engine": "pi",
+      "model": "fixture-model",
+      "version": "0.86.1",
+      "buildReviewMode": "full"
+    },
+    "environment": {
+      "browserFixturesSha256": null,
+      "browserPreflight": null
+    }
+  },
+  "executions": [
+    {
+      "key": "run/100/attempt/1",
+      "kind": "implementation",
+      "order": 1,
+      "workflow": "code-agent-task",
+      "runId": 100,
+      "attempt": 1,
+      "event": "issues",
+      "previousRunId": null,
+      "conclusion": "failed",
+      "startedAt": "2026-09-21T14:13:20Z",
+      "endedAt": "2026-09-21T14:14:20Z",
+      "jobSeconds": 60,
+      "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+      "source": "usage-receipt"
+    }
+  ],
+  "outcome": {
+    "execution": "blocked",
+    "acceptance": "not-run",
+    "delivery": "not-published",
+    "pullRequest": null,
+    "detail": "执行因环境或前置条件受阻，不视为业务缺陷。"
+  },
+  "qa": {
+    "coverage": "none",
+    "rounds": [],
+    "firstFull": {
+      "status": "not-run",
+      "round": null,
+      "executionKey": null,
+      "basis": "本产物包含第 1 轮起的全部验证，但没有全量 QA 记录。"
+    },
+    "finalFull": {
+      "status": "not-run",
+      "round": null,
+      "executionKey": null,
+      "basis": "本产物包含第 1 轮起的全部验证，但没有全量 QA 记录。"
+    },
+    "criteria": [
+      {
+        "id": "B01",
+        "text": "创建客户",
+        "optional": false,
+        "firstFull": "not-run",
+        "finalFull": "not-run"
+      },
+      {
+        "id": "B02",
+        "text": "编辑客户",
+        "optional": false,
+        "firstFull": "not-run",
+        "finalFull": "not-run"
+      }
+    ],
+    "firstPassWithoutRepair": "no",
+    "counts": {
+      "execution": {
+        "verificationAttempts": 0,
+        "repairAttempts": 0,
+        "source": "repair-summary.json（仅本执行）"
+      },
+      "chain": {
+        "verificationAttempts": 1,
+        "repairAttempts": 0,
+        "source": "pipeline-state.json（跨 Handoff 累计检查点，不再相加）"
+      }
+    },
+    "note": "工厂修复次数不等于 Agent 开发中的全部自测和修正；未记录 Agent 内部试错，不宣称开发全程无错误。"
+  },
+  "reviews": [
+    {
+      "key": "review/100.1/v2-aaaaaaaaaaaa",
+      "role": "original",
+      "selected": true,
+      "state": "not-reviewed",
+      "reason": "本轮明确关闭独立评审",
+      "rubric": {
+        "id": "nb3-framework",
+        "version": 2,
+        "scale": {
+          "min": 0,
+          "max": 100
+        },
+        "businessUiIncluded": false,
+        "dimensions": [
+          {
+            "key": "requirementFit",
+            "label": "需求满足度"
+          },
+          {
+            "key": "usability",
+            "label": "使用便利度"
+          },
+          {
+            "key": "agentFriendliness",
+            "label": "Agent 友好度"
+          },
+          {
+            "key": "design",
+            "label": "设计合理性"
+          },
+          {
+            "key": "reliability",
+            "label": "实现完整性与可靠性"
+          }
+        ]
+      },
+      "reviewer": {
+        "engine": "pi",
+        "model": "fixture-model",
+        "version": "0.86.1",
+        "runId": 100,
+        "attempt": 1,
+        "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+        "replay": false
+      },
+      "producer": {
+        "runId": 100,
+        "attempt": 1
+      },
+      "basis": {
+        "inputHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+        "baseSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "lockfileSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "reviewCriteriaHash": "36e46a4a6be5674a47db438455a98c0d7cad6a6a2638a344da3f1d6acc710782",
+        "artifactHash": "0264cd051a5251bb53163b4db7e1dab26d63ef3cb72e8a7547a98658dac01f92"
+      },
+      "buildReviewMode": "off",
+      "summary": null,
+      "progress": null,
+      "modules": [],
+      "findings": [],
+      "ui": null,
+      "limitations": [],
+      "usageSource": null
+    }
+  ],
+  "processNotes": {
+    "state": "absent",
+    "source": null,
+    "author": "implementer",
+    "independent": false,
+    "summary": null,
+    "blockers": [],
+    "improvements": [],
+    "note": "过程笔记可选；缺失不代表没有问题、没有评审或没有改进。"
+  },
+  "metrics": {
+    "usage": {
+      "sources": [
+        {
+          "key": "agent-job:1001",
+          "executionKey": "run/100/attempt/1",
+          "scope": "一次 Agent 作业内的实现、修复、QA 与同轮评审调用",
+          "phases": {
+            "implementation": {
+              "input": 300,
+              "output": 30,
+              "cacheRead": 50,
+              "cacheWrite": 0,
+              "total": 380
+            },
+            "repair": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qa": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qaFocused": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qaReport": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "review": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "compaction": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          },
+          "records": 3,
+          "missing": 0,
+          "incomplete": 0,
+          "complete": true
+        }
+      ],
+      "totals": {
+        "input": 300,
+        "output": 30,
+        "cacheRead": 50,
+        "cacheWrite": 0,
+        "total": 380,
+        "complete": true
+      },
+      "definition": "沿用 task-usage 口径：按唯一来源键（Agent 作业 / 后补评审 Run）去重，不相加已含这些调用的汇总，不把思考 Token 再加到输出；缺失为 null，不等同供应商账单。"
+    },
+    "time": {
+      "executionSeconds": 60,
+      "missingJobTimes": 0,
+      "endToEndSeconds": 60,
+      "jobs": [
+        {
+          "id": 1001,
+          "name": "agent",
+          "executionKey": "run/100/attempt/1",
+          "seconds": 60
+        }
+      ],
+      "definition": "executionSeconds 为 prepare / agent / verify-final / publish 唯一作业时长之和，不含排队；endToEndSeconds 含排队及续跑间隔。"
+    },
+    "counts": {
+      "businessBuilds": 1,
+      "executions": 1,
+      "reviewExecutions": 1
+    }
+  },
+  "evidence": [],
+  "links": [
+    {
+      "rel": "task-issue",
+      "label": "Issue #146",
+      "url": "https://github.com/owner/factory/issues/146",
+      "path": null
+    },
+    {
+      "rel": "run",
+      "label": "Run 100 / attempt 1",
+      "url": "https://github.com/owner/factory/actions/runs/100/attempts/1",
+      "path": null
+    },
+    {
+      "rel": "report-archive",
+      "label": "固定版本 HTML 报告（gh-pages 归档路径）",
+      "url": null,
+      "path": "reports/issues/146/runs/100/attempt-1/index.html"
+    }
+  ],
+  "limitations": [
+    {
+      "code": "review-not-run",
+      "detail": "本执行没有独立框架评审；未评估不代表通过，也不按零分处理。"
+    }
+  ]
+}

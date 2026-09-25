@@ -1,5 +1,6 @@
 import {
   Gauge,
+  FlaskConical,
   ListChecks,
   Palette,
   TriangleAlert,
@@ -15,6 +16,13 @@ import {
 // Feature points, Problems. The API reference stays route-addressable but is
 // deliberately absent from the menu — it serves Agents, not users.
 const appRoutes: AppClientRouteContribution = defineAppRoutes([
+  {
+    auth: 'required',
+    componentLoader: () => import('./pages/evaluations/index.js'),
+    name: 'evaluations',
+    navigation: { title: 'evaluations.title', icon: FlaskConical },
+    path: '/progress/evaluations',
+  },
   {
     auth: 'required',
     authz: 'skip',

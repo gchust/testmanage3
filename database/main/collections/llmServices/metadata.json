@@ -1,0 +1,40 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "enabledModels": {
+        "type": "json"
+      },
+      "modelOptions": {
+        "type": "json"
+      },
+      "name": {
+        "type": "string"
+      },
+      "options": {
+        "type": "json"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "sort": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "llmServices",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "llmServices"
+}

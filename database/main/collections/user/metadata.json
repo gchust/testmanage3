@@ -1,0 +1,44 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "deletedAt": {
+        "type": "datetime"
+      },
+      "deletedBy": {
+        "type": "string"
+      },
+      "disabledAt": {
+        "type": "datetime"
+      },
+      "email": {
+        "type": "string"
+      },
+      "emailVerified": {
+        "type": "boolean"
+      },
+      "id": {
+        "type": "string"
+      },
+      "image": {
+        "type": "text"
+      },
+      "name": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "username": {
+        "type": "string"
+      }
+    },
+    "name": "user",
+    "relations": {},
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "user"
+}

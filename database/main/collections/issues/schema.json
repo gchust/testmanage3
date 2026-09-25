@@ -1,0 +1,174 @@
+{
+  "formatVersion": 1,
+  "name": "issues",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "integer",
+        "autoIncrement": true,
+        "columnName": "id",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "title",
+        "dataType": "string",
+        "length": 200,
+        "nativeType": "varchar(200)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "description",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "feature_point_id",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "string",
+        "default": {
+          "expression": "'pending'",
+          "value": "pending"
+        },
+        "length": 16,
+        "nativeType": "varchar(16)",
+        "nullable": false,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "type",
+        "dataType": "string",
+        "default": {
+          "expression": "'manual'",
+          "value": "manual"
+        },
+        "length": 16,
+        "nativeType": "varchar(16)",
+        "nullable": false,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "owner",
+        "dataType": "string",
+        "length": 100,
+        "nativeType": "varchar(100)",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "owner_id",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": true,
+        "ordinalPosition": 10
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "type",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_issues_type",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "status",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_issues_status",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "feature_point_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_issues_feature_point_id",
+        "unique": false
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "issues",
+    "uniqueConstraints": []
+  }
+}

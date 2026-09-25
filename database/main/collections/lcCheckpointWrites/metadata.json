@@ -1,0 +1,34 @@
+{
+  "document": {
+    "fields": {
+      "blob": {
+        "type": "blob"
+      },
+      "channel": {
+        "type": "string"
+      },
+      "checkpointId": {
+        "type": "string"
+      },
+      "checkpointNs": {
+        "type": "string"
+      },
+      "idx": {
+        "type": "integer"
+      },
+      "taskId": {
+        "type": "string"
+      },
+      "threadId": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      }
+    },
+    "name": "lcCheckpointWrites",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "lcCheckpointWrites"
+}

@@ -1,0 +1,16 @@
+{
+  "document": {
+    "fields": {
+      "executed": {
+        "type": "bigInt"
+      },
+      "key": {
+        "type": "string"
+      }
+    },
+    "name": "workflowStats",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "workflowStats"
+}

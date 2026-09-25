@@ -1,0 +1,140 @@
+{
+  "formatVersion": 1,
+  "name": "lcCheckpoints",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "thread_id",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "checkpoint_ns",
+        "dataType": "string",
+        "default": {
+          "expression": "''",
+          "value": ""
+        },
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "checkpoint_id",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "parent_checkpoint_id",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "type",
+        "dataType": "string",
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "checkpoint",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "metadata",
+        "dataType": "json",
+        "default": {
+          "expression": "'{}'",
+          "value": "{}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 7
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "thread_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "checkpoint_ns",
+            "order": "asc"
+          },
+          {
+            "columnName": "checkpoint_id",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_lc_checkpoints_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "thread_id",
+        "checkpoint_ns",
+        "checkpoint_id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "lc_checkpoints",
+    "uniqueConstraints": []
+  }
+}

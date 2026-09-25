@@ -1,0 +1,69 @@
+# nb3-factory evaluation integration
+
+## Scope
+
+The receiver implements the fixed report, batch, ZIP bundle and top-level receipt v1 contracts from nb3-factory commit `ff7e1e12225bdb868865b36bd4032b423e57e66d`. Original schemas are in `server/providers/evaluations/contracts/`; regenerate TypeScript with `node scripts/generate-evaluation-contracts.mjs`.
+
+- T1: source-bound credentials, strict ZIP/schema/hash validation, archived bundles, database-enforced idempotency, history and current revision selected by protocol precedence.
+- T2: module subject-key mapping to existing feature points, rubric scores, requirements, evidence, findings linked to existing issues and human dispositions.
+- T3: all planned batch samples, missing/not-received/not-executed states, comparable baselines, finding changes and explicit human regression records.
+
+Machine evaluations never update manual scores or issue status. Reviewer claims remain distinct from human disposition. A finding absent in a comparison is “not observed”, never automatically “fixed”. Usage is the cumulative total from one selected revision, never the sum of revisions. Missing baseline identities, incomplete reviews or batch Agent configuration drift suppress score deltas. Modules match exact subject-key sets; findings match subject keys, kind and title.
+
+## Native NocoBase 3 infrastructure
+
+Run `pnpm skills:sync` and follow the application-local Skills. No standalone plugin or replacement authentication, authorization or storage system is introduced.
+
+| Concern                | Native capability                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| Composition            | App ServiceProvider and container tokens                                                        |
+| Browser authentication | Authentication `auth.required()`                                                                |
+| Machine credentials    | API Keys `ApiKeyService`, separate non-session `evaluation-import` configuration                |
+| Permissions            | Fluent Authorization business resources, Permission Sets, record scopes and Repository policies |
+| Archive storage        | File Repository uploads/metadata and configured private local Drive disk                        |
+| Database               | App migrations, seeds, transactions and Collection/Repository APIs                              |
+| Client                 | `useApiClient`, application navigation, i18n and shadcn components                              |
+
+Only evaluation protocol validation, revision selection, comparison and review workflows are application-specific. Import needs a custom endpoint because its contract requires a fixed multipart field, ZIP inspection, a multi-table transaction and a top-level receipt. Staff endpoints bind the exact database policies returned by the business action; they do not re-resolve broader collection grants. The separate machine path enforces its source/project binding.
+
+## Roles
+
+New editable native Permission Sets are installed once:
+
+- `evaluation-reader`: page and read access to reports, batches, mappings, findings and regressions.
+- `evaluation-reviewer`: reader access plus mapping, finding review and explicit regression records. Existing feature points and issues are read through the review action’s database policies.
+- `evaluation-manager`: reviewer access plus issuing/revoking factory credentials.
+
+Existing administrators retain access through their current unrestricted role. Ordinary users are not silently assigned a new role. Use native Users/Authorization pages to assign the new sets or narrow record scopes. Seeds preserve administrator-edited sets. Report JSON is an atomic evidence document; record permissions do not split individual JSON properties.
+
+## Receiver
+
+`POST <app-base>/api/evaluations/import` accepts exactly one multipart `bundle` field of type `application/zip`. Authenticate with the integration token using either `x-api-key` or Bearer, exclusively. Required headers are `Idempotency-Key`, `X-Evaluation-Schema-Version: 1`, `X-Evaluation-Type` and `X-Evaluation-Bundle-SHA256`.
+
+Initial import returns HTTP 201; identical retry returns HTTP 200 and the original receipt ID. Different bytes at the same source/type/key/revision return 409. Receipts are top-level JSON, never wrapped in `data`, and HTTP 202 is never returned. The batch receipt uses its full subject key. Arrival order and largest revision do not determine the current report.
+
+Limits: 64 MiB ZIP, 128 MiB unpacked, 2,048 entries, 4 MiB JSON, 32 MiB HTML, 10 MiB per PNG and 48 MiB PNG total. The store-only ZIP format is checked for local/central header agreement, UTF-8 paths, duplicate names, links, compression, CRC, manifest hashes and evidence references. Four imports per process may run concurrently; overflow receives 429 with `Retry-After: 5`.
+
+HTML is download-only with attachment disposition, `nosniff` and CSP sandbox. Bundles/evidence are only available through authenticated report endpoints. File Repository’s generated access path is deliberately not registered as a public route. Native file metadata and private Drive objects are committed before the receipt. Back up the database together with the entire configured storage directory. A failed/uncertain database commit never returns success; interrupted uploads may leave native file metadata that should only be cleaned after checking report references.
+
+## Factory configuration
+
+Create a source binding using the actual repository as source instance and project. Configure repository variables:
+
+```text
+FACTORY_EVALUATION_DELIVERY=true
+EVALUATION_ENDPOINT=https://test3.nfvd.net/main/api/evaluations/import
+EVALUATION_AUTH_MODE=x-api-key
+```
+
+Store the issued token in the GitHub Actions secret `EVALUATION_TOKEN`. The token is shown once, expires after 365 days and is revocable. It never creates a user session or authorizes ordinary application endpoints. Public API Key self-service requests for the reserved configuration are rejected.
+
+Dispatch `Deliver Evaluation Results` (`deliver-evaluation.yml`) with `mode=replay`, `type=evaluation-report`, full run `key` and `revision`. Replay sends the original archived bundle without another application build or model usage. The existing factory workflow owns retry scheduling; the receiver does not add another scheduler.
+
+## Deployment and verification
+
+Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm nocobase app i18n:check` and `pnpm build --target linux-x64 --node-version 24 --tar`. Migrate/seed using the configured application startup tasks. Regenerate Collection artifacts with `pnpm collections:generate` against an isolated migrated database.
+
+On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and the current container identity. Consistently back up SQLite and save compose/deployment metadata before switching images. Keep the previous image for rollback; never restore the old unrelated misdeployment.
+
+Verify native credential/session isolation, anonymous/unpermitted access, reader write denial, row/field Repository policies, complete batch samples, source binding, unchanged manual data, concurrent duplicate reception and receipt persistence across restart. Use a real factory artifact with its actual `deliverBundle` sender, then dispatch GitHub delivery against the deployed service. Inspect both its stored receipt and the report page in light/dark themes and English/Chinese.

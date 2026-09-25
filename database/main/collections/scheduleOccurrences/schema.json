@@ -1,0 +1,276 @@
+{
+  "formatVersion": 1,
+  "name": "scheduleOccurrences",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "schedule_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "definition_hash",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "reason",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "target_type",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "target_receipt",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "target_reference_type",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "target_reference_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "result_summary",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "execution_count",
+        "dataType": "integer",
+        "default": {
+          "expression": "'1'",
+          "value": "1"
+        },
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "started_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "last_started_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "accepted_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 14
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "last_observed_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 15
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "observation_deadline_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 16
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "finished_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 17
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 18
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 19
+      }
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "schedule_id"
+        ],
+        "onDelete": "restrict",
+        "onUpdate": "noAction",
+        "referencedCollection": {
+          "schema": "main",
+          "tableName": "schedule_definitions"
+        },
+        "referencedColumns": [
+          "id"
+        ]
+      }
+    ],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "schedule_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_schedule_occurrences_schedule_id",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "target_reference_type",
+            "order": "asc"
+          },
+          {
+            "columnName": "target_reference_id",
+            "order": "asc"
+          }
+        ],
+        "name": "schedule_occurrences_target_reference_idx",
+        "unique": false
+      },
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "id",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_schedule_occurrences_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "schedule_occurrences",
+    "uniqueConstraints": []
+  }
+}

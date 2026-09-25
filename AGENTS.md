@@ -349,6 +349,11 @@ The authorization provider clears the permission snapshot before rendering a new
 
 Navigation groups retain their expanded or collapsed state while the navigation tree stays mounted. Selecting a new page expands its ancestor groups without collapsing other groups; users can still collapse the active group manually. Keep this behavior aligned across the application, Settings, and Dev tools navigation.
 
+## Factory evaluations
+
+Automated evaluations live in `server/providers/evaluations/`, `server/routes/evaluations.ts` and `client/pages/evaluations/`; see `docs/evaluation-integration.md`. Reuse native API Keys (the separate non-session `evaluation-import` configuration), Authorization business resources/Permission Sets, policy-bound Repositories, File Repository and Drive. Preserve the machine endpoint’s top-level receipt and immutable revision semantics. Existing issue records use the `issues` Collection although the UI/API call them problems. Never overwrite manual scores or automatically close issues. Never expose the archive File Repository access path as a public route.
+
+
 ## Development logging
 
 `pnpm dev` owns the ready banner and public URL; `APP_SERVER_START_LOG=false` suppresses the underlying listener announcement through `server/environment.ts`. Keep that mapping when editing deployment environment settings. Request starts, request headers and config diagnostics use DEBUG; the normal INFO output contains completion summaries. See the shared application development Skill for hosted logging and upgrade limits.

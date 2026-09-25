@@ -1,0 +1,31 @@
+{
+  "document": {
+    "fields": {
+      "checkpoint": {
+        "type": "json"
+      },
+      "checkpointId": {
+        "type": "string"
+      },
+      "checkpointNs": {
+        "type": "string"
+      },
+      "metadata": {
+        "type": "json"
+      },
+      "parentCheckpointId": {
+        "type": "string"
+      },
+      "threadId": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      }
+    },
+    "name": "lcCheckpoints",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "lcCheckpoints"
+}

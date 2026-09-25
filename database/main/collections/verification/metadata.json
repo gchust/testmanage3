@@ -1,0 +1,28 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "expiresAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "identifier": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "value": {
+        "type": "text"
+      }
+    },
+    "name": "verification",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "verification"
+}

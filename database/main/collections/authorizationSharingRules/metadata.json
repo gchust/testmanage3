@@ -1,0 +1,37 @@
+{
+  "document": {
+    "fields": {
+      "actions": {
+        "type": "json"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "key": {
+        "type": "string"
+      },
+      "reason": {
+        "type": "text"
+      },
+      "resourceId": {
+        "type": "string"
+      },
+      "resourceType": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "authorizationSharingRules",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "authorizationSharingRules"
+}

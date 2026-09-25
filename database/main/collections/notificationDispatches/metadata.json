@@ -1,0 +1,32 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "id": {
+        "type": "string"
+      },
+      "idempotencyKey": {
+        "type": "string"
+      },
+      "requestFingerprint": {
+        "type": "string"
+      },
+      "sourceReferenceId": {
+        "type": "string"
+      },
+      "sourceType": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetimeTz"
+      }
+    },
+    "name": "notificationDispatches",
+    "relations": {},
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "notificationDispatches"
+}

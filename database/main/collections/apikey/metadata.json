@@ -1,0 +1,76 @@
+{
+  "document": {
+    "fields": {
+      "configId": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "expiresAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "key": {
+        "type": "string"
+      },
+      "lastRefillAt": {
+        "type": "datetime"
+      },
+      "lastRequest": {
+        "type": "datetime"
+      },
+      "metadata": {
+        "type": "text"
+      },
+      "name": {
+        "type": "string"
+      },
+      "permissions": {
+        "type": "text"
+      },
+      "prefix": {
+        "type": "string"
+      },
+      "rateLimitEnabled": {
+        "type": "boolean"
+      },
+      "rateLimitMax": {
+        "type": "integer"
+      },
+      "rateLimitTimeWindow": {
+        "type": "integer"
+      },
+      "referenceId": {
+        "type": "string"
+      },
+      "refillAmount": {
+        "type": "integer"
+      },
+      "refillInterval": {
+        "type": "integer"
+      },
+      "remaining": {
+        "type": "integer"
+      },
+      "requestCount": {
+        "type": "integer"
+      },
+      "start": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "apikey",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "apikey"
+}

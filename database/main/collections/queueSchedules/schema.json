@@ -1,0 +1,214 @@
+{
+  "formatVersion": 1,
+  "name": "queueSchedules",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "string",
+        "default": {
+          "expression": "'active'",
+          "value": "active"
+        },
+        "length": 50,
+        "nativeType": "varchar(50)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "name",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "payload",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "cron_expression",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "every_ms",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "timezone",
+        "dataType": "string",
+        "default": {
+          "expression": "'UTC'",
+          "value": "UTC"
+        },
+        "length": 100,
+        "nativeType": "varchar(100)",
+        "nullable": false,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "from_date",
+        "dataType": "datetime",
+        "nativeType": "datetime",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "to_date",
+        "dataType": "datetime",
+        "nativeType": "datetime",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "run_limit",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "run_count",
+        "dataType": "integer",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "next_run_at",
+        "dataType": "datetime",
+        "nativeType": "datetime",
+        "nullable": true,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "last_run_at",
+        "dataType": "datetime",
+        "nativeType": "datetime",
+        "nullable": true,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "datetime",
+        "default": {
+          "expression": "CURRENT_TIMESTAMP"
+        },
+        "nativeType": "datetime",
+        "nullable": false,
+        "ordinalPosition": 14
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "status",
+            "order": "asc"
+          },
+          {
+            "columnName": "next_run_at",
+            "order": "asc"
+          }
+        ],
+        "name": "queue_schedules_status_next_run_at_index",
+        "unique": false
+      },
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "id",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_queue_schedules_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "queue_schedules",
+    "uniqueConstraints": []
+  }
+}

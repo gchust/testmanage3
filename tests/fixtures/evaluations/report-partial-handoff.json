@@ -1,0 +1,994 @@
+{
+  "schemaVersion": 1,
+  "type": "evaluation-report",
+  "source": {
+    "producer": "nb3-factory",
+    "instance": "owner/factory",
+    "project": "owner/factory",
+    "exporter": {
+      "version": 1,
+      "controlSha": "0000000000000000000000000000000000000001",
+      "runId": 1000900,
+      "attempt": 1
+    }
+  },
+  "run": {
+    "key": "owner/factory/issues/146/initial",
+    "kind": "initial",
+    "identity": "recorded",
+    "batchKey": null,
+    "caseKey": null,
+    "sampleIndex": null,
+    "sampleKey": null,
+    "task": {
+      "repository": "owner/factory",
+      "issue": 146,
+      "buildCommentId": null,
+      "title": "客户资料管理"
+    },
+    "case": {
+      "source": "preset",
+      "presetIssueNumber": 155,
+      "capturedAt": "2026-09-24T10:00:00Z",
+      "inputHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "reviewHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  },
+  "revision": 1,
+  "createdAt": "2026-09-25T08:00:00Z",
+  "precedence": {
+    "producer": {
+      "runId": 200,
+      "attempt": 1,
+      "startedAt": "2026-09-21T19:46:40Z"
+    },
+    "executionOrder": 2,
+    "knownLaterExecutions": 0,
+    "chainTerminal": true,
+    "reviewRubric": 2,
+    "reviewState": "partial",
+    "review": {
+      "kind": "build",
+      "at": "2026-09-21T19:46:40Z",
+      "runId": 200,
+      "attempt": 1
+    },
+    "qaCoverage": "partial"
+  },
+  "baseline": {
+    "track": "published-template",
+    "application": {
+      "baseRef": "develop",
+      "baseSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "candidate": {
+        "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+        "headSha": null
+      }
+    },
+    "factory": {
+      "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "entrySha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    "template": {
+      "creatorVersion": "0.1.0-beta.20",
+      "templateVersion": "1.0.0-beta.45"
+    },
+    "dependencies": {
+      "lockfileSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "baselineFingerprint": "4444444444444444444444444444444444444444444444444444444444444444",
+      "packages": [
+        {
+          "name": "@nocobase/example-data",
+          "version": "0.0.0-fixture"
+        },
+        {
+          "name": "@nocobase/example-router",
+          "version": "0.0.0-fixture"
+        }
+      ]
+    },
+    "skills": {
+      "fingerprint": "efba61fee7d460e06da019d9df7dba7c26f7176187709c0fda920774fb9959e4",
+      "files": 2
+    },
+    "sourceSnapshot": null,
+    "inputs": {
+      "taskInputHash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "pipelineInputHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "reviewHash": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "reviewCriteriaHash": "36e46a4a6be5674a47db438455a98c0d7cad6a6a2638a344da3f1d6acc710782",
+      "prompts": [
+        {
+          "phase": "implementation",
+          "path": "agent-implement.jsonl.invocation.json",
+          "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+        }
+      ]
+    },
+    "rubric": {
+      "id": "nb3-framework",
+      "version": 2
+    },
+    "agent": {
+      "engine": "pi",
+      "model": "fixture-model",
+      "version": "0.86.1",
+      "buildReviewMode": "full"
+    },
+    "environment": {
+      "browserFixturesSha256": null,
+      "browserPreflight": null
+    }
+  },
+  "executions": [
+    {
+      "key": "run/100/attempt/1",
+      "kind": "implementation",
+      "order": 1,
+      "workflow": "code-agent-task",
+      "runId": 100,
+      "attempt": 1,
+      "event": "issues",
+      "previousRunId": null,
+      "conclusion": "handoff",
+      "startedAt": "2026-09-21T14:13:20Z",
+      "endedAt": "2026-09-21T14:14:20Z",
+      "jobSeconds": 60,
+      "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+      "source": "usage-receipt"
+    },
+    {
+      "key": "run/200/attempt/1",
+      "kind": "continuation",
+      "order": 2,
+      "workflow": "code-agent-task",
+      "runId": 200,
+      "attempt": 1,
+      "event": "repository_dispatch",
+      "previousRunId": 100,
+      "conclusion": "delivered",
+      "startedAt": "2026-09-21T19:46:40Z",
+      "endedAt": "2026-09-21T19:47:40Z",
+      "jobSeconds": 60,
+      "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+      "source": "usage-receipt"
+    }
+  ],
+  "outcome": {
+    "execution": "completed",
+    "acceptance": "passed",
+    "delivery": "published",
+    "pullRequest": null,
+    "detail": "执行链已终结；业务验收与代码交付分别见 acceptance / delivery。"
+  },
+  "qa": {
+    "coverage": "partial",
+    "rounds": [
+      {
+        "round": 2,
+        "executionKey": "run/200/attempt/1",
+        "scope": "full",
+        "passed": true,
+        "source": "verify-2/browser-acceptance/report.json",
+        "checks": [
+          {
+            "id": "B01",
+            "criterion": "创建客户",
+            "status": "passed",
+            "evidence": [
+              "qa/2/b01.png"
+            ]
+          },
+          {
+            "id": "B02",
+            "criterion": "编辑客户",
+            "status": "passed",
+            "evidence": [
+              "qa/2/b02.png"
+            ]
+          }
+        ]
+      }
+    ],
+    "firstFull": {
+      "status": "unknown",
+      "round": null,
+      "executionKey": null,
+      "basis": "第一轮验证位于更早的执行，本产物未包含，不能推断首轮结果。"
+    },
+    "finalFull": {
+      "status": "passed",
+      "round": 2,
+      "executionKey": "run/200/attempt/1",
+      "basis": "本产物中最后一次实际全量 QA。"
+    },
+    "criteria": [
+      {
+        "id": "B01",
+        "text": "创建客户",
+        "optional": false,
+        "firstFull": "unknown",
+        "finalFull": "passed"
+      },
+      {
+        "id": "B02",
+        "text": "编辑客户",
+        "optional": false,
+        "firstFull": "unknown",
+        "finalFull": "passed"
+      }
+    ],
+    "firstPassWithoutRepair": "unknown",
+    "counts": {
+      "execution": {
+        "verificationAttempts": 1,
+        "repairAttempts": 0,
+        "source": "repair-summary.json（仅本执行）"
+      },
+      "chain": {
+        "verificationAttempts": 2,
+        "repairAttempts": 1,
+        "source": "pipeline-state.json（跨 Handoff 累计检查点，不再相加）"
+      }
+    },
+    "note": "工厂修复次数不等于 Agent 开发中的全部自测和修正；未记录 Agent 内部试错，不宣称开发全程无错误。"
+  },
+  "reviews": [
+    {
+      "key": "review/200.1/v2-aaaaaaaaaaaa",
+      "role": "original",
+      "selected": true,
+      "state": "partial",
+      "reason": "虚构样例，仅用于版式预览。",
+      "rubric": {
+        "id": "nb3-framework",
+        "version": 2,
+        "scale": {
+          "min": 0,
+          "max": 100
+        },
+        "businessUiIncluded": false,
+        "dimensions": [
+          {
+            "key": "requirementFit",
+            "label": "需求满足度"
+          },
+          {
+            "key": "usability",
+            "label": "使用便利度"
+          },
+          {
+            "key": "agentFriendliness",
+            "label": "Agent 友好度"
+          },
+          {
+            "key": "design",
+            "label": "设计合理性"
+          },
+          {
+            "key": "reliability",
+            "label": "实现完整性与可靠性"
+          }
+        ]
+      },
+      "reviewer": {
+        "engine": "pi",
+        "model": "fixture-model",
+        "version": "0.86.1",
+        "runId": 200,
+        "attempt": 1,
+        "controlSha": "cccccccccccccccccccccccccccccccccccccccc",
+        "replay": false
+      },
+      "producer": {
+        "runId": 200,
+        "attempt": 1
+      },
+      "basis": {
+        "inputHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "patchSha256": "7dcaf130ea95a7b779e59d334b40dddb0888a545138c08edb581975468aa6833",
+        "baseSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "lockfileSha256": "1111111111111111111111111111111111111111111111111111111111111111",
+        "reviewCriteriaHash": "36e46a4a6be5674a47db438455a98c0d7cad6a6a2638a344da3f1d6acc710782",
+        "artifactHash": "4736acda84b0a890607691c5c40380d04a167621f90a8fc7759c07f8ac02437f"
+      },
+      "buildReviewMode": "full",
+      "summary": "虚构样例：数据访问能力支持单连接读写与正常业务组合；路由能力可用，但指引缺少关键装配示例，影响 Agent 首次接入。业务页面出错不直接等于框架有缺陷，未覆盖的实现继续显示未评估。",
+      "progress": {
+        "complete": false,
+        "pendingModules": [
+          "页面路由与接入指引"
+        ]
+      },
+      "modules": [
+        {
+          "key": "review/200.1/v2-aaaaaaaaaaaa/M1",
+          "name": "数据访问与持久化",
+          "subjectKeys": [
+            "pkg:@nocobase/example-data",
+            "skill:example-data"
+          ],
+          "mapping": "resolved",
+          "targets": [
+            {
+              "kind": "library",
+              "name": "@nocobase/example-data",
+              "subjectKey": "pkg:@nocobase/example-data",
+              "entrypoints": [
+                "query(table)"
+              ],
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E1"
+              ]
+            },
+            {
+              "kind": "guidance",
+              "name": "app/.agents/skills/example-data/SKILL.md",
+              "subjectKey": "skill:example-data",
+              "entrypoints": [
+                "连接装配与查询组合示例"
+              ],
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E2"
+              ]
+            }
+          ],
+          "scope": "虚构样例：框架负责查询入口与连接；应用负责客户业务条件。",
+          "limitations": "未覆盖并发、多连接、事务和其他数据库。",
+          "criteria": [
+            "B01",
+            "B02"
+          ],
+          "qa": {
+            "firstFull": "unknown",
+            "finalFull": "passed"
+          },
+          "requirements": [
+            {
+              "need": "保存并查询客户记录",
+              "responsibility": "框架提供真实持久化与参数化查询，客户字段和过滤规则属于业务。",
+              "support": "composition",
+              "recommendedUsage": "先解析连接，再使用 query(table) 组合业务条件。",
+              "actualUsage": "Agent 按文档接入；未另写数据存储层。",
+              "gapOwner": "none",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E1",
+                "review/200.1/v2-aaaaaaaaaaaa/E2",
+                "review/200.1/v2-aaaaaaaaaaaa/E3",
+                "review/200.1/v2-aaaaaaaaaaaa/E4"
+              ]
+            }
+          ],
+          "scores": {
+            "requirementFit": {
+              "score": 88,
+              "reason": "查询能力覆盖本次读写；业务条件是正常组合，不因没有完整 CRM 接口扣分。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E1",
+                "review/200.1/v2-aaaaaaaaaaaa/E3",
+                "review/200.1/v2-aaaaaaaaaaaa/E4"
+              ]
+            },
+            "usability": {
+              "score": 82,
+              "reason": "公开入口与连接装配步骤明确，应用只需补充业务查询条件。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E1",
+                "review/200.1/v2-aaaaaaaaaaaa/E2",
+                "review/200.1/v2-aaaaaaaaaaaa/E3"
+              ]
+            },
+            "agentFriendliness": {
+              "score": 86,
+              "reason": "Skill 提供定位入口和完整接入顺序，实际应用采用了该路径。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E2",
+                "review/200.1/v2-aaaaaaaaaaaa/E3"
+              ]
+            },
+            "design": {
+              "score": 84,
+              "reason": "查询与连接职责在库内，业务规则留在应用；不以业务 service 拆分作为框架设计依据。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E1",
+                "review/200.1/v2-aaaaaaaaaaaa/E2"
+              ]
+            },
+            "reliability": {
+              "score": 80,
+              "reason": "本样例已查看查询实现及对应运行记录；仅评价展示的单连接路径。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E1",
+                "review/200.1/v2-aaaaaaaaaaaa/E4"
+              ]
+            }
+          }
+        },
+        {
+          "key": "review/200.1/v2-aaaaaaaaaaaa/M2",
+          "name": "页面路由与接入指引",
+          "subjectKeys": [
+            "pkg:@nocobase/example-router",
+            "skill:example-router"
+          ],
+          "mapping": "resolved",
+          "targets": [
+            {
+              "kind": "library",
+              "name": "@nocobase/example-router",
+              "subjectKey": "pkg:@nocobase/example-router",
+              "entrypoints": [
+                "useDialog()"
+              ],
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E5"
+              ]
+            },
+            {
+              "kind": "guidance",
+              "name": "app/.agents/skills/example-router/SKILL.md",
+              "subjectKey": "skill:example-router",
+              "entrypoints": [
+                "弹窗路由接入示例"
+              ],
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E6"
+              ]
+            }
+          ],
+          "scope": "虚构样例：库提供弹窗路由；指引应明确 Hook 的上下文边界。",
+          "limitations": "只查看到声明和使用证据，没有库实现，可靠性未评估。",
+          "criteria": [
+            "B01"
+          ],
+          "qa": {
+            "firstFull": "unknown",
+            "finalFull": "passed"
+          },
+          "requirements": [
+            {
+              "need": "在路由弹窗中新增客户",
+              "responsibility": "框架提供路由与上下文；业务负责表单字段，不要求框架生成完整客户页。",
+              "support": "direct",
+              "recommendedUsage": "声明提供 Hook，但指引未明确必须在 Provider 后代调用。",
+              "actualUsage": "首次接入受阻；修复位置后业务 QA 通过。",
+              "gapOwner": "documentation",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E5",
+                "review/200.1/v2-aaaaaaaaaaaa/E6",
+                "review/200.1/v2-aaaaaaaaaaaa/E7",
+                "review/200.1/v2-aaaaaaaaaaaa/E4"
+              ]
+            }
+          ],
+          "scores": {
+            "requirementFit": {
+              "score": 80,
+              "reason": "当前需求有公开能力且实际接入完成；首次失败不能直接证明功能缺失。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E5",
+                "review/200.1/v2-aaaaaaaaaaaa/E4"
+              ]
+            },
+            "usability": {
+              "score": 73,
+              "reason": "上下文前提需要从报错反推，增加接入步骤。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E5",
+                "review/200.1/v2-aaaaaaaaaaaa/E6",
+                "review/200.1/v2-aaaaaaaaaaaa/E7"
+              ]
+            },
+            "agentFriendliness": {
+              "score": 62,
+              "reason": "本样例指引省略关键前提，Agent 很容易在错误位置调用。",
+              "evidence": [
+                "review/200.1/v2-aaaaaaaaaaaa/E6",
+                "review/200.1/v2-aaaaaaaaaaaa/E7"
+              ]
+            },
+            "design": {
+              "score": null,
+              "reason": "只有简要声明，未覆盖完整的上下文设计。",
+              "evidence": []
+            },
+            "reliability": {
+              "score": null,
+              "reason": "未查阅库实现，不用业务 QA 通过推断框架可靠性。",
+              "evidence": []
+            }
+          }
+        }
+      ],
+      "findings": [
+        {
+          "id": "review/200.1/v2-aaaaaaaaaaaa/F1",
+          "localId": "F1",
+          "kind": "strength",
+          "owner": "framework",
+          "severity": "info",
+          "confidence": "confirmed",
+          "confirmedBy": "reviewer",
+          "reviewerStatus": "not-applicable",
+          "title": "查询入口支持正常业务组合",
+          "detail": "虚构样例：已使用查询入口，应用无需维护数据库连接管理。",
+          "impact": "避免重新实现连接解析与通用查询入口。",
+          "suggestedChange": "保留查询与业务规则之间的职责边界。",
+          "claimed": null,
+          "observed": null,
+          "evidence": [
+            "review/200.1/v2-aaaaaaaaaaaa/E1",
+            "review/200.1/v2-aaaaaaaaaaaa/E2",
+            "review/200.1/v2-aaaaaaaaaaaa/E3"
+          ],
+          "moduleKeys": [
+            "review/200.1/v2-aaaaaaaaaaaa/M1"
+          ],
+          "subjectKeys": [
+            "pkg:@nocobase/example-data",
+            "skill:example-data"
+          ]
+        },
+        {
+          "id": "review/200.1/v2-aaaaaaaaaaaa/F2",
+          "localId": "F2",
+          "kind": "misleading",
+          "owner": "documentation",
+          "severity": "minor",
+          "confidence": "suspected",
+          "confirmedBy": null,
+          "reviewerStatus": "open",
+          "title": "弹窗指引未写清 Hook 的上下文前提",
+          "detail": "虚构样例：将说明与首轮诊断对照发现关键前提未说明。",
+          "impact": "增加首次接入出错的风险；不认定 Hook 实现有 bug。",
+          "suggestedChange": "在 Hook 说明中给出包含 Provider 的完整示例。",
+          "claimed": "Call useDialog from your page.",
+          "observed": "记录显示缺少 DialogProvider 后代上下文时调用失败。",
+          "evidence": [
+            "review/200.1/v2-aaaaaaaaaaaa/E5",
+            "review/200.1/v2-aaaaaaaaaaaa/E6",
+            "review/200.1/v2-aaaaaaaaaaaa/E7"
+          ],
+          "moduleKeys": [
+            "review/200.1/v2-aaaaaaaaaaaa/M2"
+          ],
+          "subjectKeys": [
+            "pkg:@nocobase/example-router",
+            "skill:example-router"
+          ]
+        },
+        {
+          "id": "review/200.1/v2-aaaaaaaaaaaa/F3",
+          "localId": "F3",
+          "kind": "issue",
+          "owner": "application",
+          "severity": "minor",
+          "confidence": "confirmed",
+          "confirmedBy": "reviewer",
+          "reviewerStatus": "resolved",
+          "title": "业务调用位置错误（不直接扣框架分）",
+          "detail": "虚构样例：首轮的业务页面未处于正确上下文，最终已修复。",
+          "impact": "首轮操作失败；属于使用证据，需结合指引另行归因。",
+          "suggestedChange": "调整业务调用位置；不把此项当作库实现缺陷。",
+          "claimed": null,
+          "observed": null,
+          "evidence": [
+            "review/200.1/v2-aaaaaaaaaaaa/E7",
+            "review/200.1/v2-aaaaaaaaaaaa/E4"
+          ],
+          "moduleKeys": [],
+          "subjectKeys": []
+        }
+      ],
+      "ui": {
+        "status": "not-reviewed",
+        "score": null,
+        "reason": "本样例未进行实际图像审阅；不能仅凭使用统一组件就评价跨页面样式一致性。",
+        "evidence": [],
+        "framework": false
+      },
+      "limitations": [
+        "完全虚构的布局测试，包名、API、分数和原文不是实际 NocoBase3 评测结果。",
+        "只展示读写、路由及指引；未用到的插件不推断通过。"
+      ],
+      "usageSource": null
+    }
+  ],
+  "processNotes": {
+    "state": "absent",
+    "source": null,
+    "author": "implementer",
+    "independent": false,
+    "summary": null,
+    "blockers": [],
+    "improvements": [],
+    "note": "过程笔记可选；缺失不代表没有问题、没有评审或没有改进。"
+  },
+  "metrics": {
+    "usage": {
+      "sources": [
+        {
+          "key": "agent-job:1001",
+          "executionKey": "run/100/attempt/1",
+          "scope": "一次 Agent 作业内的实现、修复、QA 与同轮评审调用",
+          "phases": {
+            "implementation": {
+              "input": 300,
+              "output": 30,
+              "cacheRead": 50,
+              "cacheWrite": 0,
+              "total": 380
+            },
+            "repair": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qa": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qaFocused": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qaReport": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "review": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "compaction": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          },
+          "records": 3,
+          "missing": 0,
+          "incomplete": 0,
+          "complete": true
+        },
+        {
+          "key": "agent-job:2001",
+          "executionKey": "run/200/attempt/1",
+          "scope": "一次 Agent 作业内的实现、修复、QA 与同轮评审调用",
+          "phases": {
+            "implementation": {
+              "input": 300,
+              "output": 30,
+              "cacheRead": 50,
+              "cacheWrite": 0,
+              "total": 380
+            },
+            "repair": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qa": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qaFocused": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "qaReport": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "review": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            },
+            "compaction": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "total": 0
+            }
+          },
+          "records": 3,
+          "missing": 0,
+          "incomplete": 0,
+          "complete": true
+        }
+      ],
+      "totals": {
+        "input": 600,
+        "output": 60,
+        "cacheRead": 100,
+        "cacheWrite": 0,
+        "total": 760,
+        "complete": true
+      },
+      "definition": "沿用 task-usage 口径：按唯一来源键（Agent 作业 / 后补评审 Run）去重，不相加已含这些调用的汇总，不把思考 Token 再加到输出；缺失为 null，不等同供应商账单。"
+    },
+    "time": {
+      "executionSeconds": 120,
+      "missingJobTimes": 0,
+      "endToEndSeconds": 20060,
+      "jobs": [
+        {
+          "id": 1001,
+          "name": "agent",
+          "executionKey": "run/100/attempt/1",
+          "seconds": 60
+        },
+        {
+          "id": 2001,
+          "name": "agent",
+          "executionKey": "run/200/attempt/1",
+          "seconds": 60
+        }
+      ],
+      "definition": "executionSeconds 为 prepare / agent / verify-final / publish 唯一作业时长之和，不含排队；endToEndSeconds 含排队及续跑间隔。"
+    },
+    "counts": {
+      "businessBuilds": 1,
+      "executions": 2,
+      "reviewExecutions": 1
+    }
+  },
+  "evidence": [
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E1",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E1"
+      },
+      "kind": "package",
+      "path": "packages/@nocobase/example-data/dist/index.js",
+      "lines": [
+        1,
+        2
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "// Fictional package implementation\nexport const query = (table) => connection.table(table);",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E2",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E2"
+      },
+      "kind": "skill",
+      "path": "app/.agents/skills/example-data/SKILL.md",
+      "lines": [
+        1,
+        2
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "# Fictional data guide\nResolve the connection, call query(table), then compose business filters.",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E3",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E3"
+      },
+      "kind": "code",
+      "path": "app/server/customers.ts",
+      "lines": [
+        1,
+        2
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "// Fictional application usage\nreturn query(\"customers\").where(\"active\", true);",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E4",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E4"
+      },
+      "kind": "qa",
+      "path": "artifacts/verify-2/browser-acceptance/report.json",
+      "lines": [
+        1,
+        1
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "{\"checks\":[{\"id\":\"B01\",\"status\":\"passed\"}]}",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E5",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E5"
+      },
+      "kind": "package",
+      "path": "packages/@nocobase/example-router/dist/index.d.ts",
+      "lines": [
+        1,
+        1
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "export declare function useDialog(): Dialog;",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E6",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E6"
+      },
+      "kind": "skill",
+      "path": "app/.agents/skills/example-router/SKILL.md",
+      "lines": [
+        1,
+        2
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "# Fictional route guide\nCall useDialog from your page.",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "review/200.1/v2-aaaaaaaaaaaa/E7",
+      "origin": {
+        "kind": "review",
+        "key": "review/200.1/v2-aaaaaaaaaaaa",
+        "localId": "E7"
+      },
+      "kind": "log",
+      "path": "artifacts/verify-1.log",
+      "lines": [
+        1,
+        1
+      ],
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "observation": "虚构证据，仅供展示和校验测试。",
+      "excerpt": "Fictional failure: useDialog requires a DialogProvider ancestor.",
+      "excerptRedacted": false,
+      "attachment": null,
+      "availability": "excerpt",
+      "note": null
+    },
+    {
+      "id": "qa/2/b01.png",
+      "origin": {
+        "kind": "qa",
+        "key": "qa/2",
+        "localId": "b01.png"
+      },
+      "kind": "screenshot",
+      "path": "artifacts/verify-2/browser-acceptance/evidence/b01.png",
+      "lines": null,
+      "sha256": "0e6546437f520f4b40c757f3ca04217e7abdf2f4cb29ec26b05c86e4bd338f9c",
+      "observation": "验收项 B01 的截图",
+      "excerpt": null,
+      "excerptRedacted": false,
+      "attachment": "evidence/verify-2/browser-acceptance/b01.png",
+      "availability": "attached",
+      "note": null
+    },
+    {
+      "id": "qa/2/b02.png",
+      "origin": {
+        "kind": "qa",
+        "key": "qa/2",
+        "localId": "b02.png"
+      },
+      "kind": "screenshot",
+      "path": "artifacts/verify-2/browser-acceptance/evidence/b02.png",
+      "lines": null,
+      "sha256": "0e6546437f520f4b40c757f3ca04217e7abdf2f4cb29ec26b05c86e4bd338f9c",
+      "observation": "验收项 B02 的截图",
+      "excerpt": null,
+      "excerptRedacted": false,
+      "attachment": "evidence/verify-2/browser-acceptance/b02.png",
+      "availability": "attached",
+      "note": null
+    }
+  ],
+  "links": [
+    {
+      "rel": "task-issue",
+      "label": "Issue #146",
+      "url": "https://github.com/owner/factory/issues/146",
+      "path": null
+    },
+    {
+      "rel": "run",
+      "label": "Run 100 / attempt 1",
+      "url": "https://github.com/owner/factory/actions/runs/100/attempts/1",
+      "path": null
+    },
+    {
+      "rel": "run",
+      "label": "Run 200 / attempt 1",
+      "url": "https://github.com/owner/factory/actions/runs/200/attempts/1",
+      "path": null
+    },
+    {
+      "rel": "report-archive",
+      "label": "固定版本 HTML 报告（gh-pages 归档路径）",
+      "url": null,
+      "path": "reports/issues/146/runs/200/attempt-1/index.html"
+    }
+  ],
+  "limitations": [
+    {
+      "code": "first-round-unavailable",
+      "detail": "只取得本执行的验证记录；首轮 QA 标为未知，不冒充整个任务首轮通过。"
+    },
+    {
+      "code": "review-partial",
+      "detail": "独立框架评审只完成部分模块，未覆盖项不推断通过。"
+    },
+    {
+      "code": "pr-unknown",
+      "detail": "发布作业已成功，但报告时未取得带交付标记的 PR。"
+    }
+  ]
+}

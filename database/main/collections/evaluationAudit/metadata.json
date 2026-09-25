@@ -1,0 +1,28 @@
+{
+  "document": {
+    "fields": {
+      "action": {
+        "type": "string"
+      },
+      "actorId": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "detail": {
+        "type": "text"
+      },
+      "id": {
+        "type": "string"
+      },
+      "target": {
+        "type": "string"
+      }
+    },
+    "name": "evaluationAudit",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "evaluationAudit"
+}

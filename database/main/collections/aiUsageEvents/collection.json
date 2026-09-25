@@ -1,0 +1,481 @@
+{
+  "collection": {
+    "constraints": [
+      {
+        "fields": [
+          "aiEmployeeUsername"
+        ],
+        "onDelete": "no action",
+        "onUpdate": "no action",
+        "references": {
+          "collection": "aiEmployees",
+          "fields": [
+            "username"
+          ]
+        },
+        "type": "foreignKey"
+      },
+      {
+        "fields": [
+          "userId"
+        ],
+        "onDelete": "no action",
+        "onUpdate": "no action",
+        "references": {
+          "collection": "user",
+          "fields": [
+            "id"
+          ]
+        },
+        "type": "foreignKey"
+      },
+      {
+        "fields": [
+          "messageId",
+          "eventType"
+        ],
+        "mode": "index",
+        "name": "uq_ai_usage_events_message_type",
+        "type": "unique"
+      }
+    ],
+    "db": {
+      "schema": "main",
+      "strict": false
+    },
+    "fields": [
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "id",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "occurredAt",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "char(36)",
+          "physicalDataType": "char"
+        },
+        "length": 36,
+        "name": "sessionId",
+        "nullable": false,
+        "type": "uuid"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "messageId",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "userId",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "aiEmployeeUsername",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "defaultExpression": "'main-agent'",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "defaultValue": "main-agent",
+        "length": 255,
+        "name": "from",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "defaultExpression": "'chat'",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "defaultValue": "chat",
+        "length": 255,
+        "name": "category",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "defaultExpression": "'llm_message'",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "defaultValue": "llm_message",
+        "length": 255,
+        "name": "eventType",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "role",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "provider",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "llmService",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "model",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "defaultValue": "0",
+        "name": "inputTokens",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "defaultValue": "0",
+        "name": "outputTokens",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "defaultValue": "0",
+        "name": "totalTokens",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "defaultValue": "0",
+        "name": "cachedTokens",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "defaultValue": "0",
+        "name": "reasoningTokens",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "INTEGER",
+          "physicalDataType": "integer"
+        },
+        "defaultValue": "0",
+        "name": "toolCallCount",
+        "nullable": false,
+        "type": "integer"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "defaultExpression": "'0'",
+          "nativeType": "INTEGER",
+          "physicalDataType": "integer"
+        },
+        "defaultValue": "0",
+        "name": "autoToolCallCount",
+        "nullable": false,
+        "type": "integer"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "defaultExpression": "'success'",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "defaultValue": "success",
+        "length": 255,
+        "name": "status",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "name": "rawUsageMetadata",
+        "nullable": true,
+        "type": "json"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "name": "rawResponseMetadata",
+        "nullable": true,
+        "type": "json"
+      }
+    ],
+    "indexes": [
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "sessionId",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "sessionId"
+        ],
+        "name": "idx_ai_usage_events_session",
+        "order": {
+          "sessionId": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "aiEmployeeUsername",
+              "order": "asc"
+            },
+            {
+              "field": "occurredAt",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "aiEmployeeUsername",
+          "occurredAt"
+        ],
+        "name": "idx_ai_usage_events_employee_occurred",
+        "order": {
+          "aiEmployeeUsername": "asc",
+          "occurredAt": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "userId",
+              "order": "asc"
+            },
+            {
+              "field": "occurredAt",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "userId",
+          "occurredAt"
+        ],
+        "name": "idx_ai_usage_events_user_occurred",
+        "order": {
+          "occurredAt": "asc",
+          "userId": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "occurredAt",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "occurredAt"
+        ],
+        "name": "idx_ai_usage_events_occurred",
+        "order": {
+          "occurredAt": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "messageId",
+              "order": "asc"
+            },
+            {
+              "field": "eventType",
+              "order": "asc"
+            }
+          ],
+          "unique": true
+        },
+        "fields": [
+          "messageId",
+          "eventType"
+        ],
+        "name": "uq_ai_usage_events_message_type",
+        "order": {
+          "eventType": "asc",
+          "messageId": "asc"
+        }
+      }
+    ],
+    "kind": "table",
+    "name": "aiUsageEvents",
+    "naming": {
+      "tablePrefix": "",
+      "underscored": true
+    }
+  },
+  "formatVersion": 1,
+  "name": "aiUsageEvents",
+  "warnings": [
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_PARTIAL",
+      "message": "Physical Schema aspect \"checkConstraints\" is partial.",
+      "path": [
+        "inspection",
+        "aspects",
+        "checkConstraints"
+      ]
+    },
+    {
+      "aspect": "comments",
+      "code": "COLLECTION_INSPECTION_UNSUPPORTED",
+      "message": "Physical Schema aspect \"comments\" is unsupported.",
+      "path": [
+        "inspection",
+        "aspects",
+        "comments"
+      ]
+    },
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_WARNING",
+      "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete.",
+      "sourceCode": "SQLITE_CHECK_CONSTRAINT_PARTIAL"
+    }
+  ]
+}

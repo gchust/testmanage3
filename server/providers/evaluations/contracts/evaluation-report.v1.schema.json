@@ -1,0 +1,759 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gchust/nb3-factory/.github/contracts/evaluation-report.v1.schema.json",
+  "title": "NB3 Factory Evaluation Report v1",
+  "description": "Normalized public DTO for one logical build run. schemaVersion is the protocol major version and is unrelated to the framework rubric version. Unknown facts are null, never zero. Additional properties are rejected: new optional fields require a documented minor extension, contradictory fields require a new major version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "type", "source", "run", "revision", "createdAt", "precedence", "baseline", "executions", "outcome", "qa", "reviews", "processNotes", "metrics", "evidence", "links", "limitations"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "type": { "const": "evaluation-report" },
+    "source": { "$ref": "#/$defs/source" },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "kind", "identity", "batchKey", "caseKey", "sampleIndex", "sampleKey", "task", "case"],
+      "properties": {
+        "key": { "$ref": "#/$defs/runKey" },
+        "kind": { "enum": ["initial", "incremental", "batch-sample"] },
+        "identity": { "enum": ["recorded", "legacy-derived", "unresolved"] },
+        "batchKey": { "$ref": "#/$defs/optionalSegment" },
+        "caseKey": { "$ref": "#/$defs/optionalSegment" },
+        "sampleIndex": { "type": ["integer", "null"], "minimum": 1 },
+        "sampleKey": { "type": ["string", "null"], "maxLength": 250 },
+        "task": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "issue", "buildCommentId", "title"],
+          "properties": {
+            "repository": { "$ref": "#/$defs/repository" },
+            "issue": { "$ref": "#/$defs/positive" },
+            "buildCommentId": { "type": ["integer", "null"], "minimum": 1 },
+            "title": { "type": "string", "maxLength": 300 }
+          }
+        },
+        "case": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["source", "presetIssueNumber", "capturedAt", "inputHash", "reviewHash"],
+              "properties": {
+                "source": { "const": "preset" },
+                "presetIssueNumber": { "type": ["integer", "null"], "minimum": 1 },
+                "capturedAt": { "$ref": "#/$defs/optionalTime" },
+                "inputHash": { "$ref": "#/$defs/optionalSha256" },
+                "reviewHash": { "$ref": "#/$defs/optionalSha256" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "revision": { "$ref": "#/$defs/positive" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "precedence": {
+      "description": "Facts a receiver compares before choosing a current revision; the largest revision is only archive order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "executionOrder", "knownLaterExecutions", "chainTerminal", "reviewRubric", "reviewState", "review", "qaCoverage"],
+      "properties": {
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runId", "attempt", "startedAt"],
+          "properties": { "runId": { "$ref": "#/$defs/positive" }, "attempt": { "$ref": "#/$defs/positive" }, "startedAt": { "$ref": "#/$defs/optionalTime" } }
+        },
+        "executionOrder": { "type": "integer", "minimum": 0 },
+        "knownLaterExecutions": { "type": "integer", "minimum": 0 },
+        "chainTerminal": { "type": "boolean" },
+        "reviewRubric": { "enum": [0, 1, 2] },
+        "reviewState": { "$ref": "#/$defs/reviewState" },
+        "review": {
+          "description": "The selected review's execution, compared after reviewRubric and reviewState so a newer review of the same facts wins: a reassessment follows the build's own review, reassessments are ordered by at (the Actions API time of their review artifact), run and attempt only break ties. All null when not reviewed.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "at", "runId", "attempt"],
+          "properties": {
+            "kind": { "enum": ["build", "reassessment", null] },
+            "at": { "$ref": "#/$defs/optionalTime" }, "runId": { "type": ["integer", "null"], "minimum": 1 }, "attempt": { "type": ["integer", "null"], "minimum": 1 }
+          }
+        },
+        "qaCoverage": { "$ref": "#/$defs/coverage" }
+      }
+    },
+    "baseline": { "$ref": "#/$defs/baseline" },
+    "executions": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/execution" } },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution", "acceptance", "delivery", "pullRequest", "detail"],
+      "properties": {
+        "execution": { "enum": ["running", "completed", "cancelled", "timed-out", "budget-exhausted", "blocked", "unknown"] },
+        "acceptance": { "enum": ["passed", "failed", "blocked", "not-run", "unknown"] },
+        "delivery": { "enum": ["published", "not-published", "unknown"] },
+        "pullRequest": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "additionalProperties": false, "required": ["number", "headSha"], "properties": { "number": { "$ref": "#/$defs/positive" }, "headSha": { "$ref": "#/$defs/optionalSha" } } }
+          ]
+        },
+        "detail": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "qa": { "$ref": "#/$defs/qa" },
+    "reviews": { "type": "array", "minItems": 1, "maxItems": 10, "items": { "$ref": "#/$defs/review" } },
+    "processNotes": { "$ref": "#/$defs/processNotes" },
+    "metrics": { "$ref": "#/$defs/metrics" },
+    "evidence": { "type": "array", "maxItems": 2000, "items": { "$ref": "#/$defs/evidence" } },
+    "links": {
+      "type": "array",
+      "maxItems": 250,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rel", "label", "url", "path"],
+        "properties": {
+          "rel": { "enum": ["task-issue", "run", "pull-request", "report-archive", "review-run", "batch"] },
+          "label": { "type": "string", "maxLength": 200 },
+          "url": { "oneOf": [{ "type": "null" }, { "type": "string", "format": "uri", "maxLength": 500 }] },
+          "path": { "type": ["string", "null"], "maxLength": 300 }
+        }
+      }
+    },
+    "limitations": { "$ref": "#/$defs/limitations" }
+  },
+  "$defs": {
+    "positive": { "type": "integer", "minimum": 1 },
+    "count": { "type": "integer", "minimum": 0 },
+    "optionalCount": { "type": ["integer", "null"], "minimum": 0 },
+    "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "maxLength": 200 },
+    "runKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,299}$" },
+    "optionalSegment": { "type": ["string", "null"], "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$" },
+    "optionalSha": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40}$" },
+    "optionalSha256": { "type": ["string", "null"], "pattern": "^[a-f0-9]{64}$" },
+    "optionalTime": { "oneOf": [{ "type": "null" }, { "type": "string", "format": "date-time" }] },
+    "optionalText": { "type": ["string", "null"], "maxLength": 4000 },
+    "text": { "type": "string", "maxLength": 4000 },
+    "coverage": { "enum": ["complete", "partial", "none"] },
+    "qaStatus": { "enum": ["passed", "failed", "blocked", "not-run", "unknown"] },
+    "reviewState": { "enum": ["completed", "partial", "not-reviewed", "failed"] },
+    "scopedId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,250}$" },
+    "scopedIds": { "type": "array", "maxItems": 60, "uniqueItems": true, "items": { "$ref": "#/$defs/scopedId" } },
+    "limitations": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "detail"],
+        "properties": { "code": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" }, "detail": { "type": "string", "maxLength": 1000 } }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "instance", "project", "exporter"],
+      "properties": {
+        "producer": { "const": "nb3-factory" },
+        "instance": { "$ref": "#/$defs/repository" },
+        "project": { "$ref": "#/$defs/repository" },
+        "exporter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "controlSha", "runId", "attempt"],
+          "properties": {
+            "version": { "$ref": "#/$defs/positive" },
+            "controlSha": { "$ref": "#/$defs/optionalSha" },
+            "runId": { "type": ["integer", "null"], "minimum": 1 },
+            "attempt": { "type": ["integer", "null"], "minimum": 1 }
+          }
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["track", "application", "factory", "template", "dependencies", "skills", "sourceSnapshot", "inputs", "rubric", "agent", "environment"],
+      "properties": {
+        "track": { "enum": ["published-template", "source-snapshot"] },
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["baseRef", "baseSha", "candidate"],
+          "properties": {
+            "baseRef": { "type": ["string", "null"], "maxLength": 200 },
+            "baseSha": { "$ref": "#/$defs/optionalSha" },
+            "candidate": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["patchSha256", "headSha"],
+              "properties": { "patchSha256": { "$ref": "#/$defs/optionalSha256" }, "headSha": { "$ref": "#/$defs/optionalSha" } }
+            }
+          }
+        },
+        "factory": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["controlSha", "entrySha"],
+          "properties": { "controlSha": { "$ref": "#/$defs/optionalSha" }, "entrySha": { "$ref": "#/$defs/optionalSha" } }
+        },
+        "template": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["creatorVersion", "templateVersion"],
+          "properties": { "creatorVersion": { "type": ["string", "null"], "maxLength": 80 }, "templateVersion": { "type": ["string", "null"], "maxLength": 80 } }
+        },
+        "dependencies": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lockfileSha256", "baselineFingerprint", "packages"],
+          "properties": {
+            "lockfileSha256": { "$ref": "#/$defs/optionalSha256" },
+            "baselineFingerprint": { "$ref": "#/$defs/optionalSha256" },
+            "packages": {
+              "type": "array",
+              "maxItems": 300,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "version"],
+                "properties": { "name": { "type": "string", "pattern": "^@nocobase/[a-z0-9][a-z0-9._-]*$" }, "version": { "type": ["string", "null"], "maxLength": 80 } }
+              }
+            }
+          }
+        },
+        "skills": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fingerprint", "files"],
+          "properties": { "fingerprint": { "$ref": "#/$defs/optionalSha256" }, "files": { "$ref": "#/$defs/count" } }
+        },
+        "sourceSnapshot": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "additionalProperties": false, "required": ["repository", "sha"], "properties": { "repository": { "type": ["string", "null"], "maxLength": 200 }, "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" } } }
+          ]
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["taskInputHash", "pipelineInputHash", "reviewHash", "reviewCriteriaHash", "prompts"],
+          "properties": {
+            "taskInputHash": { "$ref": "#/$defs/optionalSha256" },
+            "pipelineInputHash": { "$ref": "#/$defs/optionalSha256" },
+            "reviewHash": { "$ref": "#/$defs/optionalSha256" },
+            "reviewCriteriaHash": { "$ref": "#/$defs/optionalSha256" },
+            "prompts": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["phase", "path", "sha256"],
+                "properties": { "phase": { "type": "string", "maxLength": 40 }, "path": { "type": "string", "maxLength": 300 }, "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" } }
+              }
+            }
+          }
+        },
+        "rubric": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "additionalProperties": false, "required": ["id", "version"], "properties": { "id": { "const": "nb3-framework" }, "version": { "enum": [1, 2] } } }
+          ]
+        },
+        "agent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["engine", "model", "version", "buildReviewMode"],
+          "properties": {
+            "engine": { "type": ["string", "null"], "maxLength": 80 },
+            "model": { "type": ["string", "null"], "maxLength": 200 },
+            "version": { "type": ["string", "null"], "maxLength": 80 },
+            "buildReviewMode": { "enum": ["full", "off", null] }
+          }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["browserFixturesSha256", "browserPreflight"],
+          "properties": { "browserFixturesSha256": { "$ref": "#/$defs/optionalSha256" }, "browserPreflight": { "enum": ["passed", "failed", null] } }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "kind", "order", "workflow", "runId", "attempt", "event", "previousRunId", "conclusion", "startedAt", "endedAt", "jobSeconds", "controlSha", "patchSha256", "source"],
+      "properties": {
+        "key": { "$ref": "#/$defs/scopedId" },
+        "kind": { "enum": ["implementation", "continuation", "recovery", "restart", "rerun-attempt", "review"] },
+        "order": { "$ref": "#/$defs/positive" },
+        "workflow": { "enum": ["code-agent-task", "reassess-build-quality"] },
+        "runId": { "$ref": "#/$defs/positive" },
+        "attempt": { "$ref": "#/$defs/positive" },
+        "event": { "enum": ["issues", "repository_dispatch", "workflow_dispatch", null] },
+        "previousRunId": { "type": ["integer", "null"], "minimum": 1 },
+        "conclusion": { "enum": ["delivered", "handoff", "failed", "cancelled", "timed-out", "completed", "budget-exhausted", "blocked", "unknown"] },
+        "startedAt": { "$ref": "#/$defs/optionalTime" },
+        "endedAt": { "$ref": "#/$defs/optionalTime" },
+        "jobSeconds": { "$ref": "#/$defs/optionalCount" },
+        "controlSha": { "$ref": "#/$defs/optionalSha" },
+        "patchSha256": { "$ref": "#/$defs/optionalSha256" },
+        "source": { "enum": ["usage-receipt", "build-review"] }
+      }
+    },
+    "fullRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "round", "executionKey", "basis"],
+      "properties": {
+        "status": { "$ref": "#/$defs/qaStatus" },
+        "round": { "type": ["integer", "null"], "minimum": 1 },
+        "executionKey": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/scopedId" }] },
+        "basis": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "attemptCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verificationAttempts", "repairAttempts", "source"],
+      "properties": { "verificationAttempts": { "$ref": "#/$defs/optionalCount" }, "repairAttempts": { "$ref": "#/$defs/optionalCount" }, "source": { "type": "string", "maxLength": 200 } }
+    },
+    "qa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["coverage", "rounds", "firstFull", "finalFull", "criteria", "firstPassWithoutRepair", "counts", "note"],
+      "properties": {
+        "coverage": { "$ref": "#/$defs/coverage" },
+        "rounds": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["round", "executionKey", "scope", "passed", "source", "checks"],
+            "properties": {
+              "round": { "$ref": "#/$defs/positive" },
+              "executionKey": { "$ref": "#/$defs/scopedId" },
+              "scope": { "enum": ["full", "focused"] },
+              "passed": { "type": ["boolean", "null"] },
+              "source": { "type": "string", "maxLength": 300 },
+              "checks": {
+                "type": "array",
+                "maxItems": 300,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["id", "criterion", "status", "evidence"],
+                  "properties": {
+                    "id": { "type": ["string", "null"], "maxLength": 100 },
+                    "criterion": { "type": ["string", "null"], "maxLength": 2000 },
+                    "status": { "$ref": "#/$defs/qaStatus" },
+                    "evidence": { "$ref": "#/$defs/scopedIds" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "firstFull": { "$ref": "#/$defs/fullRun" },
+        "finalFull": { "$ref": "#/$defs/fullRun" },
+        "criteria": {
+          "type": "array",
+          "maxItems": 300,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text", "optional", "firstFull", "finalFull"],
+            "properties": {
+              "id": { "type": "string", "maxLength": 100 },
+              "text": { "type": "string", "maxLength": 2000 },
+              "optional": { "type": "boolean" },
+              "firstFull": { "$ref": "#/$defs/qaStatus" },
+              "finalFull": { "$ref": "#/$defs/qaStatus" }
+            }
+          }
+        },
+        "firstPassWithoutRepair": { "enum": ["yes", "no", "unknown"] },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["execution", "chain"],
+          "properties": { "execution": { "$ref": "#/$defs/attemptCounts" }, "chain": { "$ref": "#/$defs/attemptCounts" } }
+        },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "reason", "evidence"],
+      "properties": {
+        "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+        "reason": { "$ref": "#/$defs/text" },
+        "evidence": { "$ref": "#/$defs/scopedIds" }
+      }
+    },
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "subjectKeys", "mapping", "targets", "scope", "limitations", "criteria", "qa", "requirements", "scores"],
+      "properties": {
+        "key": { "$ref": "#/$defs/scopedId" },
+        "name": { "type": "string", "maxLength": 120 },
+        "subjectKeys": { "type": "array", "maxItems": 12, "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:pkg|guide|skill):[^\\s]{1,300}$" } },
+        "mapping": { "enum": ["resolved", "pending"] },
+        "targets": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "name", "subjectKey", "entrypoints", "evidence"],
+            "properties": {
+              "kind": { "enum": ["library", "plugin", "guidance"] },
+              "name": { "type": "string", "maxLength": 250 },
+              "subjectKey": { "type": ["string", "null"], "pattern": "^(?:pkg|guide|skill):[^\\s]{1,300}$" },
+              "entrypoints": { "type": "array", "maxItems": 12, "items": { "type": "string", "maxLength": 300 } },
+              "evidence": { "$ref": "#/$defs/scopedIds" }
+            }
+          }
+        },
+        "scope": { "$ref": "#/$defs/text" },
+        "limitations": { "$ref": "#/$defs/text" },
+        "criteria": { "type": "array", "maxItems": 100, "items": { "type": "string", "maxLength": 100 } },
+        "qa": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["firstFull", "finalFull"],
+          "properties": { "firstFull": { "$ref": "#/$defs/qaStatus" }, "finalFull": { "$ref": "#/$defs/qaStatus" } }
+        },
+        "requirements": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["need", "responsibility", "support", "recommendedUsage", "actualUsage", "gapOwner", "evidence"],
+            "properties": {
+              "need": { "$ref": "#/$defs/text" },
+              "responsibility": { "$ref": "#/$defs/text" },
+              "support": { "enum": ["direct", "composition", "workaround", "missing", "unknown", "out-of-scope"] },
+              "recommendedUsage": { "$ref": "#/$defs/text" },
+              "actualUsage": { "$ref": "#/$defs/text" },
+              "gapOwner": { "enum": ["none", "framework", "plugin", "template", "documentation", "application", "factory", "environment", "unknown"] },
+              "evidence": { "$ref": "#/$defs/scopedIds" }
+            }
+          }
+        },
+        "scores": { "type": "object", "maxProperties": 5, "minProperties": 4, "additionalProperties": { "$ref": "#/$defs/score" }, "propertyNames": { "enum": ["requirementFit", "usability", "agentFriendliness", "design", "reliability", "completeness", "outputQuality"] } }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "localId", "kind", "owner", "severity", "confidence", "confirmedBy", "reviewerStatus", "title", "detail", "impact", "suggestedChange", "claimed", "observed", "evidence", "moduleKeys", "subjectKeys"],
+      "properties": {
+        "id": { "$ref": "#/$defs/scopedId" },
+        "localId": { "type": "string", "pattern": "^F[1-9]\\d*$" },
+        "kind": { "enum": ["strength", "issue", "misleading", "improvement"] },
+        "owner": { "enum": ["framework", "plugin", "template", "documentation", "application", "factory", "environment", "unknown"] },
+        "severity": { "enum": ["info", "minor", "major", "critical"] },
+        "confidence": { "enum": ["confirmed", "suspected"] },
+        "confirmedBy": { "description": "confirmed means the reviewer judged the evidence sufficient; it is never a human confirmation.", "enum": ["reviewer", null] },
+        "reviewerStatus": { "description": "The reviewer's view at review time; not a receiver issue lifecycle state.", "enum": ["open", "resolved", "unknown", "not-applicable"] },
+        "title": { "$ref": "#/$defs/text" },
+        "detail": { "$ref": "#/$defs/text" },
+        "impact": { "$ref": "#/$defs/text" },
+        "suggestedChange": { "$ref": "#/$defs/text" },
+        "claimed": { "$ref": "#/$defs/optionalText" },
+        "observed": { "$ref": "#/$defs/optionalText" },
+        "evidence": { "$ref": "#/$defs/scopedIds" },
+        "moduleKeys": { "$ref": "#/$defs/scopedIds" },
+        "subjectKeys": { "type": "array", "maxItems": 30, "uniqueItems": true, "items": { "type": "string", "pattern": "^(?:pkg|guide|skill):[^\\s]{1,300}$" } }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "role", "selected", "state", "reason", "rubric", "reviewer", "producer", "basis", "buildReviewMode", "summary", "progress", "modules", "findings", "ui", "limitations", "usageSource"],
+      "properties": {
+        "key": { "$ref": "#/$defs/scopedId" },
+        "role": { "enum": ["original", "supplement", "legacy"] },
+        "selected": { "type": "boolean" },
+        "state": { "$ref": "#/$defs/reviewState" },
+        "reason": { "type": "string", "maxLength": 2000 },
+        "rubric": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "version", "scale", "businessUiIncluded", "dimensions"],
+              "properties": {
+                "id": { "const": "nb3-framework" },
+                "version": { "enum": [1, 2] },
+                "scale": { "type": "object", "additionalProperties": false, "required": ["min", "max"], "properties": { "min": { "const": 0 }, "max": { "const": 100 } } },
+                "businessUiIncluded": { "const": false },
+                "dimensions": {
+                  "type": "array",
+                  "minItems": 4,
+                  "maxItems": 5,
+                  "items": { "type": "object", "additionalProperties": false, "required": ["key", "label"], "properties": { "key": { "type": "string", "maxLength": 40 }, "label": { "type": "string", "maxLength": 80 } } }
+                }
+              }
+            }
+          ]
+        },
+        "reviewer": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["engine", "model", "version", "runId", "attempt", "controlSha", "replay"],
+              "properties": {
+                "engine": { "type": ["string", "null"], "maxLength": 80 },
+                "model": { "type": ["string", "null"], "maxLength": 200 },
+                "version": { "type": ["string", "null"], "maxLength": 80 },
+                "runId": { "type": ["integer", "null"], "minimum": 1 },
+                "attempt": { "type": ["integer", "null"], "minimum": 1 },
+                "controlSha": { "$ref": "#/$defs/optionalSha" },
+                "replay": { "type": "boolean" }
+              }
+            }
+          ]
+        },
+        "producer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runId", "attempt"],
+          "properties": { "runId": { "type": ["integer", "null"], "minimum": 1 }, "attempt": { "type": ["integer", "null"], "minimum": 1 } }
+        },
+        "basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inputHash", "patchSha256", "baseSha", "lockfileSha256", "reviewCriteriaHash", "artifactHash"],
+          "properties": {
+            "inputHash": { "$ref": "#/$defs/optionalSha256" },
+            "patchSha256": { "$ref": "#/$defs/optionalSha256" },
+            "baseSha": { "$ref": "#/$defs/optionalSha" },
+            "lockfileSha256": { "$ref": "#/$defs/optionalSha256" },
+            "reviewCriteriaHash": { "$ref": "#/$defs/optionalSha256" },
+            "artifactHash": { "$ref": "#/$defs/optionalSha256" }
+          }
+        },
+        "buildReviewMode": { "enum": ["full", "off", null] },
+        "summary": { "$ref": "#/$defs/optionalText" },
+        "progress": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "additionalProperties": false, "required": ["complete", "pendingModules"], "properties": { "complete": { "type": "boolean" }, "pendingModules": { "type": "array", "maxItems": 30, "items": { "type": "string", "maxLength": 120 } } } }
+          ]
+        },
+        "modules": { "type": "array", "maxItems": 30, "items": { "$ref": "#/$defs/module" } },
+        "findings": { "type": "array", "maxItems": 60, "items": { "$ref": "#/$defs/finding" } },
+        "ui": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "description": "Business UI observation. It is never one of the framework dimensions.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status", "score", "reason", "evidence", "framework"],
+              "properties": {
+                "status": { "enum": ["reviewed", "not-reviewed"] },
+                "score": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+                "reason": { "$ref": "#/$defs/text" },
+                "evidence": { "$ref": "#/$defs/scopedIds" },
+                "framework": { "const": false }
+              }
+            }
+          ]
+        },
+        "limitations": { "type": "array", "maxItems": 30, "items": { "type": "string", "maxLength": 2000 } },
+        "usageSource": { "type": ["string", "null"], "maxLength": 200 }
+      }
+    },
+    "processNotes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "source", "author", "independent", "summary", "blockers", "improvements", "note"],
+      "properties": {
+        "state": { "enum": ["present", "absent", "invalid"] },
+        "source": { "enum": ["retro.json", null] },
+        "author": { "const": "implementer" },
+        "independent": { "const": false },
+        "summary": { "$ref": "#/$defs/optionalText" },
+        "blockers": {
+          "type": "array",
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "phase", "title", "symptom", "rootCause", "resolution", "cost", "status"],
+            "properties": {
+              "id": { "$ref": "#/$defs/scopedId" },
+              "phase": { "type": ["string", "null"], "maxLength": 200 },
+              "title": { "type": "string", "maxLength": 500 },
+              "symptom": { "$ref": "#/$defs/optionalText" },
+              "rootCause": { "$ref": "#/$defs/optionalText" },
+              "resolution": { "$ref": "#/$defs/optionalText" },
+              "cost": { "type": ["string", "null"], "maxLength": 500 },
+              "status": { "enum": ["resolved", "open", "unknown"] }
+            }
+          }
+        },
+        "improvements": {
+          "type": "array",
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "category", "title", "detail", "suggestedChange", "mechanizable"],
+            "properties": {
+              "id": { "$ref": "#/$defs/scopedId" },
+              "category": { "type": ["string", "null"], "maxLength": 200 },
+              "title": { "type": "string", "maxLength": 500 },
+              "detail": { "$ref": "#/$defs/optionalText" },
+              "suggestedChange": { "$ref": "#/$defs/optionalText" },
+              "mechanizable": { "type": "boolean" }
+            }
+          }
+        },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "tokens": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "output", "cacheRead", "cacheWrite", "total"],
+      "properties": {
+        "input": { "$ref": "#/$defs/optionalCount" },
+        "output": { "$ref": "#/$defs/optionalCount" },
+        "cacheRead": { "$ref": "#/$defs/optionalCount" },
+        "cacheWrite": { "$ref": "#/$defs/optionalCount" },
+        "total": { "$ref": "#/$defs/optionalCount" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usage", "time", "counts"],
+      "properties": {
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sources", "totals", "definition"],
+          "properties": {
+            "sources": {
+              "type": "array",
+              "maxItems": 200,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["key", "executionKey", "scope", "phases", "records", "missing", "incomplete", "complete"],
+                "properties": {
+                  "key": { "type": "string", "pattern": "^(?:agent-job:[1-9]\\d*|review-run:[1-9]\\d*:[1-9]\\d*)$" },
+                  "executionKey": { "$ref": "#/$defs/scopedId" },
+                  "scope": { "type": "string", "maxLength": 200 },
+                  "phases": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["implementation", "repair", "qa", "qaFocused", "qaReport", "review", "compaction"],
+                    "properties": {
+                      "implementation": { "$ref": "#/$defs/tokens" },
+                      "repair": { "$ref": "#/$defs/tokens" },
+                      "qa": { "$ref": "#/$defs/tokens" },
+                      "qaFocused": { "$ref": "#/$defs/tokens" },
+                      "qaReport": { "$ref": "#/$defs/tokens" },
+                      "review": { "$ref": "#/$defs/tokens" },
+                      "compaction": { "$ref": "#/$defs/tokens" }
+                    }
+                  },
+                  "records": { "$ref": "#/$defs/count" },
+                  "missing": { "$ref": "#/$defs/count" },
+                  "incomplete": { "$ref": "#/$defs/count" },
+                  "complete": { "type": "boolean" }
+                }
+              }
+            },
+            "totals": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["input", "output", "cacheRead", "cacheWrite", "total", "complete"],
+              "properties": {
+                "input": { "$ref": "#/$defs/optionalCount" },
+                "output": { "$ref": "#/$defs/optionalCount" },
+                "cacheRead": { "$ref": "#/$defs/optionalCount" },
+                "cacheWrite": { "$ref": "#/$defs/optionalCount" },
+                "total": { "$ref": "#/$defs/optionalCount" },
+                "complete": { "type": "boolean" }
+              }
+            },
+            "definition": { "type": "string", "maxLength": 500 }
+          }
+        },
+        "time": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["executionSeconds", "missingJobTimes", "endToEndSeconds", "jobs", "definition"],
+          "properties": {
+            "executionSeconds": { "$ref": "#/$defs/optionalCount" },
+            "missingJobTimes": { "$ref": "#/$defs/count" },
+            "endToEndSeconds": { "$ref": "#/$defs/optionalCount" },
+            "jobs": {
+              "type": "array",
+              "maxItems": 2000,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "name", "executionKey", "seconds"],
+                "properties": {
+                  "id": { "$ref": "#/$defs/positive" },
+                  "name": { "enum": ["prepare", "agent", "verify-final", "publish"] },
+                  "executionKey": { "$ref": "#/$defs/scopedId" },
+                  "seconds": { "$ref": "#/$defs/optionalCount" }
+                }
+              }
+            },
+            "definition": { "type": "string", "maxLength": 500 }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["businessBuilds", "executions", "reviewExecutions"],
+          "properties": { "businessBuilds": { "const": 1 }, "executions": { "$ref": "#/$defs/count" }, "reviewExecutions": { "$ref": "#/$defs/count" } }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "origin", "kind", "path", "lines", "sha256", "observation", "excerpt", "excerptRedacted", "attachment", "availability", "note"],
+      "properties": {
+        "id": { "$ref": "#/$defs/scopedId" },
+        "origin": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "key", "localId"],
+          "properties": { "kind": { "enum": ["review", "qa"] }, "key": { "$ref": "#/$defs/scopedId" }, "localId": { "type": "string", "maxLength": 120 } }
+        },
+        "kind": { "enum": ["code", "package", "skill", "qa", "screenshot", "log"] },
+        "path": { "type": "string", "maxLength": 500 },
+        "lines": { "oneOf": [{ "type": "null" }, { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/positive" } }] },
+        "sha256": { "$ref": "#/$defs/optionalSha256" },
+        "observation": { "$ref": "#/$defs/text" },
+        "excerpt": { "type": ["string", "null"], "maxLength": 12000 },
+        "excerptRedacted": { "type": "boolean" },
+        "attachment": { "type": ["string", "null"], "pattern": "^evidence/[A-Za-z0-9][A-Za-z0-9._/-]{0,250}\\.png$" },
+        "availability": { "enum": ["attached", "excerpt", "reference-only"] },
+        "note": { "type": ["string", "null"], "maxLength": 500 }
+      }
+    }
+  }
+}

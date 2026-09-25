@@ -1,0 +1,52 @@
+{
+  "document": {
+    "fields": {
+      "aiEmployeeUsername": {
+        "type": "string"
+      },
+      "category": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "from": {
+        "type": "string"
+      },
+      "llmActiveState": {
+        "type": "string"
+      },
+      "options": {
+        "type": "json"
+      },
+      "read": {
+        "type": "boolean"
+      },
+      "scope": {
+        "type": "string"
+      },
+      "sessionId": {
+        "type": "uuid"
+      },
+      "thread": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "string"
+      },
+      "topicId": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "userId": {
+        "type": "string"
+      }
+    },
+    "name": "aiConversations",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiConversations"
+}

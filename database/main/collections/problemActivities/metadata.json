@@ -1,0 +1,34 @@
+{
+  "document": {
+    "fields": {
+      "actorId": {
+        "type": "string"
+      },
+      "actorName": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "fromStatus": {
+        "type": "string"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "problemId": {
+        "type": "integer"
+      },
+      "toStatus": {
+        "type": "string"
+      }
+    },
+    "name": "problemActivities",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "problemActivities"
+}

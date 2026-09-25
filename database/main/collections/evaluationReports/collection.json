@@ -1,0 +1,316 @@
+{
+  "collection": {
+    "constraints": [
+      {
+        "fields": [
+          "id"
+        ],
+        "type": "primary"
+      },
+      {
+        "fields": [
+          "sourceInstance",
+          "type",
+          "subjectKey",
+          "revision"
+        ],
+        "mode": "index",
+        "name": "idx_evaluation_reports_source_instance_type_subject_key_1xu1ymj",
+        "type": "unique"
+      },
+      {
+        "fields": [
+          "idempotencyKey"
+        ],
+        "mode": "index",
+        "name": "idx_evaluation_reports_idempotency_key",
+        "type": "unique"
+      }
+    ],
+    "db": {
+      "schema": "main",
+      "strict": false
+    },
+    "fields": [
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(64)",
+          "physicalDataType": "string"
+        },
+        "length": 64,
+        "name": "id",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "sourceInstance",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "project",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(32)",
+          "physicalDataType": "string"
+        },
+        "length": 32,
+        "name": "type",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(300)",
+          "physicalDataType": "string"
+        },
+        "length": 300,
+        "name": "subjectKey",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "INTEGER",
+          "physicalDataType": "integer"
+        },
+        "name": "revision",
+        "nullable": false,
+        "type": "integer"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(80)",
+          "physicalDataType": "string"
+        },
+        "length": 80,
+        "name": "idempotencyKey",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(36)",
+          "physicalDataType": "string"
+        },
+        "length": 36,
+        "name": "bundleFileId",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(64)",
+          "physicalDataType": "string"
+        },
+        "length": 64,
+        "name": "bundleSha256",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(300)",
+          "physicalDataType": "string"
+        },
+        "length": 300,
+        "name": "rank",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "document",
+        "nullable": false,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "manifest",
+        "nullable": false,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "receipt",
+        "nullable": false,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "receivedAt",
+        "nullable": false,
+        "type": "datetime"
+      }
+    ],
+    "indexes": [
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "sourceInstance",
+              "order": "asc"
+            },
+            {
+              "field": "subjectKey",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "sourceInstance",
+          "subjectKey"
+        ],
+        "name": "idx_evaluation_reports_source_instance_subject_key",
+        "order": {
+          "sourceInstance": "asc",
+          "subjectKey": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "sourceInstance",
+              "order": "asc"
+            },
+            {
+              "field": "type",
+              "order": "asc"
+            },
+            {
+              "field": "subjectKey",
+              "order": "asc"
+            },
+            {
+              "field": "revision",
+              "order": "asc"
+            }
+          ],
+          "unique": true
+        },
+        "fields": [
+          "sourceInstance",
+          "type",
+          "subjectKey",
+          "revision"
+        ],
+        "name": "idx_evaluation_reports_source_instance_type_subject_key_1xu1ymj",
+        "order": {
+          "revision": "asc",
+          "sourceInstance": "asc",
+          "subjectKey": "asc",
+          "type": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "idempotencyKey",
+              "order": "asc"
+            }
+          ],
+          "unique": true
+        },
+        "fields": [
+          "idempotencyKey"
+        ],
+        "name": "idx_evaluation_reports_idempotency_key",
+        "order": {
+          "idempotencyKey": "asc"
+        }
+      }
+    ],
+    "kind": "table",
+    "name": "evaluationReports",
+    "naming": {
+      "tablePrefix": "",
+      "underscored": true
+    }
+  },
+  "formatVersion": 1,
+  "name": "evaluationReports",
+  "warnings": [
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_PARTIAL",
+      "message": "Physical Schema aspect \"checkConstraints\" is partial.",
+      "path": [
+        "inspection",
+        "aspects",
+        "checkConstraints"
+      ]
+    },
+    {
+      "aspect": "comments",
+      "code": "COLLECTION_INSPECTION_UNSUPPORTED",
+      "message": "Physical Schema aspect \"comments\" is unsupported.",
+      "path": [
+        "inspection",
+        "aspects",
+        "comments"
+      ]
+    },
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_WARNING",
+      "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete.",
+      "sourceCode": "SQLITE_CHECK_CONSTRAINT_PARTIAL"
+    }
+  ]
+}

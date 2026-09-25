@@ -1,0 +1,356 @@
+{
+  "collection": {
+    "constraints": [
+      {
+        "fields": [
+          "id",
+          "queue"
+        ],
+        "type": "primary"
+      },
+      {
+        "expression": "`status` in ('pending', 'active', 'delayed', 'completed', 'failed')",
+        "type": "check"
+      },
+      {
+        "fields": [
+          "queue",
+          "dedupId"
+        ],
+        "mode": "index",
+        "name": "queue_jobs_dedup_active_uidx",
+        "type": "unique"
+      }
+    ],
+    "db": {
+      "schema": "main",
+      "strict": false
+    },
+    "fields": [
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "id",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "queue",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "status",
+        "nullable": false,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "data",
+        "nullable": false,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "score",
+        "nullable": true,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "workerId",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "acquiredAt",
+        "nullable": true,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "executeAt",
+        "nullable": true,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "finishedAt",
+        "nullable": true,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "error",
+        "nullable": true,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(510)",
+          "physicalDataType": "string"
+        },
+        "length": 510,
+        "name": "dedupId",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "dedupAt",
+        "nullable": true,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "bigint",
+          "physicalDataType": "bigInt"
+        },
+        "name": "dedupTtl",
+        "nullable": true,
+        "type": "bigInt"
+      }
+    ],
+    "indexes": [
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "queue",
+              "order": "asc"
+            },
+            {
+              "field": "dedupId",
+              "order": "asc"
+            }
+          ],
+          "predicate": "\"dedup_id\" IS NOT NULL AND \"status\" IN ('pending', 'delayed')",
+          "unique": true
+        },
+        "fields": [
+          "queue",
+          "dedupId"
+        ],
+        "name": "queue_jobs_dedup_active_uidx",
+        "order": {
+          "dedupId": "asc",
+          "queue": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "queue",
+              "order": "asc"
+            },
+            {
+              "field": "dedupId",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "queue",
+          "dedupId"
+        ],
+        "name": "queue_jobs_queue_dedup_id_index",
+        "order": {
+          "dedupId": "asc",
+          "queue": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "queue",
+              "order": "asc"
+            },
+            {
+              "field": "status",
+              "order": "asc"
+            },
+            {
+              "field": "finishedAt",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "queue",
+          "status",
+          "finishedAt"
+        ],
+        "name": "queue_jobs_queue_status_finished_at_index",
+        "order": {
+          "finishedAt": "asc",
+          "queue": "asc",
+          "status": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "queue",
+              "order": "asc"
+            },
+            {
+              "field": "status",
+              "order": "asc"
+            },
+            {
+              "field": "executeAt",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "queue",
+          "status",
+          "executeAt"
+        ],
+        "name": "queue_jobs_queue_status_execute_at_index",
+        "order": {
+          "executeAt": "asc",
+          "queue": "asc",
+          "status": "asc"
+        }
+      },
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "queue",
+              "order": "asc"
+            },
+            {
+              "field": "status",
+              "order": "asc"
+            },
+            {
+              "field": "score",
+              "order": "asc"
+            }
+          ],
+          "unique": false
+        },
+        "fields": [
+          "queue",
+          "status",
+          "score"
+        ],
+        "name": "queue_jobs_queue_status_score_index",
+        "order": {
+          "queue": "asc",
+          "score": "asc",
+          "status": "asc"
+        }
+      }
+    ],
+    "kind": "table",
+    "name": "queueJobs",
+    "naming": {
+      "tablePrefix": "",
+      "underscored": true
+    }
+  },
+  "formatVersion": 1,
+  "name": "queueJobs",
+  "warnings": [
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_PARTIAL",
+      "message": "Physical Schema aspect \"checkConstraints\" is partial.",
+      "path": [
+        "inspection",
+        "aspects",
+        "checkConstraints"
+      ]
+    },
+    {
+      "aspect": "comments",
+      "code": "COLLECTION_INSPECTION_UNSUPPORTED",
+      "message": "Physical Schema aspect \"comments\" is unsupported.",
+      "path": [
+        "inspection",
+        "aspects",
+        "comments"
+      ]
+    },
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_WARNING",
+      "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete.",
+      "sourceCode": "SQLITE_CHECK_CONSTRAINT_PARTIAL"
+    }
+  ]
+}

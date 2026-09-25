@@ -1,0 +1,267 @@
+{
+  "formatVersion": 1,
+  "name": "queueJobs",
+  "physical": {
+    "checkConstraints": [
+      {
+        "expression": "`status` in ('pending', 'active', 'delayed', 'completed', 'failed')"
+      }
+    ],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "queue",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "data",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "score",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "worker_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "acquired_at",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "execute_at",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "finished_at",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "error",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "dedup_id",
+        "dataType": "string",
+        "length": 510,
+        "nativeType": "varchar(510)",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "dedup_at",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "dedup_ttl",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": true,
+        "ordinalPosition": 13
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "queue",
+            "order": "asc"
+          },
+          {
+            "columnName": "dedup_id",
+            "order": "asc"
+          }
+        ],
+        "name": "queue_jobs_dedup_active_uidx",
+        "predicate": "\"dedup_id\" IS NOT NULL AND \"status\" IN ('pending', 'delayed')",
+        "unique": true
+      },
+      {
+        "keys": [
+          {
+            "columnName": "queue",
+            "order": "asc"
+          },
+          {
+            "columnName": "dedup_id",
+            "order": "asc"
+          }
+        ],
+        "name": "queue_jobs_queue_dedup_id_index",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "queue",
+            "order": "asc"
+          },
+          {
+            "columnName": "status",
+            "order": "asc"
+          },
+          {
+            "columnName": "finished_at",
+            "order": "asc"
+          }
+        ],
+        "name": "queue_jobs_queue_status_finished_at_index",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "queue",
+            "order": "asc"
+          },
+          {
+            "columnName": "status",
+            "order": "asc"
+          },
+          {
+            "columnName": "execute_at",
+            "order": "asc"
+          }
+        ],
+        "name": "queue_jobs_queue_status_execute_at_index",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "queue",
+            "order": "asc"
+          },
+          {
+            "columnName": "status",
+            "order": "asc"
+          },
+          {
+            "columnName": "score",
+            "order": "asc"
+          }
+        ],
+        "name": "queue_jobs_queue_status_score_index",
+        "unique": false
+      },
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "id",
+            "order": "asc"
+          },
+          {
+            "columnName": "queue",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_queue_jobs_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id",
+        "queue"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "queue_jobs",
+    "uniqueConstraints": []
+  }
+}

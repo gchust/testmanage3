@@ -1,0 +1,52 @@
+{
+  "document": {
+    "fields": {
+      "args": {
+        "type": "json"
+      },
+      "command": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "description": {
+        "type": "string"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "env": {
+        "type": "json"
+      },
+      "headers": {
+        "type": "json"
+      },
+      "name": {
+        "type": "string"
+      },
+      "restart": {
+        "type": "json"
+      },
+      "sort": {
+        "type": "integer"
+      },
+      "title": {
+        "type": "string"
+      },
+      "transport": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "url": {
+        "type": "string"
+      }
+    },
+    "name": "aiMcpClients",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiMcpClients"
+}

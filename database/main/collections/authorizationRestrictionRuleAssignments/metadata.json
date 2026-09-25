@@ -1,0 +1,25 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "restrictionRuleId": {
+        "type": "string"
+      },
+      "subjectId": {
+        "type": "string"
+      },
+      "subjectType": {
+        "type": "string"
+      }
+    },
+    "name": "authorizationRestrictionRuleAssignments",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "authorizationRestrictionRuleAssignments"
+}

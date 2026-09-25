@@ -1,0 +1,52 @@
+{
+  "document": {
+    "fields": {
+      "accessToken": {
+        "type": "text"
+      },
+      "accessTokenExpiresAt": {
+        "type": "datetime"
+      },
+      "accountId": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "idToken": {
+        "type": "text"
+      },
+      "issuer": {
+        "type": "string"
+      },
+      "password": {
+        "type": "text"
+      },
+      "providerId": {
+        "type": "string"
+      },
+      "refreshToken": {
+        "type": "text"
+      },
+      "refreshTokenExpiresAt": {
+        "type": "datetime"
+      },
+      "scope": {
+        "type": "text"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "userId": {
+        "type": "string"
+      }
+    },
+    "name": "account",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "account"
+}

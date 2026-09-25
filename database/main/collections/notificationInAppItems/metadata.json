@@ -1,0 +1,40 @@
+{
+  "document": {
+    "fields": {
+      "actionUrl": {
+        "type": "text"
+      },
+      "body": {
+        "type": "text"
+      },
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "deliveryId": {
+        "type": "string"
+      },
+      "id": {
+        "type": "string"
+      },
+      "notificationId": {
+        "type": "string"
+      },
+      "readAt": {
+        "type": "datetimeTz"
+      },
+      "title": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetimeTz"
+      },
+      "userId": {
+        "type": "string"
+      }
+    },
+    "name": "notificationInAppItems",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "notificationInAppItems"
+}

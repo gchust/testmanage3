@@ -17,7 +17,8 @@ describe('app client routes', () => {
   it('declares application and settings route contributions', async () => {
     expect(applicationRoutes).toHaveLength(3);
     const routes = applicationRoutes[0].routes;
-    expect(routes.slice(0, 5)).toMatchObject([
+    expect(routes.slice(0, 6)).toMatchObject([
+      { auth: 'required', name: 'evaluations', path: '/progress/evaluations' },
       {
         auth: 'required',
         name: 'homeRedirect',
@@ -34,7 +35,7 @@ describe('app client routes', () => {
     ]);
     // The tracker pages are the top-level navigation; the API reference is
     // route-addressable but deliberately not a menu entry.
-    expect(routes.slice(5)).toMatchObject([
+    expect(routes.slice(6)).toMatchObject([
       { name: 'testProgressOverview', path: '/progress' },
       { name: 'testProgressFeatures', path: '/progress/features' },
       { name: 'testProgressProblems', path: '/progress/problems' },
@@ -45,9 +46,7 @@ describe('app client routes', () => {
       },
       { name: 'testProgressIssuesRedirect', path: '/progress/issues' },
     ]);
-    expect(
-      (routes[8] as { navigation?: unknown }).navigation,
-    ).toBeUndefined();
+    expect((routes[9] as { navigation?: unknown }).navigation).toBeUndefined();
     expect(applicationRoutes[1]).toEqual({
       parent: 'settings',
       routes: [],
@@ -79,6 +78,7 @@ describe('app client routes', () => {
     ]);
 
     expect(pageAuthorizations(resolved.routes)).toEqual([
+      { name: 'evaluations', authorizedAs: 'evaluations' },
       // `/` only forwards to the overview, so it is reachable by every signed-in user.
       { name: 'homeRedirect', authorizedAs: null },
       // The tracker's entry pages are ordinary page resources: a grant names the route.

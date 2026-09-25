@@ -1,0 +1,19 @@
+{
+  "document": {
+    "fields": {
+      "appName": {
+        "type": "string"
+      },
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "updatedAt": {
+        "type": "datetimeTz"
+      }
+    },
+    "name": "scheduleSyncLocks",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "scheduleSyncLocks"
+}

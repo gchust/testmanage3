@@ -1,0 +1,61 @@
+{
+  "document": {
+    "fields": {
+      "auto": {
+        "type": "boolean"
+      },
+      "content": {
+        "type": "json"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "execution": {
+        "type": "string"
+      },
+      "id": {
+        "type": "bigInt"
+      },
+      "interruptAction": {
+        "type": "json"
+      },
+      "interruptActionOrder": {
+        "type": "integer"
+      },
+      "invokeEndTime": {
+        "type": "bigInt"
+      },
+      "invokeStartTime": {
+        "type": "bigInt"
+      },
+      "invokeStatus": {
+        "type": "string"
+      },
+      "messageId": {
+        "type": "bigInt"
+      },
+      "sessionId": {
+        "type": "uuid"
+      },
+      "status": {
+        "type": "string"
+      },
+      "toolCallId": {
+        "type": "string"
+      },
+      "toolName": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "userDecision": {
+        "type": "json"
+      }
+    },
+    "name": "aiToolMessages",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiToolMessages"
+}

@@ -1,0 +1,75 @@
+{
+  "document": {
+    "fields": {
+      "acceptedAt": {
+        "type": "datetimeTz"
+      },
+      "createdAt": {
+        "type": "datetimeTz"
+      },
+      "definitionHash": {
+        "type": "string"
+      },
+      "executionCount": {
+        "type": "integer"
+      },
+      "finishedAt": {
+        "type": "datetimeTz"
+      },
+      "id": {
+        "type": "string"
+      },
+      "lastObservedAt": {
+        "type": "datetimeTz"
+      },
+      "lastStartedAt": {
+        "type": "datetimeTz"
+      },
+      "observationDeadlineAt": {
+        "type": "datetimeTz"
+      },
+      "reason": {
+        "type": "string"
+      },
+      "resultSummary": {
+        "type": "json"
+      },
+      "scheduleId": {
+        "type": "string"
+      },
+      "startedAt": {
+        "type": "datetimeTz"
+      },
+      "status": {
+        "type": "string"
+      },
+      "targetReceipt": {
+        "type": "json"
+      },
+      "targetReferenceId": {
+        "type": "string"
+      },
+      "targetReferenceType": {
+        "type": "string"
+      },
+      "targetType": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetimeTz"
+      }
+    },
+    "name": "scheduleOccurrences",
+    "relations": {
+      "schedule": {
+        "foreignKey": "scheduleId",
+        "target": "scheduleDefinitions",
+        "targetKey": "id",
+        "type": "belongsTo"
+      }
+    },
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "scheduleOccurrences"
+}

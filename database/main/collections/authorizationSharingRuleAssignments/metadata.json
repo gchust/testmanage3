@@ -1,0 +1,25 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "sharingRuleId": {
+        "type": "string"
+      },
+      "subjectId": {
+        "type": "string"
+      },
+      "subjectType": {
+        "type": "string"
+      }
+    },
+    "name": "authorizationSharingRuleAssignments",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "authorizationSharingRuleAssignments"
+}

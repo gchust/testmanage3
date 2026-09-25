@@ -1,0 +1,79 @@
+{
+  "document": {
+    "fields": {
+      "aiEmployeeUsername": {
+        "type": "string"
+      },
+      "autoToolCallCount": {
+        "type": "integer"
+      },
+      "cachedTokens": {
+        "type": "bigInt"
+      },
+      "category": {
+        "type": "string"
+      },
+      "eventType": {
+        "type": "string"
+      },
+      "from": {
+        "type": "string"
+      },
+      "id": {
+        "type": "bigInt"
+      },
+      "inputTokens": {
+        "type": "bigInt"
+      },
+      "llmService": {
+        "type": "string"
+      },
+      "messageId": {
+        "type": "bigInt"
+      },
+      "model": {
+        "type": "string"
+      },
+      "occurredAt": {
+        "type": "bigInt"
+      },
+      "outputTokens": {
+        "type": "bigInt"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "rawResponseMetadata": {
+        "type": "json"
+      },
+      "rawUsageMetadata": {
+        "type": "json"
+      },
+      "reasoningTokens": {
+        "type": "bigInt"
+      },
+      "role": {
+        "type": "string"
+      },
+      "sessionId": {
+        "type": "uuid"
+      },
+      "status": {
+        "type": "string"
+      },
+      "toolCallCount": {
+        "type": "integer"
+      },
+      "totalTokens": {
+        "type": "bigInt"
+      },
+      "userId": {
+        "type": "string"
+      }
+    },
+    "name": "aiUsageEvents",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiUsageEvents"
+}

@@ -1,0 +1,315 @@
+{
+  "formatVersion": 1,
+  "name": "apikey",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "id",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "config_id",
+        "dataType": "string",
+        "default": {
+          "expression": "'default'",
+          "value": "default"
+        },
+        "length": 128,
+        "nativeType": "varchar(128)",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "name",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "prefix",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "start",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "key",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "reference_id",
+        "dataType": "string",
+        "length": 64,
+        "nativeType": "varchar(64)",
+        "nullable": false,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "refill_interval",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "refill_amount",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "last_refill_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "enabled",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'1'",
+          "value": "1"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "rate_limit_enabled",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'1'",
+          "value": "1"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "rate_limit_time_window",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "rate_limit_max",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 14
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "request_count",
+        "dataType": "integer",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 15
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "remaining",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 16
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "last_request",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 17
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "expires_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 18
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 19
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 20
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "permissions",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 21
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "metadata",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 22
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "expires_at",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_apikey_expires_at",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "config_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_apikey_config",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "reference_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_apikey_reference",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "key",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_apikey_key",
+        "unique": false
+      },
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "id",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_apikey_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "apikey",
+    "uniqueConstraints": []
+  }
+}

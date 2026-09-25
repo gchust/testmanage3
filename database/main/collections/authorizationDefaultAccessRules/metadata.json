@@ -1,0 +1,28 @@
+{
+  "document": {
+    "fields": {
+      "actions": {
+        "type": "json"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "resourceId": {
+        "type": "string"
+      },
+      "resourceType": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "authorizationDefaultAccessRules",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "authorizationDefaultAccessRules"
+}

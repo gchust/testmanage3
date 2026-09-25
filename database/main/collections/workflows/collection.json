@@ -1,0 +1,274 @@
+{
+  "collection": {
+    "constraints": [
+      {
+        "fields": [
+          "id"
+        ],
+        "type": "primary"
+      },
+      {
+        "fields": [
+          "key",
+          "current"
+        ],
+        "mode": "index",
+        "name": "idx_workflows_key_current",
+        "type": "unique"
+      }
+    ],
+    "db": {
+      "schema": "main",
+      "strict": false
+    },
+    "fields": [
+      {
+        "autoIncrement": true,
+        "db": {
+          "affinity": "integer",
+          "nativeType": "INTEGER",
+          "physicalDataType": "integer"
+        },
+        "name": "id",
+        "nullable": false,
+        "type": "bigInt"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "key",
+        "nullable": false,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "hash",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "version",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(255)",
+          "physicalDataType": "string"
+        },
+        "length": 255,
+        "name": "title",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'0'",
+          "nativeType": "boolean",
+          "physicalDataType": "boolean"
+        },
+        "defaultValue": "0",
+        "name": "enabled",
+        "nullable": false,
+        "type": "boolean"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "TEXT",
+          "physicalDataType": "text"
+        },
+        "name": "description",
+        "nullable": true,
+        "type": "text"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'{\"type\":\"object\"}'",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "defaultValue": {
+          "type": "object"
+        },
+        "name": "inputSchema",
+        "nullable": false,
+        "type": "json"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'{}'",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "defaultValue": {},
+        "name": "parametersSchema",
+        "nullable": false,
+        "type": "json"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'{}'",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "defaultValue": {},
+        "name": "parameterValues",
+        "nullable": false,
+        "type": "json"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "nativeType": "boolean",
+          "physicalDataType": "boolean"
+        },
+        "name": "current",
+        "nullable": true,
+        "type": "boolean"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "numeric",
+          "defaultExpression": "'{\"timeout\":0}'",
+          "nativeType": "json",
+          "physicalDataType": "json"
+        },
+        "defaultValue": {
+          "timeout": 0
+        },
+        "name": "options",
+        "nullable": false,
+        "type": "json"
+      },
+      {
+        "foreignKey": "workflowId",
+        "name": "nodes",
+        "sourceKey": "id",
+        "target": "workflowNodes",
+        "type": "hasMany"
+      },
+      {
+        "foreignKey": "workflowId",
+        "name": "runs",
+        "sourceKey": "id",
+        "target": "workflowRuns",
+        "type": "hasMany"
+      },
+      {
+        "foreignKey": "key",
+        "name": "revisions",
+        "sourceKey": "key",
+        "target": "workflows",
+        "type": "hasMany"
+      },
+      {
+        "foreignKey": "key",
+        "name": "stats",
+        "sourceKey": "key",
+        "target": "workflowStats",
+        "type": "hasOne"
+      },
+      {
+        "foreignKey": "id",
+        "name": "versionStats",
+        "sourceKey": "id",
+        "target": "workflowVersionStats",
+        "type": "hasOne"
+      }
+    ],
+    "indexes": [
+      {
+        "db": {
+          "keys": [
+            {
+              "field": "key",
+              "order": "asc"
+            },
+            {
+              "field": "current",
+              "order": "asc"
+            }
+          ],
+          "unique": true
+        },
+        "fields": [
+          "key",
+          "current"
+        ],
+        "name": "idx_workflows_key_current",
+        "order": {
+          "current": "asc",
+          "key": "asc"
+        }
+      }
+    ],
+    "kind": "table",
+    "name": "workflows",
+    "naming": {
+      "tablePrefix": "",
+      "underscored": true
+    }
+  },
+  "formatVersion": 1,
+  "name": "workflows",
+  "warnings": [
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_PARTIAL",
+      "message": "Physical Schema aspect \"checkConstraints\" is partial.",
+      "path": [
+        "inspection",
+        "aspects",
+        "checkConstraints"
+      ]
+    },
+    {
+      "aspect": "comments",
+      "code": "COLLECTION_INSPECTION_UNSUPPORTED",
+      "message": "Physical Schema aspect \"comments\" is unsupported.",
+      "path": [
+        "inspection",
+        "aspects",
+        "comments"
+      ]
+    },
+    {
+      "aspect": "checkConstraints",
+      "code": "COLLECTION_INSPECTION_WARNING",
+      "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete.",
+      "sourceCode": "SQLITE_CHECK_CONSTRAINT_PARTIAL"
+    }
+  ]
+}

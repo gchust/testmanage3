@@ -1,0 +1,248 @@
+{
+  "formatVersion": 1,
+  "name": "aiConversations",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "session_id",
+        "dataType": "char",
+        "length": 36,
+        "nativeType": "char(36)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "thread",
+        "dataType": "integer",
+        "default": {
+          "expression": "'0'",
+          "value": "0"
+        },
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "topic_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "from",
+        "dataType": "string",
+        "default": {
+          "expression": "'main-agent'",
+          "value": "main-agent"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "scope",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "user_id",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "ai_employee_username",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "title",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "options",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "llm_active_state",
+        "dataType": "string",
+        "default": {
+          "expression": "'idle'",
+          "value": "idle"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "category",
+        "dataType": "string",
+        "default": {
+          "expression": "'chat'",
+          "value": "chat"
+        },
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "read",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'1'",
+          "value": "1"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 12
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 13
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 14
+      }
+    ],
+    "foreignKeys": [
+      {
+        "columns": [
+          "ai_employee_username"
+        ],
+        "onDelete": "cascade",
+        "onUpdate": "noAction",
+        "referencedCollection": {
+          "schema": "main",
+          "tableName": "ai_employees"
+        },
+        "referencedColumns": [
+          "username"
+        ]
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "onDelete": "noAction",
+        "onUpdate": "noAction",
+        "referencedCollection": {
+          "schema": "main",
+          "tableName": "user"
+        },
+        "referencedColumns": [
+          "id"
+        ]
+      }
+    ],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "scope",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_ai_conversations_scope",
+        "unique": false
+      },
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "session_id",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_ai_conversations_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "session_id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "ai_conversations",
+    "uniqueConstraints": []
+  }
+}

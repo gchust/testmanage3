@@ -1,0 +1,42 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "featurePointId": {
+        "type": "integer"
+      },
+      "id": {
+        "type": "integer"
+      },
+      "note": {
+        "type": "text"
+      },
+      "owner": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string"
+      },
+      "title": {
+        "type": "text"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      }
+    },
+    "name": "missingItems",
+    "relations": {
+      "featurePoint": {
+        "foreignKey": "featurePointId",
+        "target": "featurePoints",
+        "targetKey": "id",
+        "type": "belongsTo"
+      }
+    },
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "missingItems"
+}

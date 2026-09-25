@@ -1,0 +1,57 @@
+{
+  "document": {
+    "fields": {
+      "branchKey": {
+        "type": "string"
+      },
+      "config": {
+        "type": "json"
+      },
+      "description": {
+        "type": "text"
+      },
+      "downstreamKey": {
+        "type": "string"
+      },
+      "id": {
+        "type": "bigInt"
+      },
+      "key": {
+        "type": "string"
+      },
+      "options": {
+        "type": "json"
+      },
+      "title": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "upstreamKey": {
+        "type": "string"
+      },
+      "workflowId": {
+        "type": "bigInt"
+      }
+    },
+    "name": "workflowNodes",
+    "relations": {
+      "branches": {
+        "foreignKey": "upstreamKey",
+        "sourceKey": "key",
+        "target": "workflowNodes",
+        "type": "hasMany"
+      },
+      "workflow": {
+        "foreignKey": "workflowId",
+        "target": "workflows",
+        "targetKey": "id",
+        "type": "belongsTo"
+      }
+    },
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "workflowNodes"
+}

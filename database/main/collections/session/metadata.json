@@ -1,0 +1,34 @@
+{
+  "document": {
+    "fields": {
+      "createdAt": {
+        "type": "datetime"
+      },
+      "expiresAt": {
+        "type": "datetime"
+      },
+      "id": {
+        "type": "string"
+      },
+      "ipAddress": {
+        "type": "string"
+      },
+      "token": {
+        "type": "string"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "userAgent": {
+        "type": "text"
+      },
+      "userId": {
+        "type": "string"
+      }
+    },
+    "name": "session",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "session"
+}

@@ -1,0 +1,40 @@
+{
+  "document": {
+    "fields": {
+      "attachments": {
+        "type": "json"
+      },
+      "content": {
+        "type": "json"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "messageId": {
+        "type": "bigInt"
+      },
+      "metadata": {
+        "type": "json"
+      },
+      "role": {
+        "type": "string"
+      },
+      "sessionId": {
+        "type": "string"
+      },
+      "toolCalls": {
+        "type": "json"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "workContext": {
+        "type": "json"
+      }
+    },
+    "name": "aiMessages",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiMessages"
+}

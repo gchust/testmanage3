@@ -1,0 +1,184 @@
+{
+  "formatVersion": 1,
+  "name": "workflowNodeRuns",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "integer",
+        "autoIncrement": true,
+        "columnName": "id",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "workflow_run_id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "node_id",
+        "dataType": "bigInt",
+        "nativeType": "bigint",
+        "nullable": false,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "node_key",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "status",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": false,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "meta",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "result",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "error",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "started_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": false,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "finished_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 10
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "expires_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 11
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "log",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 12
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "keys": [
+          {
+            "columnName": "node_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_node_runs_node_id",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "workflow_run_id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_node_runs_workflow_run_id",
+        "unique": false
+      },
+      {
+        "keys": [
+          {
+            "columnName": "workflow_run_id",
+            "order": "asc"
+          },
+          {
+            "columnName": "id",
+            "order": "asc"
+          }
+        ],
+        "name": "idx_workflow_node_runs_workflow_run_id_id",
+        "unique": false
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "id"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "workflow_node_runs",
+    "uniqueConstraints": []
+  }
+}

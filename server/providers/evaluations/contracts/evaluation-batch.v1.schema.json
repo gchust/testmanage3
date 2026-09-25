@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/gchust/nb3-factory/.github/contracts/evaluation-batch.v1.schema.json",
+  "title": "NB3 Factory Evaluation Batch v1",
+  "description": "Snapshot of one frozen evaluation batch: its baseline, the case captures and the complete planned sample set with each sample's state and report reference. Samples without a report stay listed. No global score is computed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "type", "source", "batch", "revision", "createdAt", "state", "cancelled", "baseline", "cases", "samples", "summary", "limitations"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "type": { "const": "evaluation-batch" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["producer", "instance", "project", "exporter"],
+      "properties": {
+        "producer": { "const": "nb3-factory" },
+        "instance": { "$ref": "#/$defs/repository" },
+        "project": { "$ref": "#/$defs/repository" },
+        "exporter": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["version", "controlSha", "runId", "attempt"],
+          "properties": {
+            "version": { "type": "integer", "minimum": 1 },
+            "controlSha": { "$ref": "#/$defs/optionalSha" },
+            "runId": { "type": ["integer", "null"], "minimum": 1 },
+            "attempt": { "type": ["integer", "null"], "minimum": 1 }
+          }
+        }
+      }
+    },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "subjectKey", "planKey", "planFingerprint", "manifestSha256", "trigger", "slot", "coordinatorIssue", "frozenAt", "sequence"],
+      "properties": {
+        "key": { "$ref": "#/$defs/segment" },
+        "subjectKey": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/batches/[A-Za-z0-9][A-Za-z0-9._-]{0,79}$" },
+        "planKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$" },
+        "planFingerprint": { "$ref": "#/$defs/sha256" },
+        "manifestSha256": { "$ref": "#/$defs/sha256" },
+        "trigger": { "enum": ["manual", "schedule"] },
+        "slot": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "coordinatorIssue": { "type": "integer", "minimum": 1 },
+        "frozenAt": { "type": "string", "format": "date-time" },
+        "sequence": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "revision": { "type": "integer", "minimum": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "state": { "enum": ["active", "completed", "cancelled"] },
+    "cancelled": { "type": "boolean" },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["controlSha", "entrySha", "applicationBaseSha", "defaultBranch", "lockfileSha256", "templateVersion", "reviewMode", "budget", "maxConcurrentSamples", "agentEngine", "agentConfig"],
+      "properties": {
+        "controlSha": { "$ref": "#/$defs/sha" },
+        "entrySha": { "$ref": "#/$defs/optionalSha" },
+        "applicationBaseSha": { "$ref": "#/$defs/sha" },
+        "defaultBranch": { "type": "string", "maxLength": 120 },
+        "lockfileSha256": { "$ref": "#/$defs/sha256" },
+        "templateVersion": { "type": ["string", "null"], "maxLength": 80 },
+        "reviewMode": { "enum": ["inherit", "full", "off"] },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxRepairAttempts", "maxActiveSeconds", "maxContinuations"],
+          "properties": {
+            "maxRepairAttempts": { "type": "integer", "minimum": 0, "maximum": 10 },
+            "maxActiveSeconds": { "type": "integer", "minimum": 600, "maximum": 86400 },
+            "maxContinuations": { "type": "integer", "minimum": 0, "maximum": 10 }
+          }
+        },
+        "maxConcurrentSamples": { "const": 1 },
+        "agentEngine": { "type": "string", "maxLength": 40 },
+        "agentConfig": {
+          "description": "Non-secret Agent settings in effect when the batch was frozen and their fingerprint; secrets are never included.",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["fingerprint", "values"],
+              "properties": {
+                "fingerprint": { "$ref": "#/$defs/sha256" },
+                "values": { "type": "object", "maxProperties": 40, "propertyNames": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$" }, "additionalProperties": { "type": "string", "maxLength": 200 } }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "presetIssueNumber", "title", "caseHash", "capturedAt", "commentCount", "buildReviewMode", "samples"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,19}$" },
+          "presetIssueNumber": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string", "maxLength": 300 },
+          "caseHash": { "$ref": "#/$defs/sha256" },
+          "capturedAt": { "type": "string", "format": "date-time" },
+          "commentCount": { "type": "integer", "minimum": 0 },
+          "buildReviewMode": { "enum": ["full", "off"] },
+          "samples": { "type": "integer", "minimum": 1, "maximum": 10 }
+        }
+      }
+    },
+    "samples": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "caseKey", "sampleIndex", "runKey", "issue", "state", "stateSource", "dispatchedAt", "terminalAt", "reason", "agentConfigFingerprint", "comparable", "report"],
+        "properties": {
+          "key": { "type": "string", "maxLength": 200 },
+          "caseKey": { "type": "string", "maxLength": 20 },
+          "sampleIndex": { "type": "integer", "minimum": 1 },
+          "runKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,299}$" },
+          "issue": { "type": ["integer", "null"], "minimum": 1 },
+          "state": { "$ref": "#/$defs/sampleState" },
+          "stateSource": { "enum": ["plan", "coordinator", "run", "report", "prepare", "batch"] },
+          "dispatchedAt": { "oneOf": [{ "type": "null" }, { "type": "string", "format": "date-time" }] },
+          "terminalAt": { "oneOf": [{ "type": "null" }, { "type": "string", "format": "date-time" }] },
+          "reason": { "type": ["string", "null"], "maxLength": 500 },
+          "agentConfigFingerprint": { "description": "Latest Agent settings fingerprint observed while this sample was dispatched or running.", "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/sha256" }] },
+          "comparable": { "description": "false when any settings observed while the sample was dispatched or running differ from the frozen batch; null when not dispatched or unknown.", "type": ["boolean", "null"] },
+          "report": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "revision", "execution", "acceptance"],
+            "properties": {
+              "state": { "description": "available: the report of the sample's final execution (same run and attempt); not-applicable: ended at prepare or by the batch, no build ran.", "enum": ["available", "missing", "not-applicable"] },
+              "revision": { "type": ["integer", "null"], "minimum": 1 },
+              "execution": { "enum": ["running", "completed", "cancelled", "timed-out", "budget-exhausted", "blocked", "unknown", null] },
+              "acceptance": { "enum": ["passed", "failed", "blocked", "not-run", "unknown", null] }
+            }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planned", "byState", "reports", "comparable", "acceptance"],
+      "properties": {
+        "planned": { "type": "integer", "minimum": 1 },
+        "byState": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planned", "queued", "running", "passed", "failed", "blocked", "budget-exhausted", "cancelled", "unknown"],
+          "properties": {
+            "planned": { "$ref": "#/$defs/count" }, "queued": { "$ref": "#/$defs/count" }, "running": { "$ref": "#/$defs/count" },
+            "passed": { "$ref": "#/$defs/count" }, "failed": { "$ref": "#/$defs/count" }, "blocked": { "$ref": "#/$defs/count" },
+            "budget-exhausted": { "$ref": "#/$defs/count" }, "cancelled": { "$ref": "#/$defs/count" }, "unknown": { "$ref": "#/$defs/count" }
+          }
+        },
+        "reports": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["available", "missing", "notApplicable"],
+          "properties": { "available": { "$ref": "#/$defs/count" }, "missing": { "$ref": "#/$defs/count" }, "notApplicable": { "$ref": "#/$defs/count" } }
+        },
+        "comparable": { "description": "true only when every dispatched sample ran under the frozen Agent settings.", "type": "boolean" },
+        "acceptance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["passed", "failed", "other"],
+          "properties": { "passed": { "$ref": "#/$defs/count" }, "failed": { "$ref": "#/$defs/count" }, "other": { "$ref": "#/$defs/count" } }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "detail"],
+        "properties": { "code": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" }, "detail": { "type": "string", "maxLength": 1000 } }
+      }
+    }
+  },
+  "$defs": {
+    "repository": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+    "segment": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$" },
+    "sha": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "optionalSha": { "type": ["string", "null"], "pattern": "^[a-f0-9]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "count": { "type": "integer", "minimum": 0 },
+    "sampleState": { "enum": ["planned", "queued", "running", "passed", "failed", "blocked", "budget-exhausted", "cancelled", "unknown"] }
+  }
+}

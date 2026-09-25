@@ -1,0 +1,28 @@
+{
+  "document": {
+    "fields": {
+      "blob": {
+        "type": "blob"
+      },
+      "channel": {
+        "type": "string"
+      },
+      "checkpointNs": {
+        "type": "string"
+      },
+      "threadId": {
+        "type": "string"
+      },
+      "type": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      }
+    },
+    "name": "lcCheckpointBlobs",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "lcCheckpointBlobs"
+}

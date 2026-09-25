@@ -1,0 +1,159 @@
+{
+  "formatVersion": 1,
+  "name": "llmServices",
+  "physical": {
+    "checkConstraints": [],
+    "columns": [
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "name",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": false,
+        "ordinalPosition": 1
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "title",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 2
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "provider",
+        "dataType": "string",
+        "length": 255,
+        "nativeType": "varchar(255)",
+        "nullable": true,
+        "ordinalPosition": 3
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "options",
+        "dataType": "json",
+        "nativeType": "json",
+        "nullable": true,
+        "ordinalPosition": 4
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "enabled_models",
+        "dataType": "json",
+        "default": {
+          "expression": "'{\"mode\":\"provider\",\"models\":[]}'",
+          "value": "{\"mode\":\"provider\",\"models\":[]}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 5
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "enabled",
+        "dataType": "boolean",
+        "default": {
+          "expression": "'1'",
+          "value": "1"
+        },
+        "nativeType": "boolean",
+        "nullable": false,
+        "ordinalPosition": 6
+      },
+      {
+        "affinity": "numeric",
+        "autoIncrement": false,
+        "columnName": "model_options",
+        "dataType": "json",
+        "default": {
+          "expression": "'{\"temperature\":1,\"topP\":1,\"frequencyPenalty\":0,\"presencePenalty\":0}'",
+          "value": "{\"temperature\":1,\"topP\":1,\"frequencyPenalty\":0,\"presencePenalty\":0}"
+        },
+        "nativeType": "json",
+        "nullable": false,
+        "ordinalPosition": 7
+      },
+      {
+        "affinity": "integer",
+        "autoIncrement": false,
+        "columnName": "sort",
+        "dataType": "integer",
+        "nativeType": "INTEGER",
+        "nullable": true,
+        "ordinalPosition": 8
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "created_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 9
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "updated_at",
+        "dataType": "text",
+        "nativeType": "TEXT",
+        "nullable": true,
+        "ordinalPosition": 10
+      }
+    ],
+    "foreignKeys": [],
+    "indexes": [
+      {
+        "backsConstraint": {
+          "kind": "primaryKey"
+        },
+        "keys": [
+          {
+            "columnName": "name",
+            "order": "asc"
+          }
+        ],
+        "name": "sqlite_autoindex_llm_services_1",
+        "unique": true
+      }
+    ],
+    "inspection": {
+      "aspects": {
+        "checkConstraints": "partial",
+        "columns": "complete",
+        "comments": "unsupported",
+        "foreignKeys": "complete",
+        "indexes": "complete",
+        "primaryKey": "complete",
+        "uniqueConstraints": "complete",
+        "viewDefinition": "complete"
+      },
+      "warnings": [
+        {
+          "aspect": "checkConstraints",
+          "code": "SQLITE_CHECK_CONSTRAINT_PARTIAL",
+          "message": "SQLite check constraints are parsed from the schema SQL and may be incomplete."
+        }
+      ]
+    },
+    "kind": "table",
+    "primaryKey": {
+      "columns": [
+        "name"
+      ]
+    },
+    "schema": "main",
+    "strict": false,
+    "tableName": "llm_services",
+    "uniqueConstraints": []
+  }
+}

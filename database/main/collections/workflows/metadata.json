@@ -1,0 +1,78 @@
+{
+  "document": {
+    "fields": {
+      "current": {
+        "type": "boolean"
+      },
+      "description": {
+        "type": "text"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "hash": {
+        "type": "string"
+      },
+      "id": {
+        "type": "bigInt"
+      },
+      "inputSchema": {
+        "type": "json"
+      },
+      "key": {
+        "type": "string"
+      },
+      "options": {
+        "type": "json"
+      },
+      "parameterValues": {
+        "type": "json"
+      },
+      "parametersSchema": {
+        "type": "json"
+      },
+      "title": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      }
+    },
+    "name": "workflows",
+    "relations": {
+      "nodes": {
+        "foreignKey": "workflowId",
+        "sourceKey": "id",
+        "target": "workflowNodes",
+        "type": "hasMany"
+      },
+      "revisions": {
+        "foreignKey": "key",
+        "sourceKey": "key",
+        "target": "workflows",
+        "type": "hasMany"
+      },
+      "runs": {
+        "foreignKey": "workflowId",
+        "sourceKey": "id",
+        "target": "workflowRuns",
+        "type": "hasMany"
+      },
+      "stats": {
+        "foreignKey": "key",
+        "sourceKey": "key",
+        "target": "workflowStats",
+        "type": "hasOne"
+      },
+      "versionStats": {
+        "foreignKey": "id",
+        "sourceKey": "id",
+        "target": "workflowVersionStats",
+        "type": "hasOne"
+      }
+    },
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "workflows"
+}

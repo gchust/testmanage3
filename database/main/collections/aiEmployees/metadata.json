@@ -1,0 +1,79 @@
+{
+  "document": {
+    "fields": {
+      "about": {
+        "type": "text"
+      },
+      "avatar": {
+        "type": "string"
+      },
+      "bio": {
+        "type": "text"
+      },
+      "builtIn": {
+        "type": "boolean"
+      },
+      "category": {
+        "type": "string"
+      },
+      "chatSettings": {
+        "type": "json"
+      },
+      "createdAt": {
+        "type": "datetime"
+      },
+      "dataSourceSettings": {
+        "type": "json"
+      },
+      "defaultPrompt": {
+        "type": "text"
+      },
+      "deprecated": {
+        "type": "boolean"
+      },
+      "description": {
+        "type": "text"
+      },
+      "enableKnowledgeBase": {
+        "type": "boolean"
+      },
+      "enabled": {
+        "type": "boolean"
+      },
+      "greeting": {
+        "type": "text"
+      },
+      "knowledgeBase": {
+        "type": "json"
+      },
+      "knowledgeBasePrompt": {
+        "type": "text"
+      },
+      "modelSettings": {
+        "type": "json"
+      },
+      "nickname": {
+        "type": "string"
+      },
+      "position": {
+        "type": "string"
+      },
+      "skillSettings": {
+        "type": "json"
+      },
+      "sort": {
+        "type": "integer"
+      },
+      "updatedAt": {
+        "type": "datetime"
+      },
+      "username": {
+        "type": "string"
+      }
+    },
+    "name": "aiEmployees",
+    "version": 1
+  },
+  "formatVersion": 1,
+  "name": "aiEmployees"
+}
