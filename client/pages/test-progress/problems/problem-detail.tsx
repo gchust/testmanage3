@@ -36,7 +36,7 @@ import {
 } from '../shared.js';
 import { useAsyncResource } from '../use-async-resource.js';
 import { useRefetchOnReturn } from '../use-refetch-on-return.js';
-import { FactorySource } from './factory-source.js';
+import { FactoryLinks, FactorySource } from './factory-source.js';
 
 export default function ProblemDetailPage(): ReactElement {
   const { t } = useTranslation();
@@ -142,19 +142,26 @@ function ProblemDetail({
               <span>{problem.owner ?? '—'}</span>
             </DefinitionItem>
           </dl>
-          <DefinitionItem label={t('testProgress.fieldProblemTitle')}>
-            <p className='whitespace-pre-wrap'>{problem.title}</p>
-          </DefinitionItem>
-          <DefinitionItem label={t('testProgress.fieldProblemDescription')}>
-            {problem.description === null ||
-            problem.description.trim() === '' ? (
-              <p className='text-muted-foreground'>
-                {t('testProgress.noNote')}
-              </p>
-            ) : (
-              <MarkdownContent content={problem.description} />
-            )}
-          </DefinitionItem>
+          {problem.factorySource && (
+            <FactoryLinks source={problem.factorySource} />
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('testProgress.fieldProblemDescription')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {problem.description === null || problem.description.trim() === '' ? (
+            <p className='text-sm text-muted-foreground'>
+              {t('testProgress.noNote')}
+            </p>
+          ) : (
+            <MarkdownContent
+              content={problem.description}
+              className='max-w-5xl break-words'
+            />
+          )}
         </CardContent>
       </Card>
       {problem.factorySource && (

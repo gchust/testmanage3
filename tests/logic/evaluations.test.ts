@@ -27,6 +27,7 @@ import factoryMigration from '../../database/main/migrations/202609250002_collec
 import { createTestProgressService } from '../../server/providers/test-progress.js';
 import {
   parseProblemSubmission,
+  factoryProblemSource,
   type SubmittedProblem,
 } from '../../server/providers/evaluations/problems.js';
 import {
@@ -453,6 +454,20 @@ describe('evaluation protocol', () => {
 });
 
 describe('durable evaluation reception', () => {
+  it('keeps source Issue, code PR and known factory preview URLs distinct', async () => {
+    const d = await report();
+    expect(factoryProblemSource('id', d, []).environmentUrl).toBeNull();
+    d.source.instance = 'gchust/nb3-factory';
+    d.run.task.repository = 'gchust/nb3-factory';
+    expect(factoryProblemSource('id', d, [])).toMatchObject({
+      issueUrl: 'https://github.com/gchust/nb3-factory/issues/146',
+      pullRequestUrl: 'https://github.com/gchust/nb3-factory/pull/150',
+      environmentUrl: 'https://nb3-150.nfvd.net/main/',
+    });
+    d.outcome.pullRequest = null;
+    expect(factoryProblemSource('id', d, []).environmentUrl).toBeNull();
+  });
+
   it('collects unresolved findings into the ordinary problem list with full reports and source links', async () => {
     const { service, db } = await setup();
     const d = await report();
@@ -484,6 +499,9 @@ describe('durable evaluation reception', () => {
       reportId: received.receipt.receiptId,
     });
     expect(problem.factorySource?.files).toContain('report.html');
+    expect(
+      (await tracker.listProblems({ type: 'automation' }))[0].factorySource,
+    ).toEqual(problem.factorySource);
     expect(
       (await tracker.listProblems({ type: 'automation' }))[0].featurePointId,
     ).toBeNull();

@@ -69,6 +69,7 @@ export interface Problem {
     taskTitle: string;
     issueUrl: string;
     pullRequestUrl: string | null;
+    environmentUrl?: string | null;
     runUrl: string;
     files: string[];
   };

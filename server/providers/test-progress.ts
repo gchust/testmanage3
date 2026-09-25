@@ -1187,6 +1187,7 @@ class DefaultTestProgressService implements TestProgressService {
         'status',
         'owner',
         'ownerId',
+        'factoryReportId',
       ]);
 
     if (filter.featurePointId !== undefined) {
@@ -1211,13 +1212,24 @@ class DefaultTestProgressService implements TestProgressService {
     const rows = await query.orderBy('id', 'asc').execute();
     const names = await this.featurePointNames();
     const ownerNames = await this.ownerNames();
-    return rows.map((row) =>
-      toProblemRecord(
+    const sources = await this.factorySources(
+      rows
+        .map((row) =>
+          typeof row.factoryReportId === 'string' ? row.factoryReportId : '',
+        )
+        .filter(Boolean),
+    );
+    return rows.map((row) => ({
+      ...toProblemRecord(
         row,
         names.get(Number(row.featurePointId)) ?? null,
         ownerNames,
       ),
-    );
+      ...(typeof row.factoryReportId === 'string' &&
+      sources.has(row.factoryReportId)
+        ? { factorySource: sources.get(row.factoryReportId) }
+        : {}),
+    }));
   }
 
   public async getProblem(id: number): Promise<ProblemRecord> {
@@ -1249,29 +1261,42 @@ class DefaultTestProgressService implements TestProgressService {
       await this.ownerNames(),
     );
     if (typeof row.factoryReportId === 'string' && row.factoryReportId) {
+      const sources = await this.factorySources([row.factoryReportId]);
+      const factorySource = sources.get(row.factoryReportId);
+      if (factorySource) return { ...record, factorySource };
+    }
+    return record;
+  }
+
+  /** Batch report metadata only for problems already selected by the existing read scope. */
+  private async factorySources(
+    reportIds: string[],
+  ): Promise<Map<string, FactoryProblemSource>> {
+    const sources = new Map<string, FactoryProblemSource>();
+    const ids = [...new Set(reportIds)];
+    for (let offset = 0; offset < ids.length; offset += 200) {
       const stored = await this.database
         .query()
         .selectFrom('evaluationReports')
-        .select(['document', 'manifest'])
-        .where('id', '=', String(row.factoryReportId))
-        .executeTakeFirst();
-      if (stored) {
-        const document = validateDocument(JSON.parse(String(stored.document)));
-        if (document.type === 'evaluation-report') {
-          return {
-            ...record,
-            factorySource: factoryProblemSource(
-              String(row.factoryReportId),
+        .select(['id', 'document', 'manifest'])
+        .where('id', 'in', ids.slice(offset, offset + 200))
+        .execute();
+      for (const row of stored) {
+        const document = validateDocument(JSON.parse(String(row.document)));
+        if (document.type === 'evaluation-report')
+          sources.set(
+            String(row.id),
+            factoryProblemSource(
+              String(row.id),
               document,
-              (
-                JSON.parse(String(stored.manifest)) as EvaluationBundle
-              ).files.map((file) => file.path),
+              (JSON.parse(String(row.manifest)) as EvaluationBundle).files.map(
+                (file) => file.path,
+              ),
             ),
-          };
-        }
+          );
       }
     }
-    return record;
+    return sources;
   }
 
   public async createProblem(

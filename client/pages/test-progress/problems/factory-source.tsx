@@ -1,14 +1,74 @@
 import { useTranslation } from '@nocobase/i18n/client';
+import { ExternalLink, FileDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Download } from '../../evaluations/shared.js';
 import type { Problem } from '../api.js';
+import { ReportPreview } from './report-preview.js';
+
+type Source = NonNullable<Problem['factorySource']>;
+
+export function FactoryLinks({
+  source,
+  compact = false,
+}: {
+  source: Source;
+  compact?: boolean;
+}) {
+  const { t } = useTranslation();
+  const links = [
+    { label: t('testProgress.factoryIssue'), url: source.issueUrl, empty: '' },
+    {
+      label: t('testProgress.factoryPullRequest'),
+      url: source.pullRequestUrl,
+      empty: t('testProgress.factoryNoPullRequest'),
+    },
+    {
+      label: t('testProgress.factoryEnvironment'),
+      url: source.environmentUrl,
+      empty: t('testProgress.factoryNoEnvironment'),
+    },
+  ];
+  return (
+    <div
+      className={
+        compact
+          ? 'mt-3 flex flex-wrap gap-x-4 gap-y-2 text-sm'
+          : 'grid gap-4 border-t border-border pt-4 sm:grid-cols-3'
+      }
+    >
+      {links.map(({ label, url, empty }) => (
+        <div key={label} className='min-w-0'>
+          {!compact && (
+            <p className='mb-1 text-sm text-muted-foreground'>{label}</p>
+          )}
+          {url ? (
+            <a
+              aria-label={label}
+              href={url}
+              title={url}
+              target='_blank'
+              rel='noreferrer'
+              className='inline-flex max-w-full items-center gap-1.5 break-all text-sm font-medium text-primary underline-offset-4 hover:underline'
+            >
+              <ExternalLink aria-hidden='true' className='size-3.5 shrink-0' />
+              {compact ? label : url.replace(/^https?:\/\//, '')}
+            </a>
+          ) : (
+            <span className='text-sm text-muted-foreground'>
+              {compact ? label + ' · ' + empty : empty}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function FactorySource({
   source,
   problemId,
 }: {
-  source: NonNullable<Problem['factorySource']>;
+  source: Source;
   problemId: number;
 }) {
   const { t } = useTranslation();
@@ -16,70 +76,57 @@ export function FactorySource({
     <Card>
       <CardHeader>
         <CardTitle>{t('testProgress.factorySourceTitle')}</CardTitle>
-      </CardHeader>
-      <CardContent className='space-y-4'>
         <p className='text-sm text-muted-foreground'>{source.taskTitle}</p>
-        <div className='flex flex-wrap items-center gap-2'>
-          <Button
-            variant='outline'
-            size='sm'
-            render={
-              <a href={source.issueUrl} target='_blank' rel='noreferrer' />
-            }
+      </CardHeader>
+      <CardContent className='space-y-5'>
+        {source.files.includes('report.html') ? (
+          <ReportPreview problemId={problemId} reportId={source.reportId} />
+        ) : (
+          <p className='text-sm text-muted-foreground'>
+            {t('testProgress.reportNoHtml')}
+          </p>
+        )}
+        <div className='flex flex-wrap items-center gap-4 border-t border-border pt-4'>
+          <a
+            href={source.runUrl}
+            target='_blank'
+            rel='noreferrer'
+            className='inline-flex items-center gap-1.5 text-sm text-primary underline-offset-4 hover:underline'
           >
-            {t('testProgress.factoryIssue')}
-          </Button>
-          {source.pullRequestUrl ? (
-            <Button
-              variant='outline'
-              size='sm'
-              render={
-                <a
-                  href={source.pullRequestUrl}
-                  target='_blank'
-                  rel='noreferrer'
-                />
-              }
-            >
-              {t('testProgress.factoryPullRequest')}
-            </Button>
-          ) : (
-            <span className='text-sm text-muted-foreground'>
-              {t('testProgress.factoryNoPullRequest')}
-            </span>
-          )}
-          <Button
-            variant='outline'
-            size='sm'
-            render={<a href={source.runUrl} target='_blank' rel='noreferrer' />}
-          >
+            <ExternalLink aria-hidden='true' className='size-4' />
             {t('testProgress.factoryRun')}
-          </Button>
-        </div>
-        <div className='flex flex-wrap gap-2'>
-          <Download
-            problemId={problemId}
-            reportId={source.reportId}
-            file='bundle.zip'
-          >
-            {t('evaluations.downloadBundle')}
-          </Download>
-          {source.files.includes('report.html') && (
-            <Download
-              problemId={problemId}
-              reportId={source.reportId}
-              file='report.html'
-            >
-              {t('evaluations.downloadHtml')}
-            </Download>
-          )}
-          <Download
-            problemId={problemId}
-            reportId={source.reportId}
-            file='evaluation.json'
-          >
-            {t('evaluations.downloadJson')}
-          </Download>
+          </a>
+          <details className='w-full'>
+            <summary className='flex w-fit cursor-pointer items-center gap-2 text-sm text-muted-foreground hover:text-foreground'>
+              <FileDown aria-hidden='true' className='size-4' />
+              {t('testProgress.reportDownloads')}
+            </summary>
+            <div className='mt-3 flex flex-wrap gap-2'>
+              <Download
+                problemId={problemId}
+                reportId={source.reportId}
+                file='bundle.zip'
+              >
+                {t('evaluations.downloadBundle')}
+              </Download>
+              {source.files.includes('report.html') && (
+                <Download
+                  problemId={problemId}
+                  reportId={source.reportId}
+                  file='report.html'
+                >
+                  {t('evaluations.downloadHtml')}
+                </Download>
+              )}
+              <Download
+                problemId={problemId}
+                reportId={source.reportId}
+                file='evaluation.json'
+              >
+                {t('evaluations.downloadJson')}
+              </Download>
+            </div>
+          </details>
         </div>
       </CardContent>
     </Card>

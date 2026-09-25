@@ -16,6 +16,7 @@ export interface FactoryProblemSource {
   taskTitle: string;
   issueUrl: string;
   pullRequestUrl: string | null;
+  environmentUrl: string | null;
   runUrl: string;
   files: string[];
 }
@@ -33,6 +34,21 @@ export function factoryProblemSource(
     pullRequestUrl: report.outcome.pullRequest
       ? `https://github.com/${repo}/pull/${report.outcome.pullRequest.number}`
       : null,
+    // This integration uses nb3-factory's documented preview-host.mjs address rule.
+    // An address identifies the PR environment; it is not a deployment health check.
+    environmentUrl:
+      report.source.instance === 'gchust/nb3-factory' &&
+      repo === 'gchust/nb3-factory' &&
+      report.outcome.pullRequest &&
+      /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(
+        process.env.FACTORY_PREVIEW_DOMAIN ?? 'nfvd.net',
+      )
+        ? 'https://nb3-' +
+          report.outcome.pullRequest.number +
+          '.' +
+          (process.env.FACTORY_PREVIEW_DOMAIN ?? 'nfvd.net') +
+          '/main/'
+        : null,
     runUrl: `https://github.com/${repo}/actions/runs/${report.precedence.producer.runId}/attempts/${report.precedence.producer.attempt}`,
     files,
   };

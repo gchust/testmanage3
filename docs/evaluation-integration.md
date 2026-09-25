@@ -6,7 +6,7 @@ GitHub Actions owns selecting unresolved review findings and final failed QA che
 
 Set the factory repository variable `EVALUATION_DELIVERY_FORMAT=testmanage3-problems-v1`. The existing delivery workflow includes a multipart text field `problems` containing `{version: 1, problems: [...]}` alongside `bundle`. Each problem carries a stable key, title, description, subject keys and report finding IDs or a QA criterion ID. The receiver rejects invalid references, oversized submissions and differing issue payloads for the same report revision. Default `bundle-v1` delivery remains compatible with other receivers.
 
-Issue details include the original ZIP, HTML and JSON reports, GitHub task Issue, PR when recorded, and Actions run links. An absent PR is shown explicitly. Problems without an unambiguous feature mapping enter the same list as Uncategorized; no synthetic feature points are created. Replays do not duplicate problems, resurrect deleted problems, or overwrite human titles, notes, ownership and lifecycle status. Old report revisions cannot replace the current evidence.
+Issue details open the HTML report directly in an embedded reading area, with optional ZIP, HTML and JSON downloads below. Task Issue, code PR and PR preview environment links are separated from downloads and shown in both the list and detail metadata. Actions run links remain with the report. An absent PR is shown explicitly. Problems without an unambiguous feature mapping enter the same list as Uncategorized; no synthetic feature points are created. Replays do not duplicate problems, resurrect deleted problems, or overwrite human titles, notes, ownership and lifecycle status. Old report revisions cannot replace the current evidence.
 
 The standalone evaluation navigation entry is removed. Its old URL and archival API remain for backward compatibility and to retain already received evidence; ordinary work starts and ends on the existing Problems page. Migration rollback requires categorizing all uncategorized problems first.
 
@@ -56,7 +56,15 @@ Initial import returns HTTP 201; identical retry returns HTTP 200 and the origin
 
 Limits: 64 MiB ZIP, 128 MiB unpacked, 2,048 entries, 4 MiB JSON, 32 MiB HTML, 10 MiB per PNG and 48 MiB PNG total. The store-only ZIP format is checked for local/central header agreement, UTF-8 paths, duplicate names, links, compression, CRC, manifest hashes and evidence references. Four imports per process may run concurrently; overflow receives 429 with `Retry-After: 5`.
 
-HTML is download-only with attachment disposition, `nosniff` and CSP sandbox. Bundles/evidence are only available through authenticated report endpoints. File Repository’s generated access path is deliberately not registered as a public route. Native file metadata and private Drive objects are committed before the receipt. Back up the database together with the entire configured storage directory. A failed/uncertain database commit never returns success; interrupted uploads may leave native file metadata that should only be cleaned after checking report references.
+Raw HTML is served as an attachment with `nosniff` and CSP sandbox. Bundles/evidence are only available through authenticated report endpoints. File Repository’s generated access path is deliberately not registered as a public route. Native file metadata and private Drive objects are committed before the receipt. Back up the database together with the entire configured storage directory. A failed/uncertain database commit never returns success; interrupted uploads may leave native file metadata that should only be cleaned after checking report references.
+
+## Reading reports and source links
+
+The ordinary Problems list shows a two-line Markdown summary and distinct task links. The detail page separates metadata, the full description, and the complete report. HTML opens automatically; the reading area can expand and download buttons are under an optional disclosure. Loading failures have a retry action, and changing problems cancels stale requests.
+
+The inline reader retrieves the existing protected attachment with the native API client, removes active elements and event handlers, inserts a restrictive CSP, and displays it in an opaque sandboxed iframe. Scripts, forms, nested frames and external resource requests are disabled. Inline styles and data images preserve the report layout; the original downloadable file is unchanged.
+
+For the known gchust/nb3-factory integration, PR environment addresses follow the factory's preview-host.mjs rule: https://nb3-<PR>.nfvd.net/main/. FACTORY_PREVIEW_DOMAIN on the TestManage server can mirror a changed factory preview domain. These are environment addresses, not a live health assertion; PR environments can be undeployed or reclaimed. Other factory repositories do not inherit this domain. A task without a PR shows explicit missing PR and environment labels.
 
 ## Factory configuration
 

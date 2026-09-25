@@ -26,11 +26,11 @@ import { cn } from '@/lib/utils';
  * the typography plugin, and the tokens keep it readable in both themes.
  */
 const MARKDOWN_CLASS = cn(
-  'text-sm leading-6 text-foreground',
+  'min-w-0 break-words text-sm leading-6 text-foreground',
   '[&_h1]:mt-3 [&_h1]:mb-2 [&_h1]:font-heading [&_h1]:text-lg [&_h1]:font-semibold',
   '[&_h2]:mt-3 [&_h2]:mb-2 [&_h2]:font-heading [&_h2]:text-base [&_h2]:font-semibold',
   '[&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:font-semibold',
-  '[&_p]:my-2 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0',
+  '[&_p]:my-3 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0',
   '[&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5',
   '[&_li]:my-0.5',
   '[&_a]:text-primary [&_a]:underline [&_a]:underline-offset-4',
@@ -133,10 +133,11 @@ export function MarkdownEditor({
       icon: <List aria-hidden='true' className='size-3.5' />,
       label: t('testProgress.markdownList'),
       apply: (selected) => ({
-        text: selected
-          .split('\n')
-          .map((line) => `- ${line}`)
-          .join('\n') || '- ',
+        text:
+          selected
+            .split('\n')
+            .map((line) => `- ${line}`)
+            .join('\n') || '- ',
       }),
     },
     {

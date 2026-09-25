@@ -4,6 +4,8 @@ import { useTranslation } from '@nocobase/i18n/client';
 import type { ReactElement } from 'react';
 import { Link, Outlet, useSearchParams } from 'react-router';
 
+import { FactoryLinks } from './factory-source.js';
+import { MarkdownContent } from '../markdown.js';
 import { Loading } from '@/components/loading';
 import { PageContainer } from '@/components/page-container';
 import { PageHeader } from '@/components/page-header';
@@ -228,9 +230,24 @@ export default function ProblemsPage(): ReactElement {
                           {problem.title}
                         </Link>
                         {problem.description === null ? null : (
-                          <span className='mt-0.5 block text-xs text-muted-foreground'>
-                            {problem.description}
-                          </span>
+                          <MarkdownContent
+                            className='mt-2 line-clamp-2 text-muted-foreground'
+                            content={
+                              problem.description
+                                .split(/\n\s*\n/)
+                                .find(
+                                  (part) =>
+                                    part.trim() &&
+                                    !/^#{1,6}\s/.test(part.trim()),
+                                ) ?? problem.description
+                            }
+                          />
+                        )}
+                        {problem.factorySource && (
+                          <FactoryLinks
+                            source={problem.factorySource}
+                            compact
+                          />
                         )}
                       </TableCell>
                       <TableCell className='whitespace-nowrap text-muted-foreground'>
