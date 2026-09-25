@@ -169,18 +169,24 @@ function ReportBody({
                 t('evaluations.unknown')}
             </span>
           </div>
-          <Table>
+          <Table className='table-fixed'>
             <TableHeader>
               <TableRow>
-                <TableHead>{t('evaluations.criterion')}</TableHead>
-                <TableHead>{t('evaluations.firstFull')}</TableHead>
-                <TableHead>{t('evaluations.finalFull')}</TableHead>
+                <TableHead className='w-2/3 whitespace-normal'>
+                  {t('evaluations.criterion')}
+                </TableHead>
+                <TableHead className='whitespace-normal'>
+                  {t('evaluations.firstFull')}
+                </TableHead>
+                <TableHead className='whitespace-normal'>
+                  {t('evaluations.finalFull')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {report.qa.criteria.map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell>
+                  <TableCell className='whitespace-normal break-words'>
                     {c.id} · {c.text}
                   </TableCell>
                   <TableCell>
