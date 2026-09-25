@@ -1,4 +1,6 @@
 import { authorizationToken } from '@nocobase/app-plugin-authorization';
+import { authenticationToken } from '@nocobase/app-plugin-authentication';
+import { APIError } from 'better-auth/api';
 import { createApp } from '../../server/app.js';
 import authConfig from '../../server/config/auth.js';
 // @vitest-environment node
@@ -735,6 +737,23 @@ describe('app server', () => {
           })
         ).status,
       ).toBe(401);
+    const nativeError = new APIError('UNAUTHORIZED', {
+      code: 'INVALID_API_KEY',
+      message: 'Invalid API key.',
+    });
+    const foreignError = Object.assign(
+      new Error(nativeError.message),
+      nativeError,
+    );
+    const authentication =
+      app.application.container.resolve(authenticationToken);
+    const session = vi
+      .spyOn(authentication, 'getSession')
+      .mockRejectedValueOnce(foreignError);
+    expect(
+      (await requestApp(app, baseUrl + 'evaluations/reports')).status,
+    ).toBe(401);
+    session.mockRestore();
     for (const endpoint of ['create', 'update', 'delete'])
       expect(
         (

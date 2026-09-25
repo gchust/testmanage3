@@ -353,8 +353,9 @@ Navigation groups retain their expanded or collapsed state while the navigation 
 
 Automated evaluations live in `server/providers/evaluations/`, `server/routes/evaluations.ts` and `client/pages/evaluations/`; see `docs/evaluation-integration.md`. Reuse native API Keys (the separate non-session `evaluation-import` configuration), Authorization business resources/Permission Sets, policy-bound Repositories, File Repository and Drive. Preserve the machine endpoint’s top-level receipt and immutable revision semantics. Existing issue records use the `issues` Collection although the UI/API call them problems. Never overwrite manual scores or automatically close issues. Never expose the archive File Repository access path as a public route.
 
-
 ## Development logging
+
+`HttpErrorsProvider` registers `applicationErrorHandler` during the native boot lifecycle because a deployment may install separate Better Auth dependency copies. Authentication's class-identity check can then miss a native API key refusal. The App boundary uses Better Auth's public `isAPIError` guard to retain 4xx status, body, and headers; Hono exceptions and unknown server errors keep their existing behavior. Remove this compatibility boundary only when the native middleware handles cross-package errors and deployed verification passes.
 
 `pnpm dev` owns the ready banner and public URL; `APP_SERVER_START_LOG=false` suppresses the underlying listener announcement through `server/environment.ts`. Keep that mapping when editing deployment environment settings. Request starts, request headers and config diagnostics use DEBUG; the normal INFO output contains completion summaries. See the shared application development Skill for hosted logging and upgrade limits.
 
