@@ -67,3 +67,30 @@ Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm nocobase app i18n:check` a
 On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and the current container identity. Consistently back up SQLite and save compose/deployment metadata before switching images. Keep the previous image for rollback; never restore the old unrelated misdeployment.
 
 Verify native credential/session isolation, anonymous/unpermitted access, reader write denial, row/field Repository policies, complete batch samples, source binding, unchanged manual data, concurrent duplicate reception and receipt persistence across restart. Use a real factory artifact with its actual `deliverBundle` sender, then dispatch GitHub delivery against the deployed service. Inspect both its stored receipt and the report page in light/dark themes and English/Chinese.
+
+## Production acceptance — 2026-09-25
+
+Deployed to 252 at 18:41 Singapore time using image `testmanage3:evaluations-ba52b7c`, source revision `ba52b7ce692c8eb260857d3fb2a096b76ab2a043`. The entry is `https://test3.nfvd.net/main/progress/evaluations`. The build targets Linux x64 / glibc / Node 24; the container health check passes.
+
+The real factory report is `gchust/nb3-factory/issues/315/initial`, revision 1. All three deliveries use the original 224,620-byte archive with SHA-256 `45f27de9d4791f6b8060043caf669c4a70615c41623cc6c5218800a14997da7a`. No synthetic fixtures were uploaded to production, and replay did not invoke another Agent build or review.
+
+| Validation                                    | Factory Actions run | Receiver result        |
+| --------------------------------------------- | ------------------- | ---------------------- |
+| First original-bundle delivery                | `36124635435`       | HTTP 201, stored       |
+| Replay from the default `develop` branch      | `36124961001`       | HTTP 200, same receipt |
+| Replay after replacing/restarting the service | `36125384963`       | HTTP 200, same receipt |
+
+The persistent receipt is `850c0eea-d66a-4a3c-ac09-577160a4fe93`. Both the factory outbox and the receiver confirm `stored`. There is one report and one native File Repository archive after retries. The sample deliberately has independent review disabled and incomplete usage; the UI preserves “not reviewed” and “partial” instead of inventing scores or complete usage.
+
+Production verification also covers:
+
+- Original 33 feature points, 93 issues, 93 missing items and 97 activity records remain unchanged, including row-content digests. SQLite integrity passes.
+- Anonymous access and machine-key access to user/session/report APIs return 401. Reserved API-key self-service create/update/delete return 403, and the default key configuration cannot read the integration key (404).
+- Chrome: Chinese/light runs and report details, English/dark report details, all five tabs, original ZIP/JSON/HTML downloads, and attached PNG evidence download. No page errors or unexpected HTTP errors occurred. Downloaded ZIP bytes match the registered hash; HTML remains attachment-only with CSP sandbox.
+- Application: 46 test files / 329 tests, typecheck, lint, Linux production build, locale check and 55 generated Collection definitions all pass. Factory evaluation tests: 88 pass; factory regression CI and browser preflight pass.
+
+Live testing found and fixed a factory workflow dependency bug: a skipped optional backfill incorrectly skipped the send job after successful planning. Factory PR `gchust/nb3-factory#331` is merged into `develop`; the final two runs use that default-branch fix. The App also uses Better Auth's public `isAPIError` guard at its native provider boundary to preserve credential refusal statuses across duplicate deployment package constructors.
+
+Rollback backups are under `/srv/testmanage3-backups/`, including `pre-switch-20260925T102337Z` (before the feature migration) and `received-report-20260925T104107Z` (with the accepted report). Keep configuration and the entire storage tree together. Previous images remain available.
+
+Machine-readable receipts, build identity and checks: [production.json](verification/2026-09-25/production.json). Browser evidence: [Chinese runs](verification/2026-09-25/runs-zh-light.png), [English dark report](verification/2026-09-25/report-en-dark.png). These files contain no credentials.
