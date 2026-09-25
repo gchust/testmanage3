@@ -1,4 +1,4 @@
-# nb3-factory evaluation integration
+# nb3-factory problem delivery and report archive
 
 ## Factory problems: the user-facing workflow
 
@@ -10,7 +10,7 @@ Issue details include the original ZIP, HTML and JSON reports, GitHub task Issue
 
 The standalone evaluation navigation entry is removed. Its old URL and archival API remain for backward compatibility and to retain already received evidence; ordinary work starts and ends on the existing Problems page. Migration rollback requires categorizing all uncategorized problems first.
 
-## Scope
+## Compatibility archive capabilities
 
 The receiver implements the fixed report, batch, ZIP bundle and top-level receipt v1 contracts from nb3-factory commit `ff7e1e12225bdb868865b36bd4032b423e57e66d`. Original schemas are in `server/providers/evaluations/contracts/`; regenerate TypeScript with `node scripts/generate-evaluation-contracts.mjs`.
 
@@ -46,9 +46,11 @@ New editable native Permission Sets are installed once:
 
 Existing administrators retain access through their current unrestricted role. Ordinary users are not silently assigned a new role. Use native Users/Authorization pages to assign the new sets or narrow record scopes. Seeds preserve administrator-edited sets. Report JSON is an atomic evidence document; record permissions do not split individual JSON properties.
 
+These sets control the compatibility archive and integration management. Viewing a collected problem and downloading its attached report uses the existing Problems permission, including its record scope; it does not require a separate evaluation-reader role. The problem-scoped download endpoint resolves the report from the authorized problem instead of accepting a caller-selected report ID.
+
 ## Receiver
 
-`POST <app-base>/api/evaluations/import` accepts exactly one multipart `bundle` field of type `application/zip`. Authenticate with the integration token using either `x-api-key` or Bearer, exclusively. Required headers are `Idempotency-Key`, `X-Evaluation-Schema-Version: 1`, `X-Evaluation-Type` and `X-Evaluation-Bundle-SHA256`.
+`POST <app-base>/api/evaluations/import` accepts exactly one multipart `bundle` field of type `application/zip` and an optional `problems` text field (at most 1 MiB). Authenticate with the integration token using either `x-api-key` or Bearer, exclusively. Required headers are `Idempotency-Key`, `X-Evaluation-Schema-Version: 1`, `X-Evaluation-Type` and `X-Evaluation-Bundle-SHA256`.
 
 Initial import returns HTTP 201; identical retry returns HTTP 200 and the original receipt ID. Different bytes at the same source/type/key/revision return 409. Receipts are top-level JSON, never wrapped in `data`, and HTTP 202 is never returned. The batch receipt uses its full subject key. Arrival order and largest revision do not determine the current report.
 
@@ -64,6 +66,7 @@ Create a source binding using the actual repository as source instance and proje
 FACTORY_EVALUATION_DELIVERY=true
 EVALUATION_ENDPOINT=https://test3.nfvd.net/main/api/evaluations/import
 EVALUATION_AUTH_MODE=x-api-key
+EVALUATION_DELIVERY_FORMAT=testmanage3-problems-v1
 ```
 
 Store the issued token in the GitHub Actions secret `EVALUATION_TOKEN`. The token is shown once, expires after 365 days and is revocable. It never creates a user session or authorizes ordinary application endpoints. Public API Key self-service requests for the reserved configuration are rejected.
@@ -78,7 +81,24 @@ On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and the cur
 
 Verify native credential/session isolation, anonymous/unpermitted access, reader write denial, row/field Repository policies, complete batch samples, source binding, unchanged manual data, concurrent duplicate reception and receipt persistence across restart. Use a real factory artifact with its actual `deliverBundle` sender, then dispatch GitHub delivery against the deployed service. Inspect both its stored receipt and the report page in light/dark themes and English/Chinese.
 
-## Production acceptance — 2026-09-25
+## Problem delivery acceptance — 2026-09-25
+
+Deployed to 252 at 20:14 Singapore time using image `testmanage3:factory-problems-178d782`, application revision `178d782c8602f7066623e893e4a6e02ff3352e35`. Factory PR `gchust/nb3-factory#334` is merged into `develop` as `b8f6701dd2dac1e69a4dc13e19ecf7e362fa3cb7`. The repository delivery format is `testmanage3-problems-v1`. No scheduled evaluation plans were enabled, and verification reused an existing report without another build or model call.
+
+The real report for `gchust/nb3-factory/issues/320/initial`, revision 1, contains one unresolved improvement and two strengths. The factory selects only the improvement and sends it with the original 280,454-byte ZIP (SHA-256 `e1f527ce40aca80a606d62079ca1e85c8fb7ede35a17a931f1550d95d511ceb1`). TestManage stores it as problem `187`, automation/pending and Uncategorized, in the existing Problems page: `https://test3.nfvd.net/main/progress/problems/187`. The sidebar no longer has a standalone evaluation entry.
+
+| Validation | Factory Actions run | Receiver result |
+| --- | --- | --- |
+| Original report and explicit problem submission | `36133819280` | HTTP 201, stored |
+| Identical registered revision replay | `36134139779` | HTTP 200, same receipt and one problem |
+
+Both runs execute the send and record jobs successfully. The shared receipt is `fe20f948-6625-45d9-9b39-13a93a0d5c73`. Chrome verifies the ordinary Problems list and detail page, Chinese/light and English/dark, Issue and Actions links, and ZIP/HTML/JSON downloads. Downloaded ZIP bytes match the registered hash, and the JSON is semantically identical to the original full report. HTML is attachment-only with CSP sandbox; anonymous report access returns 401. There are no page errors or unexpected HTTP errors. This real task has no published PR, so the page correctly shows “No PR recorded”; report payloads containing a PR URL are covered by automated tests.
+
+An isolated clone of production passed the migration and HTTP import checks before the production switch. The original 33 feature points, 93 issues, 93 missing items, and 97 activity records retain their original row-content digests. After both deliveries there are 94 issues and 98 activities: one new problem and its creation event. SQLite integrity and container health pass. The rollback snapshot is `/srv/testmanage3-backups/pre-factory-problems-20260925T121410Z`.
+
+Application checks pass: 47 files / 339 tests, typecheck, lint, locale check, 55 generated Collection definitions, and the Linux x64 / Node 24 production build. Factory checks pass: 92 tests and both GitHub regression/preflight jobs. Evidence: [factory-problems.json](verification/2026-09-25/factory-problems.json), [problem list](verification/2026-09-25/problems-zh-light.png), [Chinese detail](verification/2026-09-25/problem-zh-light.png), and [English dark detail](verification/2026-09-25/problem-en-dark.png).
+
+## Initial archive-only acceptance — 2026-09-25 (superseded)
 
 Deployed to 252 at 18:41 Singapore time using image `testmanage3:evaluations-ba52b7c`, source revision `ba52b7ce692c8eb260857d3fb2a096b76ab2a043`. The entry is `https://test3.nfvd.net/main/progress/evaluations`. The build targets Linux x64 / glibc / Node 24; the container health check passes.
 
