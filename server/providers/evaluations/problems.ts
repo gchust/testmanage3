@@ -19,16 +19,22 @@ export interface FactoryProblemSource {
   environmentUrl: string | null;
   runUrl: string;
   files: string[];
+  reportUrl: string | null;
+  hasArchive: boolean;
 }
 
 export function factoryProblemSource(
   reportId: string,
   report: EvaluationReport,
   files: string[],
+  reportUrl: string | null = null,
+  hasArchive = true,
 ): FactoryProblemSource {
   const repo = report.run.task.repository;
   return {
     reportId,
+    reportUrl,
+    hasArchive,
     taskTitle: report.run.task.title,
     issueUrl: `https://github.com/${repo}/issues/${report.run.task.issue}`,
     pullRequestUrl: report.outcome.pullRequest

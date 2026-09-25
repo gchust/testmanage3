@@ -72,6 +72,8 @@ export interface Problem {
     environmentUrl?: string | null;
     runUrl: string;
     files: string[];
+    reportUrl?: string | null;
+    hasArchive?: boolean;
   };
 }
 

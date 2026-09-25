@@ -16,6 +16,7 @@ import { RepositoryError } from '@nocobase/db';
 import { bodyLimit } from 'hono/body-limit';
 import { evaluationServiceToken } from '../providers/evaluations/index.js';
 import { parseProblemSubmission } from '../providers/evaluations/problems.js';
+import { parseLinkedReport } from '../providers/evaluations/report-links.js';
 import {
   EvaluationError,
   LIMITS,
@@ -70,7 +71,10 @@ function actor(c: Context<Env>): string {
     throw new EvaluationError('FORBIDDEN', 'A user identity is required.');
   return String(id);
 }
-async function boundedBody(request: Request): Promise<Buffer> {
+async function boundedBody(
+  request: Request,
+  maxSize = LIMITS.zip + 65536,
+): Promise<Buffer> {
   const reader = (
     request.body as ReadableStream<Uint8Array> | null
   )?.getReader();
@@ -82,11 +86,11 @@ async function boundedBody(request: Request): Promise<Buffer> {
       const { done, value } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > LIMITS.zip + 65536) {
+      if (size > maxSize) {
         await reader.cancel();
         throw new EvaluationError(
           'TOO_LARGE',
-          'Multipart body exceeds 64 MiB plus framing.',
+          'Request body exceeds the delivery format limit.',
         );
       }
       chunks.push(value);
@@ -139,10 +143,28 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
       if (!source) return c.json({ code: 'UNAUTHORIZED' }, 401);
       if (importing >= 4)
         return c.json({ code: 'BUSY' }, 429, { 'Retry-After': '5' });
-      if (!c.req.header('content-type')?.startsWith('multipart/form-data;'))
+      const linked =
+        c.req.header('content-type')?.split(';')[0].trim() ===
+        'application/json';
+      if (
+        !linked &&
+        !c.req.header('content-type')?.startsWith('multipart/form-data;')
+      )
         return c.json({ code: 'INVALID_MULTIPART' }, 400);
       importing++;
       try {
+        if (linked) {
+          const bytes = await boundedBody(c.req.raw, 4 * 1024 * 1024);
+          const input = parseLinkedReport(bytes, {
+            version: c.req.header('X-Evaluation-Schema-Version') ?? '',
+            type: c.req.header('X-Evaluation-Type') ?? '',
+            sha256: c.req.header('X-Evaluation-Bundle-SHA256') ?? '',
+            payloadSha256: c.req.header('X-Evaluation-Payload-SHA256') ?? '',
+            idempotencyKey: c.req.header('Idempotency-Key') ?? '',
+          });
+          const result = await service.importLinkedReport(source, input);
+          return c.json(result.receipt, result.duplicate ? 200 : 201);
+        }
         const bytes = await boundedBody(c.req.raw);
         let form: FormData;
         try {

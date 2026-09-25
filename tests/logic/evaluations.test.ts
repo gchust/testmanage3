@@ -18,12 +18,13 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { crc32 } from 'node:zlib';
 import { Hono, type Context } from 'hono';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import migration from '../../database/main/migrations/202609250001_create_evaluations.js';
 import issuesMigration from '../../database/main/migrations/202609210003_create_issues.js';
 import issueTypesMigration from '../../database/main/migrations/202609220001_add_issue_type_and_owner.js';
 import activityMigration from '../../database/main/migrations/202609220003_create_problem_activities.js';
 import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
+import linkMigration from '../../database/main/migrations/202609250003_reference_factory_reports.js';
 import { createTestProgressService } from '../../server/providers/test-progress.js';
 import {
   parseProblemSubmission,
@@ -253,6 +254,7 @@ async function setup() {
     c.string('ownerId');
   });
   await factoryMigration.up(context);
+  await linkMigration.up(context);
   await db.query().insertInto('user').values({ id: 'admin' }).execute();
   await db
     .query()
@@ -672,6 +674,7 @@ describe('durable evaluation reception', () => {
       (await db.query().selectFrom('issues').selectAll().execute())[0],
     ).not.toHaveProperty('factoryKey');
     await factoryMigration.up(context);
+
     expect(
       await db.query().selectFrom('issues').selectAll().execute(),
     ).toHaveLength(2);
@@ -1063,5 +1066,203 @@ describe('version comparability', () => {
     const diff = compareReports(left, right);
     expect(diff.findings.notObserved.length).toBeGreaterThan(0);
     expect(diff.findings).not.toHaveProperty('resolved');
+  });
+});
+
+function linkedRequest(
+  p: ReturnType<typeof packet>,
+  token = 'integration-secret',
+  patch: Record<string, unknown> = {},
+  headerPatch: Record<string, string> = {},
+) {
+  const document = p.document;
+  const archive =
+    document.type === 'evaluation-report'
+      ? document.links.find((link) => link.rel === 'report-archive')
+      : undefined;
+  const [owner, repo] = document.source.instance.split('/');
+  const reportUrl = archive?.path
+    ? 'https://' + owner + '.github.io/' + repo + '/' + archive.path
+    : null;
+  const body = JSON.stringify({
+    version: 1,
+    document,
+    reportUrl,
+    problems: submittedProblems(document),
+    ...patch,
+  });
+  return new Request('http://local/evaluations/import', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': token,
+      'X-Evaluation-Schema-Version': '1',
+      'X-Evaluation-Type': document.type,
+      'X-Evaluation-Bundle-SHA256': p.headers.sha256,
+      'X-Evaluation-Payload-SHA256': hash(body),
+      'Idempotency-Key': p.headers.idempotencyKey,
+      ...headerPatch,
+    },
+    body,
+  });
+}
+
+describe('linked report delivery', () => {
+  it('stores JSON metadata and problems with one receipt and no uploaded file', async () => {
+    const { service, db, archive } = await setup();
+    const store = vi.spyOn(archive, 'store');
+    const app = await router(service),
+      p = packet(await report());
+    const first = await app.fetch(linkedRequest(p));
+    expect(first.status).toBe(201);
+    const receipt = (await first.json()) as { receiptId: string };
+    const repeat = await app.fetch(linkedRequest(p));
+    expect(repeat.status).toBe(200);
+    expect(await repeat.json()).toEqual(receipt);
+    expect(store).not.toHaveBeenCalled();
+    const saved = await service.getReport(receipt.receiptId);
+    expect(saved.bundleFileId).toBeNull();
+    expect(saved.files).toEqual(['evaluation.json']);
+    expect(saved.reportUrl).toBe(
+      'https://owner.github.io/factory/reports/issues/146/runs/100/attempt-1/index.html',
+    );
+    const problems = await createTestProgressService(db).listProblems({
+      type: 'automation',
+    });
+    expect(problems).toHaveLength(1);
+    expect(problems[0].factorySource).toMatchObject({
+      reportUrl: saved.reportUrl,
+      hasArchive: false,
+      files: ['evaluation.json'],
+    });
+    expect(
+      JSON.parse(
+        (
+          await service.attachment(receipt.receiptId, 'evaluation.json')
+        ).bytes.toString(),
+      ),
+    ).toEqual(p.document);
+    await expect(
+      service.attachment(receipt.receiptId, 'bundle.zip'),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    expect(
+      (await app.request('/evaluations/reports/' + receipt.receiptId)).status,
+    ).toBe(401);
+    expect(
+      (
+        await app.request('/evaluations/reports/' + receipt.receiptId, {
+          headers: { 'x-user': 'member' },
+        })
+      ).status,
+    ).toBe(403);
+    const changed = structuredClone(p.document);
+    changed.createdAt = '2026-09-25T11:00:00Z';
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(p, 'integration-secret', { document: changed }),
+        )
+      ).status,
+    ).toBe(409);
+  });
+
+  it('keeps the same receipt and problem when transitioning between archive and link formats', async () => {
+    for (const linkFirst of [true, false]) {
+      const { service, db } = await setup(),
+        app = await router(service),
+        p = packet(await report());
+      const multipart = () =>
+        request(p, 'integration-secret', {
+          version: 1,
+          problems: submittedProblems(p.document),
+        });
+      const first = await app.fetch(linkFirst ? linkedRequest(p) : multipart());
+      expect(first.status).toBe(201);
+      const receipt = (await first.json()) as { receiptId: string };
+      const second = await app.fetch(
+        linkFirst ? multipart() : linkedRequest(p),
+      );
+      expect(second.status).toBe(200);
+      expect(await second.json()).toEqual(receipt);
+      expect(
+        await createTestProgressService(db).listProblems({
+          type: 'automation',
+        }),
+      ).toHaveLength(1);
+      expect(
+        (await service.attachment(receipt.receiptId, 'bundle.zip')).bytes,
+      ).toEqual(p.bytes);
+      expect(
+        (await service.getReport(receipt.receiptId)).reportUrl,
+      ).toBeTruthy();
+    }
+  });
+
+  it('rejects invalid credentials, unbound sources, altered payloads and unrelated report URLs', async () => {
+    const { service, db } = await setup(),
+      app = await router(service),
+      p = packet(await report());
+    expect((await app.fetch(linkedRequest(p, ''))).status).toBe(401);
+    expect((await app.fetch(linkedRequest(p, 'wrong'))).status).toBe(401);
+    for (const reportUrl of [
+      'javascript:alert(1)',
+      'https://other.example/report',
+      'https://user:secret@owner.github.io/factory/report',
+      null,
+    ]) {
+      expect(
+        (await app.fetch(linkedRequest(p, 'integration-secret', { reportUrl })))
+          .status,
+      ).toBe(400);
+    }
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(
+            p,
+            'integration-secret',
+            {},
+            { 'X-Evaluation-Payload-SHA256': '0'.repeat(64) },
+          ),
+        )
+      ).status,
+    ).toBe(400);
+    const other = structuredClone(p.document);
+    other.source.project = 'owner/another';
+    expect((await app.fetch(linkedRequest(packet(other)))).status).toBe(403);
+    expect(
+      await db.query().selectFrom('evaluationReports').selectAll().execute(),
+    ).toHaveLength(0);
+  });
+
+  it('retains batch metadata without inventing a batch HTML link', async () => {
+    const { service } = await setup(),
+      app = await router(service);
+    const p = packet(await fixture('batch-in-progress'));
+    expect((await app.fetch(linkedRequest(p))).status).toBe(201);
+  });
+
+  it('migrates existing archives reversibly and refuses to discard link-only records', async () => {
+    const { service, context, db, save } = await setup();
+    const d = await report();
+    await save(d);
+    await linkMigration.down!(context);
+    await linkMigration.up(context);
+    expect(
+      await db
+        .query()
+        .selectFrom('evaluationReports')
+        .select('reportUrl')
+        .execute(),
+    ).toHaveLength(1);
+    const linked = structuredClone(d);
+    linked.revision += 1;
+    expect(
+      (await (await router(service)).fetch(linkedRequest(packet(linked))))
+        .status,
+    ).toBe(201);
+    await expect(linkMigration.down!(context)).rejects.toThrow(
+      'Archive linked reports',
+    );
   });
 });

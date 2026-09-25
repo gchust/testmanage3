@@ -31,6 +31,8 @@ type Stored = {
   bundleSha256: string;
   receivedAt: string;
   files: string[];
+  bundleFileId?: string | null;
+  reportUrl?: string | null;
 };
 export function ReportDetail({
   id,
@@ -66,9 +68,11 @@ export function ReportDetail({
                 }))}
               />
             </div>
-            <Download reportId={id} file='bundle.zip'>
-              {t('evaluations.downloadBundle')}
-            </Download>
+            {data.data.bundleFileId !== null && (
+              <Download reportId={id} file='bundle.zip'>
+                {t('evaluations.downloadBundle')}
+              </Download>
+            )}
             {data.data.files.includes('report.html') && (
               <Download reportId={id} file='report.html'>
                 {t('evaluations.downloadHtml')}

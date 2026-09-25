@@ -80,7 +80,7 @@
         "dataType": "string",
         "length": 36,
         "nativeType": "varchar(36)",
-        "nullable": false,
+        "nullable": true,
         "ordinalPosition": 8
       },
       {
@@ -138,6 +138,16 @@
         "nativeType": "TEXT",
         "nullable": false,
         "ordinalPosition": 14
+      },
+      {
+        "affinity": "text",
+        "autoIncrement": false,
+        "columnName": "report_url",
+        "dataType": "string",
+        "length": 2048,
+        "nativeType": "varchar(2048)",
+        "nullable": true,
+        "ordinalPosition": 15
       }
     ],
     "foreignKeys": [],

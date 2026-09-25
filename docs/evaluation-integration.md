@@ -50,6 +50,12 @@ These sets control the compatibility archive and integration management. Viewing
 
 ## Receiver
 
+The configured TestManage link mode uses application/json at the same authenticated import endpoint. Its version-1 envelope contains the structured report document, the factory-selected problems, and the immutable GitHub Pages report URL. The request does not transfer the ZIP, HTML or screenshot bytes, and the receiver does not fetch those files. The problem page embeds the source URL in a sandboxed iframe and offers opening the original report. Existing archived reports keep their original downloads.
+
+JSON is limited to 4 MiB. X-Evaluation-Payload-SHA256 verifies the submitted bytes; the existing source/type/key/revision identity and X-Evaluation-Bundle-SHA256 refer to the registered factory archive. The latter is a producer assertion in link mode, not proof that TestManage downloaded the archive. Metadata and problem payloads cannot change under an existing revision. Source-bound API keys, native read policies, transaction-based receipts and human problem dispositions are unchanged. Empty problem lists store report metadata without creating a problem. Batch metadata has no invented HTML address.
+
+Each factory attempt now defaults to 180 seconds; EVALUATION_TIMEOUT_SECONDS accepts 30–300 seconds. Three bounded attempts remain, and the workflow reserves enough time to write receipts before its overall deadline. The legacy multipart protocol below is still supported. Switching between formats preserves the receipt and existing problems; subsequently supplying a matching archive can add local downloads.
+
 `POST <app-base>/api/evaluations/import` accepts exactly one multipart `bundle` field of type `application/zip` and an optional `problems` text field (at most 1 MiB). Authenticate with the integration token using either `x-api-key` or Bearer, exclusively. Required headers are `Idempotency-Key`, `X-Evaluation-Schema-Version: 1`, `X-Evaluation-Type` and `X-Evaluation-Bundle-SHA256`.
 
 Initial import returns HTTP 201; identical retry returns HTTP 200 and the original receipt ID. Different bytes at the same source/type/key/revision return 409. Receipts are top-level JSON, never wrapped in `data`, and HTTP 202 is never returned. The batch receipt uses its full subject key. Arrival order and largest revision do not determine the current report.
@@ -74,7 +80,8 @@ Create a source binding using the actual repository as source instance and proje
 FACTORY_EVALUATION_DELIVERY=true
 EVALUATION_ENDPOINT=https://test3.nfvd.net/main/api/evaluations/import
 EVALUATION_AUTH_MODE=x-api-key
-EVALUATION_DELIVERY_FORMAT=testmanage3-problems-v1
+EVALUATION_DELIVERY_FORMAT=testmanage3-links-v1
+EVALUATION_TIMEOUT_SECONDS=180
 ```
 
 Store the issued token in the GitHub Actions secret `EVALUATION_TOKEN`. The token is shown once, expires after 365 days and is revocable. It never creates a user session or authorizes ordinary application endpoints. Public API Key self-service requests for the reserved configuration are rejected.
@@ -105,10 +112,10 @@ Deployed to 252 at 20:14 Singapore time using image `testmanage3:factory-problem
 
 The real report for `gchust/nb3-factory/issues/320/initial`, revision 1, contains one unresolved improvement and two strengths. The factory selects only the improvement and sends it with the original 280,454-byte ZIP (SHA-256 `e1f527ce40aca80a606d62079ca1e85c8fb7ede35a17a931f1550d95d511ceb1`). TestManage stores it as problem `187`, automation/pending and Uncategorized, in the existing Problems page: `https://test3.nfvd.net/main/progress/problems/187`. The sidebar no longer has a standalone evaluation entry.
 
-| Validation | Factory Actions run | Receiver result |
-| --- | --- | --- |
-| Original report and explicit problem submission | `36133819280` | HTTP 201, stored |
-| Identical registered revision replay | `36134139779` | HTTP 200, same receipt and one problem |
+| Validation                                      | Factory Actions run | Receiver result                        |
+| ----------------------------------------------- | ------------------- | -------------------------------------- |
+| Original report and explicit problem submission | `36133819280`       | HTTP 201, stored                       |
+| Identical registered revision replay            | `36134139779`       | HTTP 200, same receipt and one problem |
 
 Both runs execute the send and record jobs successfully. The shared receipt is `fe20f948-6625-45d9-9b39-13a93a0d5c73`. Chrome verifies the ordinary Problems list and detail page, Chinese/light and English/dark, Issue and Actions links, and ZIP/HTML/JSON downloads. Downloaded ZIP bytes match the registered hash, and the JSON is semantically identical to the original full report. HTML is attachment-only with CSP sandbox; anonymous report access returns 401. There are no page errors or unexpected HTTP errors. This real task has no published PR, so the page correctly shows “No PR recorded”; report payloads containing a PR URL are covered by automated tests.
 

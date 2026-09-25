@@ -410,6 +410,8 @@ const zhCN: AppResource = {
     factoryEnvironment: 'PR 预览环境',
     factoryNoEnvironment: '暂无环境地址',
     reportPreview: '在线阅读 HTML 报告',
+    reportLinkHint: '报告由来源系统提供，可直接阅读，也可在新窗口中打开。',
+    reportOpenOriginal: '打开原始报告',
     reportPreviewHint: '报告已在页面内展开，可直接滚动阅读；下载文件在下方。',
     reportExpand: '扩大阅读区',
     reportReduce: '恢复阅读区',

@@ -124,7 +124,7 @@
         },
         "length": 36,
         "name": "bundleFileId",
-        "nullable": false,
+        "nullable": true,
         "type": "string"
       },
       {
@@ -194,6 +194,18 @@
         "name": "receivedAt",
         "nullable": false,
         "type": "datetime"
+      },
+      {
+        "autoIncrement": false,
+        "db": {
+          "affinity": "text",
+          "nativeType": "varchar(2048)",
+          "physicalDataType": "string"
+        },
+        "length": 2048,
+        "name": "reportUrl",
+        "nullable": true,
+        "type": "string"
       }
     ],
     "indexes": [

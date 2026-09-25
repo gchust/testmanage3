@@ -49,6 +49,45 @@ afterEach(() => {
 });
 
 describe('factory problem source', () => {
+  it('embeds the source report link and offers opening it without requesting archive bytes', async () => {
+    const r = await runtime();
+    const url =
+      'https://owner.github.io/repo/reports/issues/12/runs/14/attempt-1/index.html';
+    render(
+      <I18nProvider runtime={r}>
+        <FactorySource
+          problemId={12}
+          source={{
+            ...source,
+            reportUrl: url,
+            hasArchive: false,
+            files: ['evaluation.json'],
+          }}
+        />
+      </I18nProvider>,
+    );
+    const frame = screen.getByTitle('在线阅读 HTML 报告');
+    expect(frame).toHaveAttribute('src', url);
+    expect(frame).toHaveAttribute('sandbox', '');
+    expect(screen.getByRole('link', { name: '打开原始报告' })).toHaveAttribute(
+      'href',
+      url,
+    );
+    expect(api.stream).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole('button', { name: '下载原始报告包', hidden: true }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: '下载 HTML 报告', hidden: true }),
+    ).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '扩大阅读区' }));
+    expect(frame).toHaveClass('h-[85vh]');
+    await act(() => r.changeLanguage('en-US'));
+    expect(
+      screen.getByRole('link', { name: 'Open original report' }),
+    ).toHaveAttribute('href', url);
+  });
+
   it('separates clickable Issue, code PR and preview environment from report downloads', async () => {
     const r = await runtime();
     const { rerender } = render(

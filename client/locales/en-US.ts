@@ -428,6 +428,9 @@ const enUS = {
     factoryEnvironment: 'PR preview environment',
     factoryNoEnvironment: 'No environment URL',
     reportPreview: 'Read HTML report',
+    reportLinkHint:
+      'The report is served by its source. You can also open it in a new window.',
+    reportOpenOriginal: 'Open original report',
     reportPreviewHint:
       'Read and scroll through the report here. Optional file downloads are below.',
     reportExpand: 'Expand reading area',

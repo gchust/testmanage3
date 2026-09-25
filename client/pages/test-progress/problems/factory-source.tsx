@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download } from '../../evaluations/shared.js';
 import type { Problem } from '../api.js';
 import { ReportPreview } from './report-preview.js';
+import { LinkedReportPreview } from './linked-report-preview.js';
 
 type Source = NonNullable<Problem['factorySource']>;
 
@@ -79,7 +80,9 @@ export function FactorySource({
         <p className='text-sm text-muted-foreground'>{source.taskTitle}</p>
       </CardHeader>
       <CardContent className='space-y-5'>
-        {source.files.includes('report.html') ? (
+        {source.reportUrl ? (
+          <LinkedReportPreview url={source.reportUrl} />
+        ) : source.files.includes('report.html') ? (
           <ReportPreview problemId={problemId} reportId={source.reportId} />
         ) : (
           <p className='text-sm text-muted-foreground'>
@@ -102,13 +105,15 @@ export function FactorySource({
               {t('testProgress.reportDownloads')}
             </summary>
             <div className='mt-3 flex flex-wrap gap-2'>
-              <Download
-                problemId={problemId}
-                reportId={source.reportId}
-                file='bundle.zip'
-              >
-                {t('evaluations.downloadBundle')}
-              </Download>
+              {source.hasArchive !== false && (
+                <Download
+                  problemId={problemId}
+                  reportId={source.reportId}
+                  file='bundle.zip'
+                >
+                  {t('evaluations.downloadBundle')}
+                </Download>
+              )}
               {source.files.includes('report.html') && (
                 <Download
                   problemId={problemId}

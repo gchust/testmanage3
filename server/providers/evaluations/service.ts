@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { isDeepStrictEqual } from 'node:util';
+import type { parseLinkedReport } from './report-links.js';
 import type { EvaluationArchive } from './archive.js';
 import { setTimeout as pause } from 'node:timers/promises';
 import type {
@@ -43,7 +45,8 @@ export interface StoredReport {
   id: string;
   document: EvaluationDocument;
   bundleSha256: string;
-  bundleFileId: string;
+  bundleFileId: string | null;
+  reportUrl: string | null;
   files: string[];
   receivedAt: string;
 }
@@ -77,10 +80,15 @@ function stored(row: Row): StoredReport {
     id: String(row.id),
     document: validateDocument(JSON.parse(String(row.document))),
     bundleSha256: String(row.bundleSha256),
-    bundleFileId: String(row.bundleFileId),
-    files: (JSON.parse(String(row.manifest)) as EvaluationBundle).files.map(
-      (file) => file.path,
-    ),
+    bundleFileId:
+      typeof row.bundleFileId === 'string' ? row.bundleFileId : null,
+    reportUrl: typeof row.reportUrl === 'string' ? row.reportUrl : null,
+    files:
+      row.bundleFileId == null
+        ? ['evaluation.json']
+        : (JSON.parse(String(row.manifest)) as EvaluationBundle).files.map(
+            (file) => file.path,
+          ),
     receivedAt: new Date(String(row.receivedAt)).toISOString(),
   };
 }
@@ -228,6 +236,36 @@ export class EvaluationService {
     problems?: SubmittedProblem[],
   ): Promise<{ duplicate: boolean; receipt: EvaluationReceipt }> {
     const { document, manifest, sha256 } = verified;
+    return this.importReport(
+      source,
+      { document, manifest, sha256, bytes, reportUrl: null },
+      problems,
+    );
+  }
+
+  async importLinkedReport(
+    source: SourceBinding,
+    input: ReturnType<typeof parseLinkedReport>,
+  ) {
+    return this.importReport(
+      source,
+      { ...input, manifest: null, bytes: null },
+      input.problems,
+    );
+  }
+
+  private async importReport(
+    source: SourceBinding,
+    input: {
+      document: EvaluationDocument;
+      manifest: EvaluationBundle | null;
+      sha256: string;
+      bytes: Buffer | null;
+      reportUrl: string | null;
+    },
+    problems?: SubmittedProblem[],
+  ): Promise<{ duplicate: boolean; receipt: EvaluationReceipt }> {
+    const { document, manifest, sha256, bytes, reportUrl } = input;
     const subject = subjectOf(document);
     if (
       source.sourceInstance !== document.source.instance ||
@@ -240,7 +278,7 @@ export class EvaluationService {
     const existingBytes = await this.database
       .query()
       .selectFrom('evaluationReports')
-      .select(['bundleSha256'])
+      .select(['bundleSha256', 'bundleFileId'])
       .where('idempotencyKey', '=', deliveryKey(subject))
       .executeTakeFirst();
     if (existingBytes && existingBytes.bundleSha256 !== sha256)
@@ -250,9 +288,10 @@ export class EvaluationService {
       );
     // Native File Repository durably writes its metadata and object before any receipt.
     // A duplicate already owns an archive; only a new revision uploads a new object.
-    const bundleFileId = existingBytes
-      ? null
-      : await this.archive.store(bytes, sha256);
+    const bundleFileId =
+      !bytes || existingBytes?.bundleFileId
+        ? null
+        : await this.archive.store(bytes, sha256);
     const id = randomUUID(),
       rank = precedenceRank(document),
       subjectKey = subjectId(document);
@@ -295,11 +334,26 @@ export class EvaluationService {
             );
           const existing = await q
             .selectFrom('evaluationReports')
-            .select(['bundleSha256', 'receipt'])
+            .select([
+              'bundleSha256',
+              'receipt',
+              'document',
+              'reportUrl',
+              'bundleFileId',
+            ])
             .where('idempotencyKey', '=', key)
             .executeTakeFirst();
           if (existing) {
-            if (existing.bundleSha256 !== sha256)
+            if (
+              existing.bundleSha256 !== sha256 ||
+              !isDeepStrictEqual(
+                JSON.parse(String(existing.document)),
+                document,
+              ) ||
+              (reportUrl &&
+                existing.reportUrl &&
+                reportUrl !== existing.reportUrl)
+            )
               throw new EvaluationError(
                 'CONFLICT',
                 'This subject revision already contains different bytes.',
@@ -307,6 +361,19 @@ export class EvaluationService {
             const receipt = JSON.parse(
               String(existing.receipt),
             ) as EvaluationReceipt;
+            const archiveKept = !!bundleFileId && !existing.bundleFileId;
+            if (archiveKept || (reportUrl && !existing.reportUrl)) {
+              await q
+                .updateTable('evaluationReports')
+                .set({
+                  ...(archiveKept
+                    ? { bundleFileId, manifest: JSON.stringify(manifest) }
+                    : {}),
+                  ...(reportUrl && !existing.reportUrl ? { reportUrl } : {}),
+                })
+                .where('idempotencyKey', '=', key)
+                .execute();
+            }
             if (problems)
               await recordProblemSubmission(
                 connection,
@@ -333,6 +400,7 @@ export class EvaluationService {
             return {
               duplicate: true,
               receipt,
+              archiveKept,
             };
           }
           const now = new Date();
@@ -348,8 +416,9 @@ export class EvaluationService {
               idempotencyKey: key,
               bundleSha256: sha256,
               bundleFileId,
+              reportUrl,
               rank,
-              document: verified.files.get('evaluation.json')!.toString('utf8'),
+              document: JSON.stringify(document),
               manifest: JSON.stringify(manifest),
               receipt: JSON.stringify(receipt),
               receivedAt: now,
@@ -418,11 +487,11 @@ export class EvaluationService {
             bundleSha256: sha256,
             revision: document.revision,
           });
-          return { duplicate: false, receipt };
+          return { duplicate: false, receipt, archiveKept: !!bundleFileId };
         });
-        if (result.duplicate && bundleFileId)
+        if (!result.archiveKept && bundleFileId)
           await this.archive.discard(bundleFileId);
-        return result;
+        return { duplicate: result.duplicate, receipt: result.receipt };
       } catch (error) {
         if (attempt >= 5 || !retryable(error)) throw error;
         await pause(30 * (attempt + 1));
@@ -505,6 +574,14 @@ export class EvaluationService {
   }
   async attachment(id: string, file: string) {
     const report = await this.getReport(id);
+    if (!report.bundleFileId) {
+      if (file === 'evaluation.json')
+        return {
+          bytes: Buffer.from(JSON.stringify(report.document)),
+          contentType: 'application/json; charset=utf-8',
+        };
+      return notFound();
+    }
     const bytes = await this.archive.read(report.bundleFileId);
     if (hash(bytes) !== report.bundleSha256)
       throw new Error('Stored archive checksum mismatch.');

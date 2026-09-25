@@ -1278,7 +1278,7 @@ class DefaultTestProgressService implements TestProgressService {
       const stored = await this.database
         .query()
         .selectFrom('evaluationReports')
-        .select(['id', 'document', 'manifest'])
+        .select(['id', 'document', 'manifest', 'reportUrl', 'bundleFileId'])
         .where('id', 'in', ids.slice(offset, offset + 200))
         .execute();
       for (const row of stored) {
@@ -1289,9 +1289,13 @@ class DefaultTestProgressService implements TestProgressService {
             factoryProblemSource(
               String(row.id),
               document,
-              (JSON.parse(String(row.manifest)) as EvaluationBundle).files.map(
-                (file) => file.path,
-              ),
+              row.bundleFileId == null
+                ? ['evaluation.json']
+                : (
+                    JSON.parse(String(row.manifest)) as EvaluationBundle
+                  ).files.map((file) => file.path),
+              typeof row.reportUrl === 'string' ? row.reportUrl : null,
+              row.bundleFileId != null,
             ),
           );
       }
