@@ -34,7 +34,7 @@ Run `pnpm skills:sync` and follow the application-local Skills. No standalone pl
 | Database               | App migrations, seeds, transactions and Collection/Repository APIs                              |
 | Client                 | `useApiClient`, application navigation, i18n and shadcn components                              |
 
-Only evaluation protocol validation, revision selection, comparison and review workflows are application-specific. Import needs a custom endpoint because its contract requires a fixed multipart field, ZIP inspection, a multi-table transaction and a top-level receipt. Staff endpoints bind the exact database policies returned by the business action; they do not re-resolve broader collection grants. The separate machine path enforces its source/project binding.
+Only evaluation protocol validation, revision selection, comparison and review workflows are application-specific. Import needs a custom endpoint because its contract requires versioned link or archive validation, a multi-table transaction and a top-level receipt. Staff endpoints bind the exact database policies returned by the business action; they do not re-resolve broader collection grants. The separate machine path enforces its source/project binding.
 
 ## Roles
 
@@ -68,7 +68,9 @@ Raw HTML is served as an attachment with `nosniff` and CSP sandbox. Bundles/evid
 
 The ordinary Problems list shows a two-line Markdown summary and distinct task links. The detail page separates metadata, the full description, and the complete report. HTML opens automatically; the reading area can expand and download buttons are under an optional disclosure. Loading failures have a retry action, and changing problems cancels stale requests.
 
-The inline reader retrieves the existing protected attachment with the native API client, removes active elements and event handlers, inserts a restrictive CSP, and displays it in an opaque sandboxed iframe. Scripts, forms, nested frames and external resource requests are disabled. Inline styles and data images preserve the report layout; the original downloadable file is unchanged.
+For link-backed reports, the inline reader loads the validated GitHub Pages URL directly in an opaque sandboxed iframe with no referrer. The page also offers opening the original report in a new tab. The browser reads the report from its source; TestManage neither imports nor proxies the HTML.
+
+For legacy reports without a source URL, the inline reader retrieves the existing protected attachment with the native API client, removes active elements and event handlers, inserts a restrictive CSP, and displays it in an opaque sandboxed iframe. Scripts, forms, nested frames and external resource requests are disabled in this legacy rendering path. Inline styles and data images preserve the report layout; the original downloadable file is unchanged.
 
 For the known gchust/nb3-factory integration, PR environment addresses follow the factory's preview-host.mjs rule: https://nb3-<PR>.nfvd.net/main/. FACTORY_PREVIEW_DOMAIN on the TestManage server can mirror a changed factory preview domain. These are environment addresses, not a live health assertion; PR environments can be undeployed or reclaimed. Other factory repositories do not inherit this domain. A task without a PR shows explicit missing PR and environment labels.
 
@@ -86,7 +88,7 @@ EVALUATION_TIMEOUT_SECONDS=180
 
 Store the issued token in the GitHub Actions secret `EVALUATION_TOKEN`. The token is shown once, expires after 365 days and is revocable. It never creates a user session or authorizes ordinary application endpoints. Public API Key self-service requests for the reserved configuration are rejected.
 
-Dispatch `Deliver Evaluation Results` (`deliver-evaluation.yml`) with `mode=replay`, `type=evaluation-report`, full run `key` and `revision`. Replay sends the original archived bundle without another application build or model usage. The existing factory workflow owns retry scheduling; the receiver does not add another scheduler.
+Dispatch `Deliver Evaluation Results` (`deliver-evaluation.yml`) with `mode=replay`, `type=evaluation-report`, full run `key` and `revision`. Replay reads the original registered report without another application build or model usage. With `testmanage3-links-v1`, only structured metadata, selected problems and the report URL are submitted; archive formats still transfer the original ZIP. The existing factory workflow owns retry scheduling; the receiver does not add another scheduler.
 
 ## Deployment and verification
 
@@ -95,6 +97,26 @@ Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm nocobase app i18n:check` a
 On 252, preserve `/srv/testmanage3-production/storage`, `config.yml` and the current container identity. Consistently back up SQLite and save compose/deployment metadata before switching images. Keep the previous image for rollback; never restore the old unrelated misdeployment.
 
 Verify native credential/session isolation, anonymous/unpermitted access, reader write denial, row/field Repository policies, complete batch samples, source binding, unchanged manual data, concurrent duplicate reception and receipt persistence across restart. Use a real factory artifact with its actual `deliverBundle` sender, then dispatch GitHub delivery against the deployed service. Inspect both its stored receipt and the report page in light/dark themes and English/Chinese.
+
+## Report link delivery acceptance — 2026-09-25
+
+Deployed to 252 at 21:45 Singapore time using image `testmanage3:report-links-cabf024`, application revision `cabf024d75c17940ac27863d818c9ae8369c466a`, pushed to `gchust/testmanage3` branch `feat/integration`. Factory PR [#336](https://github.com/gchust/nb3-factory/pull/336) is merged into `develop` as `5f646e3eee4184e6f9ceee289d3e6445f7f63682`. Repository variables now select `testmanage3-links-v1` and `EVALUATION_TIMEOUT_SECONDS=180`; the existing endpoint, source-bound secret and enabled delivery setting remain valid. Single-attempt timeouts support 30–300 seconds, with at most three attempts.
+
+The report for Issue #333 previously required a 2,287,438-byte ZIP. Its link submission is 26,845 bytes and transfers no ZIP, HTML or screenshot content. The receiver stores its structured metadata and immutable report URL without creating a File Repository archive. Its selected unresolved problem list is empty, so receiving the report correctly creates no problem. This acceptance reuses existing reports and does not trigger another application build or model evaluation.
+
+| Validation | Factory Actions run | Actual result |
+| --- | --- | --- |
+| First formerly failing workflow, attempt 2 | [36138107190](https://github.com/gchust/nb3-factory/actions/runs/36138107190) | Success; one HTTP 201 submission in 2,315 ms |
+| Second formerly failing workflow, attempt 2 | [36138245692](https://github.com/gchust/nb3-factory/actions/runs/36138245692) | Success; scan plans zero pending items after the first run records its receipt, so send/record are skipped |
+| Existing Issue #320 replay, attempt 1 | [36143184418](https://github.com/gchust/nb3-factory/actions/runs/36143184418) | Success; HTTP 200 in 6,106 ms, original receipt and problem preserved |
+
+Issue #333 has exactly one report, receipt `6aeb3205-0a79-492a-9a7f-af70fc8d0b9b`, with no local archive. Issue #320 retains receipt `fe20f948-6625-45d9-9b39-13a93a0d5c73`, its original archive, and problem `187`; replay only adds its report link. All 94 existing problems and the other business rows retain their original content digests. There are now four report records and still three native archive files. SQLite integrity and container health pass.
+
+Production Chrome verifies direct GitHub Pages iframe loading, the original-report link, Issue source display, expanded reading, mobile layout, English/dark and Chinese/light. The report cannot access its parent page, normal inline reading does not request TestManage's report download endpoint, and the legacy HTML download remains byte-identical. There are no browser or unexpected HTTP errors. This sample has no published PR, and the page explicitly shows the absence of a PR and preview environment. The temporary verification session was revoked (subsequent access returns 401), its credential files were removed, and the isolated trial container and storage were removed.
+
+An isolated production clone also verifies HTTP 201/200 idempotency, no archive upload, empty problem handling, rejected invalid report URLs, rejected unauthenticated/invalid-key requests, and machine-key isolation. Application validation passes: 47 files / 351 tests, typecheck, lint, locale check, 55 generated Collection definitions and the Linux x64 / Node 24 production build. Factory validation passes: 94 local tests and both PR regression/preflight checks. The rollback backup is `/srv/testmanage3-backups/pre-report-links-20260925T134508Z`.
+
+Evidence: [verification record](verification/2026-09-25/report-links.json), [problem list](verification/2026-09-25/report-links-list-zh.png), [Chinese detail](verification/2026-09-25/report-links-detail-zh.png), [mobile detail](verification/2026-09-25/report-links-mobile.png), and [English dark detail](verification/2026-09-25/report-links-detail-en-dark.png).
 
 ## Inline report preview acceptance — 2026-09-25
 

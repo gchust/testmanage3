@@ -1,0 +1,310 @@
+{
+  "verifiedAt": "2026-09-25T13:52:59.335139+00:00",
+  "deployment": {
+    "image": "testmanage3:report-links-cabf024",
+    "revision": "cabf024d75c17940ac27863d818c9ae8369c466a",
+    "bundleSha256": "a3aa35ad80bf7eb0877597b51fcdb854f089fdf1d9537af614fbe305a60b3625",
+    "backup": "/srv/testmanage3-backups/pre-report-links-20260925T134508Z",
+    "deployedAt": "2026-09-25T13:45:15.560454+00:00",
+    "preservedCounts": {
+      "feature_points": 33,
+      "issues": 94,
+      "missing_items": 93,
+      "problem_comments": 0,
+      "problem_activities": 98,
+      "problem_images": 0,
+      "evaluation_reports": 3,
+      "evaluation_subjects": 3
+    },
+    "imageId": "sha256:39c2e4e3433f5ce5a6fe0888b6bf68ec84694d90a0ef18e5a93585d4d96cf08e"
+  },
+  "factory": {
+    "pullRequest": "https://github.com/gchust/nb3-factory/pull/336",
+    "mergeCommit": "5f646e3eee4184e6f9ceee289d3e6445f7f63682",
+    "configuration": {
+      "FACTORY_EVALUATION_DELIVERY": "true",
+      "EVALUATION_ENDPOINT": "https://test3.nfvd.net/main/api/evaluations/import",
+      "EVALUATION_AUTH_MODE": "x-api-key",
+      "EVALUATION_DELIVERY_FORMAT": "testmanage3-links-v1",
+      "EVALUATION_TIMEOUT_SECONDS": "180"
+    },
+    "token": "Existing source-bound GitHub secret retained; credential omitted."
+  },
+  "payload": {
+    "sourceIssue": 333,
+    "archiveBytes": 2287438,
+    "jsonBytes": 26845,
+    "htmlAndScreenshotsUploaded": false,
+    "selectedProblems": 0
+  },
+  "runs": [
+    {
+      "id": "36138107190",
+      "attempt": 2,
+      "conclusion": "success",
+      "url": "https://github.com/gchust/nb3-factory/actions/runs/36138107190",
+      "eventHeadSha": "b8f6701dd2dac1e69a4dc13e19ecf7e362fa3cb7",
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138107190/job/108097715586"
+        },
+        {
+          "name": "backfill",
+          "conclusion": "skipped",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138107190/job/108097717234"
+        },
+        {
+          "name": "send",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138107190/job/108097871833"
+        },
+        {
+          "name": "record",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138107190/job/108097962656"
+        }
+      ],
+      "delivery": [
+        {
+          "id": "98a2b975ec3ffe7f:r:a5f38cc1decaa8595104fedbde59a69e:1",
+          "targetId": "98a2b975ec3ffe7f",
+          "type": "evaluation-report",
+          "key": "gchust/nb3-factory/issues/333/initial",
+          "revision": 1,
+          "bundleSha256": "8766b4f9f105f2d7e5a9d6c5a65e13d165e095af798a91bda2388876fd1faddc",
+          "reason": null,
+          "bundle": "bundles/0.zip",
+          "state": "stored",
+          "attempts": [
+            {
+              "at": "2026-09-25T13:47:45.152Z",
+              "httpStatus": 201,
+              "outcome": "stored",
+              "error": null,
+              "durationMs": 2315
+            }
+          ],
+          "receipt": {
+            "receiptId": "6aeb3205-0a79-492a-9a7f-af70fc8d0b9b",
+            "state": "stored",
+            "httpStatus": 201
+          }
+        }
+      ]
+    },
+    {
+      "id": "36138245692",
+      "attempt": 2,
+      "conclusion": "success",
+      "url": "https://github.com/gchust/nb3-factory/actions/runs/36138245692",
+      "eventHeadSha": "b8f6701dd2dac1e69a4dc13e19ecf7e362fa3cb7",
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138245692/job/108098045573"
+        },
+        {
+          "name": "backfill",
+          "conclusion": "skipped",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138245692/job/108098046596"
+        },
+        {
+          "name": "send",
+          "conclusion": "skipped",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138245692/job/108098153617"
+        },
+        {
+          "name": "record",
+          "conclusion": "skipped",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36138245692/job/108098154851"
+        }
+      ],
+      "plannedItems": 0,
+      "reason": "Scan after the preceding successful delivery found no pending items; no send or receipt artifact was produced."
+    },
+    {
+      "id": "36143184418",
+      "attempt": 1,
+      "conclusion": "success",
+      "url": "https://github.com/gchust/nb3-factory/actions/runs/36143184418",
+      "eventHeadSha": "5f646e3eee4184e6f9ceee289d3e6445f7f63682",
+      "jobs": [
+        {
+          "name": "plan",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36143184418/job/108098155731"
+        },
+        {
+          "name": "backfill",
+          "conclusion": "skipped",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36143184418/job/108098197959"
+        },
+        {
+          "name": "send",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36143184418/job/108098218662"
+        },
+        {
+          "name": "record",
+          "conclusion": "success",
+          "url": "https://github.com/gchust/nb3-factory/actions/runs/36143184418/job/108098334543"
+        }
+      ],
+      "delivery": [
+        {
+          "id": "98a2b975ec3ffe7f:r:9317fc6c4b4bf725ac293ce7c0463e11:1",
+          "targetId": "98a2b975ec3ffe7f",
+          "type": "evaluation-report",
+          "key": "gchust/nb3-factory/issues/320/initial",
+          "revision": 1,
+          "bundleSha256": "e1f527ce40aca80a606d62079ca1e85c8fb7ede35a17a931f1550d95d511ceb1",
+          "reason": null,
+          "bundle": "bundles/0.zip",
+          "state": "stored",
+          "attempts": [
+            {
+              "at": "2026-09-25T13:48:44.882Z",
+              "httpStatus": 200,
+              "outcome": "stored",
+              "error": null,
+              "durationMs": 6106
+            }
+          ],
+          "receipt": {
+            "receiptId": "fe20f948-6625-45d9-9b39-13a93a0d5c73",
+            "state": "stored",
+            "httpStatus": 200
+          }
+        }
+      ]
+    }
+  ],
+  "trial": {
+    "receiptId": "cb9952ea-7129-40c5-9887-be4d41fe09f9",
+    "statuses": [
+      201,
+      200
+    ],
+    "payloadBytes": 26845,
+    "selectedProblems": 0,
+    "reportUrl": "https://gchust.github.io/nb3-factory/reports/issues/333/runs/36132776150/attempt-1/index.html",
+    "bundleNotUploaded": true,
+    "legacyArchiveUnchanged": true,
+    "unauthorizedRejected": true,
+    "unsafeLinkRejected": true,
+    "machineKeyIsolation": true,
+    "before": {
+      "issues": 94,
+      "evaluation_reports": 3,
+      "evaluation_bundle_files": 3
+    },
+    "after": {
+      "issues": 94,
+      "evaluation_reports": 4,
+      "evaluation_bundle_files": 3
+    }
+  },
+  "production": {
+    "verifiedAt": "2026-09-25T13:52:59.335139+00:00",
+    "integrity": "ok",
+    "preservedBusinessRows": {
+      "feature_points": {
+        "count": 33,
+        "sha256": "50c3200023fdfc3a092c4d8155fadc64db2ba5734470aa9f4230bbc0136dd7ac",
+        "unchanged": true
+      },
+      "issues": {
+        "count": 94,
+        "sha256": "074f3b20504dc81ed3c4786520b2a8923f13a63b7217dbc5dcec8eecad5b9a18",
+        "unchanged": true
+      },
+      "missing_items": {
+        "count": 93,
+        "sha256": "8ee9ee93d9976ad923817050025ca141793101cb44a41ecdde32ccd3e8e6a6d5",
+        "unchanged": true
+      },
+      "problem_comments": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "unchanged": true
+      },
+      "problem_activities": {
+        "count": 98,
+        "sha256": "f6f6a1329454f76b7db87b4e06ff44fba990f6c16f9c349a07a4b659cb5df352",
+        "unchanged": true
+      },
+      "problem_images": {
+        "count": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "unchanged": true
+      }
+    },
+    "counts": {
+      "evaluation_reports": 4,
+      "evaluation_subjects": 4,
+      "evaluation_bundle_files": 3,
+      "issues": 94
+    },
+    "reports": {
+      "333": {
+        "id": "6aeb3205-0a79-492a-9a7f-af70fc8d0b9b",
+        "subject_key": "gchust/nb3-factory/issues/333/initial",
+        "revision": 1,
+        "bundle_file_id": null,
+        "bundle_sha256": "8766b4f9f105f2d7e5a9d6c5a65e13d165e095af798a91bda2388876fd1faddc",
+        "report_url": "https://gchust.github.io/nb3-factory/reports/issues/333/runs/36132776150/attempt-1/index.html",
+        "problemCount": 0
+      },
+      "320": {
+        "id": "fe20f948-6625-45d9-9b39-13a93a0d5c73",
+        "subject_key": "gchust/nb3-factory/issues/320/initial",
+        "revision": 1,
+        "bundle_file_id": "4d5bd8d8-a931-4915-a3ca-fd54508676f5",
+        "bundle_sha256": "e1f527ce40aca80a606d62079ca1e85c8fb7ede35a17a931f1550d95d511ceb1",
+        "report_url": "https://gchust.github.io/nb3-factory/reports/issues/320/runs/36114915913/attempt-1/index.html",
+        "problemCount": 1
+      }
+    },
+    "healthy": true,
+    "image": "testmanage3:report-links-cabf024",
+    "temporarySessionRevoked": true,
+    "revokedSessionStatus": 401,
+    "remoteSessionFileRemoved": true,
+    "trialContainerRemoved": true,
+    "trialStorageRemoved": true,
+    "localSessionFileRemoved": true
+  },
+  "browser": {
+    "summaryLineClamp": "2",
+    "listSourceVisible": true,
+    "inlineReportVisible": true,
+    "parentAccessBlocked": true,
+    "externalReportLink": "https://gchust.github.io/nb3-factory/reports/issues/320/runs/36114915913/attempt-1/index.html",
+    "noReportTransferThroughTestManage": true,
+    "expandedReadingArea": true,
+    "originalHtmlUnchanged": true,
+    "mobileNoPageOverflow": true,
+    "englishDark": true,
+    "parentPageIsolated": true,
+    "errors": []
+  },
+  "checks": {
+    "appTestFiles": 47,
+    "appTestsPassed": 351,
+    "factoryTestsPassed": 94,
+    "typecheck": true,
+    "lint": true,
+    "localeCheck": true,
+    "collectionsCheck": true,
+    "collectionCount": 55,
+    "linuxX64Node24Build": true,
+    "factoryPullRequestChecks": [
+      "factory-tests",
+      "browser-preflight"
+    ]
+  },
+  "noNewBuildOrModelEvaluationTriggered": true
+}
