@@ -98,8 +98,7 @@
     "tw-animate-css": "^1.2.5",
     "typescript": "^6.0.3",
     "vite": "^6.3.5",
-    "vitest": "^4.1.10",
-    "zod": "^4.6.5"
+    "vitest": "^4.1.10"
   },
   "files": [
     ".prettierignore",
@@ -173,7 +172,8 @@
     "@oclif/core": "^4.14.0",
     "better-auth": "^1.7.1",
     "cn": "^0.3.0",
-    "hono": "^4.13.2"
+    "hono": "^4.13.2",
+    "zod": "^4.6.5"
   },
   "scripts": {
     "dev": "tsx ./scripts/dev.mjs",

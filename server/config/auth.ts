@@ -6,6 +6,7 @@ import { apiKey } from '@nocobase/app-plugin-api-keys/server';
 import type { AuthConfig } from '@nocobase/app-plugin-authentication/server';
 import type { BetterAuthPlugin } from 'better-auth';
 import { username } from 'better-auth/plugins';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 
 /**
  * Declares `issuer` on Better Auth's core account model.
@@ -32,7 +33,31 @@ const accountIssuer: BetterAuthPlugin = {
 };
 
 const auth: AppConfigFactory<AuthConfig> = defineAppConfig((_runtime) => ({
-  plugins: [username({ displayUsername: false }), apiKey(), accountIssuer],
+  plugins: [
+    username({ displayUsername: false }),
+    apiKey([
+      { configId: 'default' },
+      { configId: 'evaluation-import', enableSessionForAPIKeys: false },
+    ]),
+    accountIssuer,
+  ],
+  hooks: {
+    before: createAuthMiddleware(async (context) => {
+      // Reserved integration keys can only be managed through the application
+      // API, which binds each key to its source. Trusted server calls have no request.
+      const body = context.body as { configId?: unknown } | undefined;
+      if (
+        context.request &&
+        context.path.startsWith('/api-key/') &&
+        (body?.configId === 'evaluation-import' ||
+          context.query?.configId === 'evaluation-import')
+      ) {
+        throw new APIError('FORBIDDEN', {
+          message: 'Use evaluation integration management.',
+        });
+      }
+    }),
+  },
   emailAndPassword: { enabled: true, autoSignIn: false },
   session: { storeSessionInDatabase: true },
 }));

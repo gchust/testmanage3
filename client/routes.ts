@@ -1,9 +1,4 @@
-import {
-  Gauge,
-  ListChecks,
-  Palette,
-  TriangleAlert,
-} from 'lucide-react';
+import { Gauge, ListChecks, Palette, TriangleAlert } from 'lucide-react';
 import {
   defineAppRoutes,
   defineDevRoutes,

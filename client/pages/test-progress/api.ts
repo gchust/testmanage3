@@ -14,13 +14,10 @@ export type FeatureStatus =
   | 'unspecified';
 
 /** Material gaps and test findings are one table with a type. */
-export type ProblemType = 'skills' | 'docs' | 'example' | 'automation' | 'manual';
+export type ProblemType =
+  'skills' | 'docs' | 'example' | 'automation' | 'manual';
 export type ProblemStatus =
-  | 'pending'
-  | 'fixing'
-  | 'regression'
-  | 'verified'
-  | 'cancelled';
+  'pending' | 'fixing' | 'regression' | 'verified' | 'cancelled';
 
 /** Per-type problem counts; `open` means not yet verified. */
 export interface ProblemCounts {
@@ -61,12 +58,23 @@ export interface Problem {
   readonly id: number;
   readonly title: string;
   readonly description: string | null;
-  readonly featurePointId: number;
+  readonly featurePointId: number | null;
   readonly featurePointName: string | null;
   readonly type: ProblemType;
   readonly status: ProblemStatus;
   readonly owner: string | null;
   readonly ownerId: string | null;
+  readonly factorySource?: {
+    reportId: string;
+    taskTitle: string;
+    issueUrl: string;
+    pullRequestUrl: string | null;
+    environmentUrl?: string | null;
+    runUrl: string;
+    files: string[];
+    reportUrl?: string | null;
+    hasArchive?: boolean;
+  };
 }
 
 /** One Markdown comment under a problem. */
@@ -177,7 +185,7 @@ export interface FeaturePointPayload {
 export interface ProblemPayload {
   title?: string;
   description?: string | null;
-  featurePointId?: number;
+  featurePointId?: number | null;
   type?: ProblemType;
   status?: ProblemStatus;
   ownerId?: string | null;

@@ -19,3 +19,6 @@ coverage/
 /.agent-annotations/
 /.nocobase/
 *.log
+
+# Derived database snapshots; regenerate after migrations before schema checks.
+/database/*/collections/

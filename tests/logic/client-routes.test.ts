@@ -17,6 +17,7 @@ describe('app client routes', () => {
   it('declares application and settings route contributions', async () => {
     expect(applicationRoutes).toHaveLength(3);
     const routes = applicationRoutes[0].routes;
+    expect(routes.some((route) => route.name === 'evaluations')).toBe(false);
     expect(routes.slice(0, 5)).toMatchObject([
       {
         auth: 'required',
@@ -45,9 +46,7 @@ describe('app client routes', () => {
       },
       { name: 'testProgressIssuesRedirect', path: '/progress/issues' },
     ]);
-    expect(
-      (routes[8] as { navigation?: unknown }).navigation,
-    ).toBeUndefined();
+    expect((routes[8] as { navigation?: unknown }).navigation).toBeUndefined();
     expect(applicationRoutes[1]).toEqual({
       parent: 'settings',
       routes: [],

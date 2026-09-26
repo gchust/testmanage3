@@ -149,6 +149,8 @@ Database tasks support `--connection <name>` and `--all`; no argument targets `d
 | `pnpm fix`           | Fix lint problems, then format                               |
 | `pnpm check`         | Everything above plus a build; what to run before committing |
 
+Collection snapshots under `database/<connection>/collections/` are generated local tooling output and are gitignored. On a fresh checkout, run `pnpm migrate` and `pnpm collections:generate` before `pnpm collections:generate --check`. Migrations and seeds remain the versioned source of truth; runtime and production builds do not require committed snapshots.
+
 `pnpm nocobase app i18n:check` reports a language declared in `client/locales/` but not `server/locales/`, or the reverse, and exits nonzero until the lists align. The browser builds its language picker from the client list, so a client-only language still works in the interface; server messages fall back to English and the language control explains that fallback. Add the matching server locale when server-produced text should use the same language.
 
 ### Plugins

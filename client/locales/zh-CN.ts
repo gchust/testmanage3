@@ -1,6 +1,15 @@
 import type { AppResource } from './en-US.js';
 
 const zhCN: AppResource = {
+  // Labels for administrator-customized historical permission sets.
+  'evaluations.roles.evaluation-reader': '历史报告读取权限',
+  'evaluations.roles.evaluation-reviewer': '历史报告复核权限',
+  'factoryIntegration.title': '工厂接入',
+  'factoryIntegration.manage': '管理工厂接入凭据',
+  'factoryIntegration.manager': '工厂接入管理员',
+  'testProgress.downloadBundle': '下载原始报告包',
+  'testProgress.downloadHtml': '下载 HTML 报告',
+  'testProgress.downloadJson': '下载报告 JSON',
   'auth.welcome': '欢迎回来',
   'auth.loginDescription': '使用用户名或邮箱和密码登录。',
   'auth.registerTitle': '创建账户',
@@ -221,6 +230,25 @@ const zhCN: AppResource = {
     fieldExampleCurrent: 'Example 已有情况',
     fieldRemark: '备注',
     fieldFeaturePoint: '所属功能点',
+    uncategorized: '待归类',
+    factorySourceTitle: '完整测试报告',
+    factoryIssue: '来源 Issue',
+    factoryPullRequest: '代码 PR',
+    factoryEnvironment: 'PR 预览环境',
+    factoryNoEnvironment: '暂无环境地址',
+    reportPreview: '在线阅读 HTML 报告',
+    reportLinkHint: '报告由来源系统提供，可直接阅读，也可在新窗口中打开。',
+    reportOpenOriginal: '打开原始报告',
+    reportPreviewHint: '报告已在页面内展开，可直接滚动阅读；下载文件在下方。',
+    reportExpand: '扩大阅读区',
+    reportReduce: '恢复阅读区',
+    reportPreviewError: '报告加载失败，请重试或下载原始报告。',
+    reportRetry: '重新加载',
+    reportNoHtml: '此报告未包含 HTML，可在下方下载完整报告包。',
+    reportDownloads: '下载报告文件（可选）',
+    factoryNoPullRequest: '暂无 PR 记录',
+    factoryRun: 'Actions 运行记录',
+    factoryReport: '完整报告',
     selectPlaceholder: '请选择…',
     scorePlaceholder: '0–10',
     notePlaceholder: '说明',
@@ -257,8 +285,7 @@ const zhCN: AppResource = {
     hint: {
       skills:
         '判定为「有」的三条，全过才算有：\n1. 找得到：能检索到正文并记下路径；\n2. 走得通：给出主流程的步骤、命令或 API；\n3. 验得了：至少一个验证方式或预期结果。\n不够就填「没有」，缺口记成缺失项。不看覆盖边界和文字质量（那是评分）。',
-      docs:
-        '两个来源都要有：\n1. 插件源码文档（README、docs 等）；\n2. 官网文档（code/docs）。\n每类都要找得到、给出主流程、可验证；缺哪类就填「没有」并记成缺失项。',
+      docs: '两个来源都要有：\n1. 插件源码文档（README、docs 等）；\n2. 官网文档（code/docs）。\n每类都要找得到、给出主流程、可验证；缺哪类就填「没有」并记成缺失项。',
       scores:
         '评分 0–10，越高越好；颜色分档：≥8 绿、7–8 蓝、6–7 黄、<6 红，未评分显示「—」。\n评分的判定依据见「接口文档」所在目录的 score-rubric（设计合理性/开发完整性/Agent 友好度/产出质量），每项都要附证据说明。',
       designScore:

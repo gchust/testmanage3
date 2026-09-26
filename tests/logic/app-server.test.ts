@@ -1,3 +1,6 @@
+import { authorizationToken } from '@nocobase/app-plugin-authorization';
+import { authenticationToken } from '@nocobase/app-plugin-authentication';
+import { APIError } from 'better-auth/api';
 import { createApp } from '../../server/app.js';
 import authConfig from '../../server/config/auth.js';
 // @vitest-environment node
@@ -692,6 +695,171 @@ describe('app server', () => {
       headers: { 'x-api-key': key.key },
     });
     expect(rejected.status).toBe(401);
+  });
+
+  it('uses native factory credentials and integration-only permission sets without minting user sessions', async () => {
+    const app = trackCloseable(
+      await createInstalledStandaloneServer({ viteDevUrl: false }),
+    );
+    const baseUrl =
+      'http://localhost' + app.application.publicBasePath + '/api/';
+    const signIn = await requestApp(app, baseUrl + 'auth/sign-in/username', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'nocobase', password: 'admin123' }),
+    });
+    const cookie = signIn.headers
+      .getSetCookie()
+      .map((header) => header.split(';')[0])
+      .join('; ');
+    const headers = { cookie, 'content-type': 'application/json' };
+    expect(
+      (await requestApp(app, baseUrl + 'evaluations/sources')).status,
+    ).toBe(401);
+    const created = await requestApp(app, baseUrl + 'evaluations/sources', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        name: 'Factory integration',
+        sourceInstance: 'owner/factory',
+        project: 'owner/factory',
+      }),
+    });
+    expect(created.status).toBe(201);
+    const source = (await created.json()) as {
+      data: { id: string; apiKeyId: string; token: string };
+    };
+    for (const endpoint of ['auth/get-session', 'users', 'evaluations/sources'])
+      expect(
+        (
+          await requestApp(app, baseUrl + endpoint, {
+            headers: { 'x-api-key': source.data.token },
+          })
+        ).status,
+      ).toBe(401);
+    const nativeError = new APIError('UNAUTHORIZED', {
+      code: 'INVALID_API_KEY',
+      message: 'Invalid API key.',
+    });
+    const foreignError = Object.assign(
+      new Error(nativeError.message),
+      nativeError,
+    );
+    const authentication =
+      app.application.container.resolve(authenticationToken);
+    const session = vi
+      .spyOn(authentication, 'getSession')
+      .mockRejectedValueOnce(foreignError);
+    expect(
+      (await requestApp(app, baseUrl + 'evaluations/sources')).status,
+    ).toBe(401);
+    session.mockRestore();
+    for (const endpoint of ['create', 'update', 'delete'])
+      expect(
+        (
+          await requestApp(app, baseUrl + 'auth/api-key/' + endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              configId: 'evaluation-import',
+              name: 'Bypass attempt',
+              keyId: source.data.apiKeyId,
+            }),
+          })
+        ).status,
+      ).toBe(403);
+    expect(
+      (
+        await requestApp(
+          app,
+          baseUrl + 'auth/api-key/get?id=' + source.data.apiKeyId,
+          { headers },
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (await requestApp(app, baseUrl + 'evaluations/sources', { headers }))
+        .status,
+    ).toBe(200);
+    const registered = await requestApp(app, baseUrl + 'users', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        username: 'factory_manager',
+        email: 'factory-manager@example.test',
+        name: 'Factory manager',
+        password: 'Test-only-reader-4827',
+      }),
+    });
+    expect(registered.status).toBe(201);
+    const member = (await registered.json()) as { data: { id: string } };
+    const memberLogin = await requestApp(
+      app,
+      baseUrl + 'auth/sign-in/username',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          username: 'factory_manager',
+          password: 'Test-only-reader-4827',
+        }),
+      },
+    );
+    const memberCookie = memberLogin.headers
+      .getSetCookie()
+      .map((header) => header.split(';')[0])
+      .join('; ');
+    const memberHeaders = {
+      cookie: memberCookie,
+      'content-type': 'application/json',
+    };
+    expect(
+      (
+        await requestApp(app, baseUrl + 'evaluations/sources', {
+          headers: memberHeaders,
+        })
+      ).status,
+    ).toBe(403);
+    await app.application.container
+      .resolve(authorizationToken)
+      .permissionSets.assign({
+        permissionSet: 'evaluation-manager',
+        subject: { type: 'user', id: member.data.id },
+      });
+    expect(
+      (
+        await requestApp(app, baseUrl + 'evaluations/sources', {
+          headers: memberHeaders,
+        })
+      ).status,
+    ).toBe(200);
+    for (const path of [
+      'reports',
+      'compare',
+      'mappings',
+      'regressions',
+      'capabilities',
+    ]) {
+      const retired = await requestApp(app, baseUrl + 'evaluations/' + path, {
+        headers,
+      });
+      expect(retired.status).toBe(404);
+    }
+
+    expect(
+      (
+        await requestApp(
+          app,
+          baseUrl + 'evaluations/sources/' + source.data.id,
+          { method: 'DELETE', headers },
+        )
+      ).status,
+    ).toBe(204);
+    const revoked = await requestApp(app, baseUrl + 'evaluations/import', {
+      method: 'POST',
+      headers: { 'x-api-key': source.data.token },
+    });
+    expect(revoked.status).toBe(401);
   });
 
   it('redirects HTML navigation to installation in install mode', async () => {

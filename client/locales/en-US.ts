@@ -1,6 +1,15 @@
 import type { LocaleResource } from '@nocobase/i18n';
 
 const enUS = {
+  // Labels for administrator-customized historical permission sets.
+  'evaluations.roles.evaluation-reader': 'Legacy report reader',
+  'evaluations.roles.evaluation-reviewer': 'Legacy report reviewer',
+  'factoryIntegration.title': 'Factory integrations',
+  'factoryIntegration.manage': 'Manage factory credentials',
+  'factoryIntegration.manager': 'Factory integration manager',
+  'testProgress.downloadBundle': 'Download original report bundle',
+  'testProgress.downloadHtml': 'Download HTML report',
+  'testProgress.downloadJson': 'Download report JSON',
   'auth.welcome': 'Welcome back',
   'auth.loginDescription': 'Sign in with your username or email and password.',
   'auth.registerTitle': 'Create an account',
@@ -233,6 +242,29 @@ const enUS = {
     fieldExampleCurrent: 'Current example state',
     fieldRemark: 'Remark',
     fieldFeaturePoint: 'Feature point',
+    uncategorized: 'Uncategorized',
+    factorySourceTitle: 'Complete test report',
+    factoryIssue: 'Source Issue',
+    factoryPullRequest: 'Code PR',
+    factoryEnvironment: 'PR preview environment',
+    factoryNoEnvironment: 'No environment URL',
+    reportPreview: 'Read HTML report',
+    reportLinkHint:
+      'The report is served by its source. You can also open it in a new window.',
+    reportOpenOriginal: 'Open original report',
+    reportPreviewHint:
+      'Read and scroll through the report here. Optional file downloads are below.',
+    reportExpand: 'Expand reading area',
+    reportReduce: 'Reduce reading area',
+    reportPreviewError:
+      'Unable to load the report. Retry or download the original.',
+    reportRetry: 'Reload report',
+    reportNoHtml:
+      'This report has no HTML preview. The complete bundle is available below.',
+    reportDownloads: 'Download report files (optional)',
+    factoryNoPullRequest: 'No PR recorded',
+    factoryRun: 'Actions run',
+    factoryReport: 'Full report',
     selectPlaceholder: 'Select…',
     scorePlaceholder: '0–10',
     notePlaceholder: 'Notes',
@@ -270,8 +302,7 @@ const enUS = {
     hint: {
       skills:
         '"Available" needs all three:\n1. Findable: retrievable, with the path recorded;\n2. Workable: main-flow steps, commands or APIs are given;\n3. Verifiable: at least one check or expected result.\nOtherwise use "Missing" and record the gaps as missing items. Boundaries and writing quality are scored separately.',
-      docs:
-        'Both sources are required:\n1. Plugin source docs (README, docs);\n2. Website docs (code/docs).\nEach must be findable, cover the main flow and be verifiable; record whichever is absent as a missing item.',
+      docs: 'Both sources are required:\n1. Plugin source docs (README, docs);\n2. Website docs (code/docs).\nEach must be findable, cover the main flow and be verifiable; record whichever is absent as a missing item.',
       scores:
         'Scores run 0–10, higher is better. Bands: >=8 green, 7–8 blue, 6–7 amber, <6 red; an unrated score shows "—".\nEach score follows the score-rubric (design, development completeness, Agent friendliness, output quality) and must cite its evidence.',
       designScore:

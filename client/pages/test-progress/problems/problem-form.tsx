@@ -128,7 +128,8 @@ function ProblemFormFields({
       return {
         title: initial.title,
         description: initial.description ?? '',
-        featurePointId: String(initial.featurePointId),
+        featurePointId:
+          initial.featurePointId == null ? '' : String(initial.featurePointId),
         type: initial.type,
         status: initial.status,
         // Rows written before the account association carry a name only;
@@ -169,10 +170,6 @@ function ProblemFormFields({
       setSaveError(t('testProgress.problemTitleRequired'));
       return;
     }
-    if (values.featurePointId === '') {
-      setSaveError(t('testProgress.featurePointRequired'));
-      return;
-    }
 
     setSaving(true);
     setSaveError(null);
@@ -181,7 +178,8 @@ function ProblemFormFields({
         title,
         description:
           values.description.trim() === '' ? null : values.description,
-        featurePointId: Number(values.featurePointId),
+        featurePointId:
+          values.featurePointId === '' ? null : Number(values.featurePointId),
         type: values.type,
         status: values.status,
         ownerId: values.ownerId.trim() === '' ? null : values.ownerId.trim(),
@@ -249,18 +247,18 @@ function ProblemFormFields({
 
       <div className='grid gap-4 sm:grid-cols-2'>
         <div className='space-y-2'>
-          <Label>
-            {t('testProgress.fieldFeaturePoint')}
-            <span className='text-destructive'> *</span>
-          </Label>
+          <Label>{t('testProgress.fieldFeaturePoint')}</Label>
           <FormSelect
-            options={featurePoints.map((feature) => ({
-              value: String(feature.id),
-              label:
-                feature.level === 'dimension'
-                  ? feature.name
-                  : `— ${feature.name}`,
-            }))}
+            options={[
+              { value: '', label: t('testProgress.uncategorized') },
+              ...featurePoints.map((feature) => ({
+                value: String(feature.id),
+                label:
+                  feature.level === 'dimension'
+                    ? feature.name
+                    : `— ${feature.name}`,
+              })),
+            ]}
             placeholder={t('testProgress.selectPlaceholder')}
             value={values.featurePointId}
             onValueChange={(value) => update('featurePointId', value)}

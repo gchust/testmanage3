@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "type": "evaluation-report",
+  "revision": 1,
+  "source": {
+    "producer": "nb3-factory",
+    "instance": "owner/factory",
+    "project": "owner/factory"
+  },
+  "run": {
+    "key": "owner/factory/issues/146/initial",
+    "task": {
+      "repository": "owner/factory",
+      "issue": 146,
+      "title": "客户资料管理"
+    }
+  },
+  "outcome": {
+    "pullRequest": {
+      "number": 150
+    }
+  },
+  "precedence": {
+    "producer": {
+      "runId": 100,
+      "attempt": 1,
+      "startedAt": "2026-09-21T14:13:20Z"
+    },
+    "reviewRubric": 2,
+    "reviewState": "completed",
+    "review": {
+      "kind": "build",
+      "at": "2026-09-21T14:13:20Z",
+      "runId": 100,
+      "attempt": 1
+    },
+    "qaCoverage": "complete"
+  },
+  "links": [
+    {
+      "rel": "report-archive",
+      "path": "reports/issues/146/runs/100/attempt-1/index.html"
+    }
+  ],
+  "reviews": [
+    {
+      "findings": [
+        {
+          "id": "review/100.1/v2-aaaaaaaaaaaa/F2"
+        }
+      ]
+    }
+  ],
+  "qa": {
+    "criteria": [
+      {
+        "id": "B01"
+      }
+    ]
+  }
+}
