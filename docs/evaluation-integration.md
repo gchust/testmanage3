@@ -54,6 +54,14 @@ Validation passes: 46 test files / 344 tests (`pnpm test --maxWorkers=2`), typec
 
 This cleanup updates PR #1 only. It has not been redeployed to 252; the production acceptance below describes the preceding deployed revision.
 
+## Additive metadata rejection — 2026-09-26
+
+Factory delivery run `36232945703` rejected Issue #369 revision 1 with HTTP 422. Factory PR #353 added `health` and `baseline.agent.configuration` under `schemaVersion: 1`; production still runs `testmanage3:report-links-cabf024`, whose copied full-document schema rejects unknown properties. Read-only inspection confirmed that the production schema lacks both fields. The original report fails on exactly those two paths, while the current metadata-only receiver accepts the complete original submission.
+
+The existing `document.ts` and `validateDocument()` implementation is the compatibility fix: validate consumed identity, chronology, link and finding-reference fields, allow opaque producer metadata, and preserve the original document for storage, downloads and immutable replay comparisons. Keep authentication, source binding, payload digests, report URL checks, supported schema versions and conflict checks strict. Do not strip fields from a registered report or disable validation globally. A route-level regression now covers the new fields, first import, identical replay, preserved JSON, changed-content rejection and duplicate prevention.
+
+Recovery requires deploying the compatible receiver, then explicitly replaying `type=evaluation-report`, `key=gchust/nb3-factory/issues/369/initial`, `revision=1`. Verify HTTP 201 (or 200 for an identical stored revision), a stored receipt and the three submitted problems. The factory's scheduled scan only selects `pending`; a `rejected` record requires `replay` or `retry-rejected`. This investigation and local regression do not deploy the receiver or resend production data. Future producer changes must be checked against the deployed receiver contract, with receiver compatibility deployed before new metadata is emitted.
+
 ## Report link delivery acceptance — 2026-09-25
 
 Deployed to 252 at 21:45 Singapore time using image `testmanage3:report-links-cabf024`, application revision `cabf024d75c17940ac27863d818c9ae8369c466a`, pushed to `gchust/testmanage3` branch `feat/integration`. Factory PR [#336](https://github.com/gchust/nb3-factory/pull/336) is merged into `develop` as `5f646e3eee4184e6f9ceee289d3e6445f7f63682`. Repository variables now select `testmanage3-links-v1` and `EVALUATION_TIMEOUT_SECONDS=180`; the existing endpoint, source-bound secret and enabled delivery setting remain valid. Single-attempt timeouts support 30–300 seconds, with at most three attempts.

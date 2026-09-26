@@ -1004,6 +1004,62 @@ describe('linked report delivery', () => {
       expect(() => validateDocument(document)).toThrow();
   });
 
+  it('accepts additive v1 health and agent configuration while preserving immutable replays', async () => {
+    const { service, db } = await setup(),
+      app = await router(service),
+      d = report();
+    // Factory PR #353 added these opaque fields without changing schemaVersion.
+    // The deployed full-document schema rejected the report for Issue #369.
+    const health = {
+      status: 'complete',
+      requiredChecks: {
+        status: 'passed',
+        results: [{ id: 'typecheck', status: 'passed' }],
+      },
+      review: 'completed',
+      qa: 'passed',
+    };
+    d.health = health;
+    d.baseline = {
+      agent: {
+        configuration: {
+          fingerprints: [hash('configuration')],
+          complete: true,
+        },
+      },
+    };
+    const p = packet(d);
+    const first = await app.fetch(linkedRequest(p));
+    expect(first.status).toBe(201);
+    const receipt = (await first.json()) as { receiptId: string };
+    expect((await service.getReport(receipt.receiptId)).document).toEqual(d);
+    expect(
+      JSON.parse(
+        (
+          await service.attachment(receipt.receiptId, 'evaluation.json')
+        ).bytes.toString(),
+      ),
+    ).toEqual(d);
+    const repeated = await app.fetch(linkedRequest(p));
+    expect(repeated.status).toBe(200);
+    expect(await repeated.json()).toEqual(receipt);
+    const changed = { ...d, health: { ...health, status: 'incomplete' } };
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(p, 'integration-secret', { document: changed }),
+        )
+      ).status,
+    ).toBe(409);
+    expect(
+      await db.query().selectFrom('evaluationReports').selectAll().execute(),
+    ).toHaveLength(1);
+    expect(
+      await createTestProgressService(db).listProblems({ type: 'automation' }),
+    ).toHaveLength(1);
+    expect((await service.getReport(receipt.receiptId)).document).toEqual(d);
+  });
+
   it('rejects missing identities, mismatched headers, malformed and oversized JSON', async () => {
     const { service, db } = await setup(),
       app = await router(service),
