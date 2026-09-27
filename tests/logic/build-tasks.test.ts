@@ -74,9 +74,13 @@ describe('build tasks', () => {
     const { service, github, context, db } = await setup();
     const task = await service.save(null, input, actor);
     expect(task.targetBranch).toMatch(/^apps\/tm-/);
+    expect(task.createdAt).toMatch(/Z$/);
+    expect(task.updatedAt).toMatch(/Z$/);
     expect(github.dispatch).not.toHaveBeenCalled();
     await service.comment(String(task.id), 'Also add escalation.', actor);
-    expect((await service.detail(String(task.id))).comments).toHaveLength(1);
+    const detail = await service.detail(String(task.id));
+    expect(detail.comments).toHaveLength(1);
+    expect(detail.comments[0].createdAt).toMatch(/Z$/);
     await migration.down!(context);
     await expect(
       db.query().selectFrom('buildTasks').selectAll().execute(),
@@ -96,6 +100,8 @@ describe('build tasks', () => {
       active: true,
       workflowRunId: '100',
     });
+    expect(first?.createdAt).toMatch(/Z$/);
+    expect(first?.dispatchRequestedAt).toMatch(/Z$/);
     await service.comment(id, 'Add workload charts.', actor);
     const snapshot = await service.snapshot(id, String(first?.id));
     expect(snapshot.comments).toHaveLength(1);
@@ -225,6 +231,46 @@ describe('build tasks', () => {
       status: 'completed',
       active: false,
       result: { revision: 3, reportId: 'report-3', acceptance: 'passed' },
+    });
+  });
+  it('links a continued execution only through its recorded ancestor', async () => {
+    const { service } = await setup();
+    const task = await service.save(null, input, actor);
+    await service.trigger(String(task.id), randomUUID(), actor);
+    const report = {
+      ...structuredClone(reportFixture),
+      precedence: {
+        ...reportFixture.precedence,
+        producer: { ...reportFixture.precedence.producer, runId: 200 },
+      },
+      outcome: {
+        pullRequest: null,
+        execution: 'completed',
+        acceptance: 'passed',
+        delivery: 'published',
+      },
+    };
+    await service.recordReport(report, '', 'unrelated');
+    expect((await service.detail(String(task.id))).runs[0]?.result).toBeNull();
+    await service.recordReport(
+      {
+        ...report,
+        executions: [
+          { runId: 100, previousRunId: null },
+          { runId: 200, previousRunId: 100 },
+        ],
+      },
+      '',
+      'continued',
+    );
+    expect((await service.detail(String(task.id))).runs[0]).toMatchObject({
+      active: false,
+      status: 'completed',
+      workflowRunId: '100',
+      result: {
+        reportId: 'continued',
+        runUrl: 'https://github.com/owner/factory/actions/runs/200',
+      },
     });
   });
   it('enforces actual repository row and field policies', async () => {

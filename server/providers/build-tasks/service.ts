@@ -20,6 +20,19 @@ const scalar = (value: unknown): string =>
 const string = (value: unknown) => (typeof value === 'string' ? value : '');
 const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+// SQLite returns UTC datetimes without a zone suffix. The HTTP contract must
+// include it; otherwise browsers interpret the same instant as local time.
+function dated(row: Row): Row {
+  const result = { ...row };
+  for (const key of ['createdAt', 'updatedAt', 'dispatchRequestedAt']) {
+    if (row[key] == null) continue;
+    const text = scalar(row[key]);
+    result[key] = new Date(
+      /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text) ? text : text + 'Z',
+    ).toISOString();
+  }
+  return result;
+}
 const notFound = (): never => {
   throw new BuildTaskError('NOT_FOUND', 'NOT_FOUND');
 };
@@ -68,7 +81,7 @@ export class BuildTasksService {
       limit: 1000,
     });
     return tasks.map((task) => ({
-      ...task,
+      ...dated(task),
       latestRun: this.runView(runs.find((r) => r.taskId === task.id)),
     }));
   }
@@ -76,7 +89,7 @@ export class BuildTasksService {
     if (!run) return null;
     const { snapshot: _snapshot, activeTaskId, result, ...rest } = run;
     return {
-      ...rest,
+      ...dated(rest),
       active: activeTaskId != null,
       result: result
         ? (JSON.parse(scalar(result)) as Record<string, unknown>)
@@ -96,7 +109,11 @@ export class BuildTasksService {
       sort: (s) => s.field('createdAt').desc(),
       limit: 100,
     });
-    return { task, comments, runs: runs.map((r) => this.runView(r)) };
+    return {
+      task: dated(task),
+      comments: comments.map(dated),
+      runs: runs.map((r) => this.runView(r)),
+    };
   }
   async save(id: string | null, input: unknown, actor: Actor) {
     const values = taskInput.parse(input);
@@ -109,44 +126,50 @@ export class BuildTasksService {
       if (active) throw new BuildTaskError('ACTIVE_RUN', 'ACTIVE_RUN');
       if (task.issueNumber && values.targetBranch !== task.targetBranch)
         throw new BuildTaskError('CONFLICT', 'TARGET_BRANCH_LOCKED');
-      return (
-        await this.repo('buildTasks').updateOne({
-          filter: { id },
-          values: { ...values, updatedAt: now() },
-        })
-      ).record;
+      return dated(
+        (
+          await this.repo('buildTasks').updateOne({
+            filter: { id },
+            values: { ...values, updatedAt: now() },
+          })
+        ).record,
+      );
     }
     const taskId = randomUUID();
-    return (
-      await this.repo('buildTasks').createOne({
-        values: {
-          ...values,
-          id: taskId,
-          targetBranch: values.targetBranch || `apps/tm-${taskId}`,
-          repository: this.github.config.repository,
-          createdBy: actor.id,
-          createdByName: actor.name,
-          createdAt: now(),
-          updatedAt: now(),
-        },
-      })
-    ).record;
+    return dated(
+      (
+        await this.repo('buildTasks').createOne({
+          values: {
+            ...values,
+            id: taskId,
+            targetBranch: values.targetBranch || `apps/tm-${taskId}`,
+            repository: this.github.config.repository,
+            createdBy: actor.id,
+            createdByName: actor.name,
+            createdAt: now(),
+            updatedAt: now(),
+          },
+        })
+      ).record,
+    );
   }
   async comment(id: string, content: string, actor: Actor) {
     if (!(await this.repo('buildTasks').findOne({ filter: { id } })))
       return notFound();
-    return (
-      await this.repo('buildTaskComments').createOne({
-        values: {
-          id: randomUUID(),
-          taskId: id,
-          authorId: actor.id,
-          authorName: actor.name,
-          content,
-          createdAt: now(),
-        },
-      })
-    ).record;
+    return dated(
+      (
+        await this.repo('buildTaskComments').createOne({
+          values: {
+            id: randomUUID(),
+            taskId: id,
+            authorId: actor.id,
+            authorName: actor.name,
+            content,
+            createdAt: now(),
+          },
+        })
+      ).record,
+    );
   }
   async snapshot(taskId: string, runId: string) {
     if (!(await this.repo('buildTasks').findOne({ filter: { id: taskId } })))

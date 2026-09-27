@@ -42,6 +42,8 @@ key returns the same run; another key while a run is active returns 409.
 202 returns a local run record, not a claim that acceptance passed. The existing
 `POST /evaluations/import` source-authenticated protocol attaches results.
 Concurrent report deliveries preserve the highest producer/review/revision rank.
+Task, comment and execution timestamps are returned as ISO 8601 UTC instants
+with a zone suffix; the browser displays them in the user's local timezone.
 
 The new **Build task operator** permission set grants page access and the four
 actions above. Administrators assign it through Users; it is not automatically
