@@ -109,3 +109,33 @@ on the server.
    unassigned operator permission set. Existing tables are unchanged.
 4. Set `problemFixes.enabled: true`, assign the operator permission set, and
    verify one run end to end.
+
+## Deployment — September 27, 2026
+
+- Application revision: `1babd6efd089dd6bcdda2607b4cf1f9d3a372359` (PR #1, `feat/integration`).
+- Image: `testmanage3:problem-fixes-1babd6e`, ID `sha256:d51b593238711ea51b3d955cd125b60251bf235769e2294a7132bc56c3b73a71`, Linux x64 / glibc / Node 24 / ABI 137.
+- Archive SHA-256: `57845fb1ac2e9370265f2ae61f1ab5682448b708ae513e306bae929210c388b6`.
+- Switched at `2026-09-27T12:21:08Z` on SSH alias `252`; previous image `testmanage3:build-tasks-522a49c`.
+- Backup: `/srv/testmanage3-backups/pre-problem-fixes-20260927T122102173584Z`. Release files and evidence: `/srv/testmanage3-problem-fixes-1babd6e/`.
+- The only runtime configuration change is `problemFixes.enabled: true`. The token falls back to the existing `buildTasks` credential, and the API reports the integration as configured.
+- Factory companion: gchust/nb3-factory#402. Until it merges, a click is rejected with 503 `FACTORY_ENTRY_NOT_READY` and no run is created.
+
+An isolated trial ran on a copy of production data with no network and with both integrations disabled. It verified the following:
+
+- Every existing business row was preserved: 143 problems, 147 activities, 29 reports, and all build-task data. Existing permission sets were unchanged.
+- The new permission set exists.
+- A user without the permission gets 403. After `problem-fix-operator` is assigned, the list returns 200.
+- A submission against the disabled integration returns 503 and creates no run.
+- Anonymous and wrong-key protocol calls return 401.
+- Data persists across a restart.
+
+The trial container and its data copy were removed.
+
+Production verification after the switch:
+
+- Business rows were preserved, the problem-fix API reports `configured: true`, and the container is healthy.
+- Public HTTPS checks passed: the application loads (200), anonymous staff and factory calls return 401, and unknown paths return a JSON 404.
+- The only error-level log entry comes from the deliberate wrong-key check.
+- Chrome at desktop width and at 390 pixels showed the section with the button enabled, no horizontal overflow and no page errors. The button was not clicked.
+
+No end-to-end run has been made yet. It needs the factory PR merged and its `CLAUDE_CODE_OAUTH_TOKEN` and `NOCOBASE3_PR_TOKEN` secrets set.
