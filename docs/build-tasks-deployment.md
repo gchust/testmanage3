@@ -1,6 +1,66 @@
 # Build task deployment — September 27, 2026
 
-## Final release
+## Per-run Issue update
+
+The update deployed at `2026-09-27T08:08:02Z` (16:08 Singapore time) replaces
+the original one-Issue-per-task behavior. Each intentional run now creates a new
+Issue, persists its identity, closes it for archival, and explicitly starts the
+factory. Idempotent replays return the existing run. Earlier Issues, snapshots
+and results are preserved, and every history entry links to its own Issue.
+
+- Application revision: `522a49cd74ef3591c99f3ea24dbe674c7cc1c8c0`.
+- Image: `testmanage3:build-tasks-522a49c`.
+- Image ID: `sha256:80102328313eed79af533735d3fafb5f6f9787e63ac520ba406aa951b29dfddc`.
+- Archive SHA-256: `f519b497eeff5ca339a8714f502cc0e21d3e8eb34a6d37088efde2580991aaab`.
+- Previous image: `testmanage3:build-tasks-58a08e4`.
+- Backup: `/srv/testmanage3-backups/pre-build-tasks-20260927T080746238666Z`.
+- Factory PR #394 merged as `ba6358a34a6478c2b539e86614c3d7a9d3d9b917`.
+
+The factory accepts closed externally labelled Issues for explicit dispatches
+and their validated recovery/handoff chains. A prior external submission's open
+PR does not block the new run; its work branch and PR remain independent. Ordinary
+closed Issues and ordinary application-branch serialization retain their existing
+behavior. The application requires the `factory:external-closed-v1` capability
+before it creates an Issue. Closing an Issue is separate from build acceptance.
+
+Verification passed 20 focused application tests and 34 factory tests, scoped
+ESLint, client/server/node-project type checks and locale checks. Factory CI passed.
+The Linux x64 / Node 24 image passed archive and native-runtime verification and
+all 28 runtime dependency checks. The isolated production clone passed permission,
+CRUD, disabled-dispatch and restart checks. Production replacement preserved 139
+problems, 26 reports, one task, two comments, two existing runs, all other inspected
+business rows and existing grants. Runtime configuration bytes were unchanged.
+The isolated trial container and data copy were removed.
+
+Live verification created Issue #396 for run
+`46fd6cfa-2224-4c20-b324-1b2383b847bb` on the existing acceptance task. Issue #396
+was closed at `2026-09-27T08:08:46Z` before Actions run `36305279913` started.
+The workflow completed successfully at `2026-09-27T08:24:13Z`, including independent
+final verification, and published separate code PR #397 from `agent/issue-396`.
+Issue #396 remained closed throughout. The automatic Issue-opened workflow
+`36305279546` skipped every job, so creation did not start a duplicate build.
+Replaying the idempotency key returned the same run; the task has three runs,
+while both previous #384 records and the old Issue's title, body and state stayed
+unchanged.
+
+The authenticated callback stored receipt/report
+`adc64f1c-7bd6-427b-af5d-31cc90a330e3` at `2026-09-27T08:25:00.784Z`, while the
+browser was closed. The import returned HTTP 201. The run is `completed`, acceptance
+is `passed`, delivery is `published`, and the active-task lock is released.
+
+Public HTTPS Chrome verification at `2026-09-27T08:26:19.393Z` confirmed the returned
+result, the #396 Issue/PR/report links, both retained historical results and the
+available Run once button. The original report returned HTTP 200, the 390-pixel
+view had no horizontal overflow, and no browser page errors occurred. Final
+production checks confirmed a healthy container, unchanged runtime configuration,
+SQLite integrity, retained permission sets and no error-level container logs. The
+database contains one task, two comments, three runs, 27 reports and 139 problems.
+
+Original report:
+`https://gchust.github.io/nb3-factory/reports/issues/396/runs/36305279913/attempt-1/index.html`.
+Release evidence is under `/srv/testmanage3-build-tasks-522a49c/`.
+
+## Initial feature and timezone release
 
 - Application: TestManage3, PR #1, branch `feat/integration` (PR remains open).
 - Destination: SSH alias `252`, existing Docker service `testmanage3`.
