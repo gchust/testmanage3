@@ -151,3 +151,12 @@ buildTasks:
   workflow: code-agent-task.yml
   ref: develop
   token: ''
+
+# Claude Code problem fixes (server only). An empty token reuses buildTasks.token;
+# PROBLEM_FIXES_GITHUB_TOKEN and PROBLEM_FIXES_ENABLED override these values.
+problemFixes:
+  enabled: false
+  repository: gchust/nb3-factory
+  workflow: framework-fix.yml
+  ref: develop
+  token: ''

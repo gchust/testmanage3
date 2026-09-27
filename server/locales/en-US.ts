@@ -14,6 +14,14 @@ const enUS = {
       run: 'Trigger builds and synchronize status',
     },
   },
+  problemFixes: {
+    title: 'Claude Code problem fixes',
+    operator: 'Problem fix operator',
+    permissions: {
+      read: 'Read fix runs and results',
+      run: 'Start Claude Code fixes and synchronize status',
+    },
+  },
 };
 
 export type AppServerResource = LocaleResource<typeof enUS>;

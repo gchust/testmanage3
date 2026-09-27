@@ -118,6 +118,63 @@ const enUS = {
     },
   },
 
+  problemFixes: {
+    title: 'Claude Code problem fixes',
+    operator: 'Problem fix operator',
+    permissions: {
+      read: 'Read fix runs and results',
+      run: 'Start Claude Code fixes and synchronize status',
+    },
+    sectionTitle: 'Claude Code review and fix',
+    description:
+      'Claude Code re-checks this problem against the latest nocobase/nocobase3 source. When it is confirmed, Claude Code fixes it and opens a draft PR. The conclusion is added to the comments below.',
+    run: 'Send to Claude Code for review and fix',
+    running: 'Fix in progress',
+    confirm: 'Start review and fix',
+    cancel: 'Cancel',
+    confirmTitle: 'Send this problem to Claude Code?',
+    confirmDescription:
+      'The current description and all existing comments are frozen, then a real GitHub Actions run starts. Claude Code re-checks the problem on the latest nocobase/nocobase3 source; if it is confirmed, Claude Code fixes it and opens a draft PR under the maintainer’s GitHub account. Each run uses the Claude Code subscription quota. Comments added later are not included in this run.',
+    submitting: 'Submitting…',
+    submitted: 'Sent to Claude Code',
+    submitError:
+      'Submission could not be confirmed. Refresh the run history before retrying.',
+    dispatchFailed:
+      'The run was not submitted. Check the factory integration and try again.',
+    dispatchUnknown:
+      'GitHub may have accepted this request. Refresh its status; another run stays blocked until it is reconciled.',
+    notConfigured:
+      'An administrator must configure the GitHub factory integration before problems can be sent to Claude Code.',
+    activeHint:
+      'A run is in progress. Its conclusion will be added to the comments when it finishes.',
+    refresh: 'Refresh status',
+    refreshError: 'Unable to refresh GitHub status. Please retry.',
+    loadError: 'Unable to load Claude Code runs. Please retry.',
+    noRuns: 'This problem has not been sent to Claude Code.',
+    fromGitHub: 'Started from GitHub Actions',
+    pullRequest: 'Draft PR',
+    actionsRun: 'Actions run',
+    status: {
+      dispatching: 'Submitting',
+      queued: 'Queued',
+      running: 'Running',
+      awaiting_result: 'Finished without a result',
+      completed: 'Completed',
+      failed: 'Failed',
+      cancelled: 'Cancelled',
+      dispatch_failed: 'Submission failed',
+      dispatch_unknown: 'Submission unconfirmed',
+    },
+    verdict: {
+      confirmed: 'Confirmed',
+      not_reproducible: 'Not reproducible',
+      already_fixed: 'Already fixed in the latest source',
+      not_framework: 'Not a framework problem',
+      needs_info: 'Needs more information',
+      error: 'Run failed',
+    },
+  },
+
   // Labels for administrator-customized historical permission sets.
   'evaluations.roles.evaluation-reader': 'Legacy report reader',
   'evaluations.roles.evaluation-reviewer': 'Legacy report reviewer',

@@ -2,7 +2,7 @@ import { ApiClientError, useApiClient } from '@nocobase/app-client';
 import { useAuthentication } from '@nocobase/app-plugin-authentication/client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { Check, Copy, Pencil, Trash2 } from 'lucide-react';
-import { useState, type ReactElement } from 'react';
+import { useCallback, useState, type ReactElement } from 'react';
 import { Link, Outlet, useParams } from 'react-router';
 import { toast } from 'sonner';
 
@@ -37,6 +37,7 @@ import {
 import { useAsyncResource } from '../use-async-resource.js';
 import { useRefetchOnReturn } from '../use-refetch-on-return.js';
 import { FactoryLinks, FactorySource } from './factory-source.js';
+import { ProblemFixSection } from './problem-fix.js';
 
 export default function ProblemDetailPage(): ReactElement {
   const { t } = useTranslation();
@@ -49,6 +50,16 @@ export default function ProblemDetailPage(): ReactElement {
     (signal) => fetchProblem(api, id, signal),
   );
   useRefetchOnReturn(resource.reload);
+  // A finished Claude Code run adds a comment and may change the status. Reload
+  // those in place: a full reload would unmount the page and drop comment drafts.
+  const [revision, setRevision] = useState(0);
+  const { mutate } = resource;
+  const settle = useCallback(() => {
+    void fetchProblem(api, id)
+      .then((next) => mutate(() => next))
+      .catch(() => {});
+    setRevision((value) => value + 1);
+  }, [api, id, mutate]);
 
   const notFound =
     !validId ||
@@ -81,8 +92,18 @@ export default function ProblemDetailPage(): ReactElement {
             <>
               <ProblemDetail problem={resource.data} />
               <div className='space-y-6'>
-                <ProblemComments problemId={resource.data.id} />
-                <ProblemTimeline problemId={resource.data.id} />
+                <ProblemFixSection
+                  problemId={resource.data.id}
+                  onSettled={settle}
+                />
+                <ProblemComments
+                  problemId={resource.data.id}
+                  revision={revision}
+                />
+                <ProblemTimeline
+                  problemId={resource.data.id}
+                  revision={revision}
+                />
               </div>
             </>
           ) : null}
@@ -293,13 +314,15 @@ async function writeClipboard(text: string): Promise<void> {
 
 function ProblemTimeline({
   problemId,
+  revision,
 }: {
   readonly problemId: number;
+  readonly revision: number;
 }): ReactElement {
   const { t } = useTranslation();
   const api = useApiClient();
   const activities = useAsyncResource<ProblemActivity[]>(
-    `problem-activities|${problemId}`,
+    `problem-activities|${problemId}|${revision}`,
     (signal) => fetchProblemActivities(api, problemId, signal),
   );
 
@@ -376,15 +399,17 @@ function ProblemTimeline({
 
 function ProblemComments({
   problemId,
+  revision,
 }: {
   readonly problemId: number;
+  readonly revision: number;
 }): ReactElement {
   const { t } = useTranslation();
   const api = useApiClient();
   const { session } = useAuthentication();
   const currentUserId = session?.user?.id ?? null;
   const comments = useAsyncResource<ProblemComment[]>(
-    `problem-comments|${problemId}`,
+    `problem-comments|${problemId}|${revision}`,
     (signal) => fetchProblemComments(api, problemId, signal),
   );
   const [draft, setDraft] = useState('');

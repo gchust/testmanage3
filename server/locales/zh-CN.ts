@@ -11,6 +11,14 @@ const zhCN: AppServerResource = {
       run: '触发搭建与同步状态',
     },
   },
+  problemFixes: {
+    title: 'Claude Code 问题修复',
+    operator: '问题修复操作员',
+    permissions: {
+      read: '查看修复运行与结果',
+      run: '启动 Claude Code 修复并同步状态',
+    },
+  },
 };
 
 export default zhCN;

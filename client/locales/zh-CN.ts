@@ -111,6 +111,60 @@ const zhCN: AppResource = {
     },
   },
 
+  problemFixes: {
+    title: 'Claude Code 问题修复',
+    operator: '问题修复操作员',
+    permissions: {
+      read: '查看修复运行与结果',
+      run: '启动 Claude Code 修复并同步状态',
+    },
+    sectionTitle: 'Claude Code 复核修复',
+    description:
+      'Claude Code 会基于最新的 nocobase/nocobase3 源码复核这个问题；确认存在时自动修复并提交 draft PR，结论会追加到下方评论中。',
+    run: '交给 Claude Code 复核修复',
+    running: '正在复核修复',
+    confirm: '开始复核修复',
+    cancel: '取消',
+    confirmTitle: '把这个问题交给 Claude Code？',
+    confirmDescription:
+      '将冻结当前的问题描述和全部已有评论，并启动一次真实的 GitHub Actions 运行。Claude Code 会在最新的 nocobase/nocobase3 源码上复核问题；确认存在时自动修复，并以维护者的 GitHub 账号提交 draft PR。每次运行都会消耗 Claude Code 订阅额度。之后追加的评论不会进入本次运行。',
+    submitting: '提交中…',
+    submitted: '已交给 Claude Code',
+    submitError: '暂时无法确认提交结果，请先刷新运行记录再重试。',
+    dispatchFailed: '提交失败，请检查工厂集成配置后重试。',
+    dispatchUnknown:
+      'GitHub 可能已经接受了这次请求。请刷新状态；在确认之前不能再次提交。',
+    notConfigured:
+      '需由管理员配置 GitHub 工厂集成后，才能把问题交给 Claude Code。',
+    activeHint: '正在运行中，结束后结论会追加到评论里。',
+    refresh: '刷新状态',
+    refreshError: '无法刷新 GitHub 状态，请重试。',
+    loadError: '无法加载 Claude Code 运行记录，请重试。',
+    noRuns: '这个问题还没有交给过 Claude Code。',
+    fromGitHub: '由 GitHub Actions 手动启动',
+    pullRequest: 'Draft PR',
+    actionsRun: 'Actions 运行',
+    status: {
+      dispatching: '正在提交',
+      queued: '排队中',
+      running: '运行中',
+      awaiting_result: '已结束但未回传结论',
+      completed: '已完成',
+      failed: '失败',
+      cancelled: '已取消',
+      dispatch_failed: '提交失败',
+      dispatch_unknown: '待确认提交结果',
+    },
+    verdict: {
+      confirmed: '确认存在',
+      not_reproducible: '无法复现',
+      already_fixed: '最新源码已修复',
+      not_framework: '非框架问题',
+      needs_info: '需要更多信息',
+      error: '执行失败',
+    },
+  },
+
   // Labels for administrator-customized historical permission sets.
   'evaluations.roles.evaluation-reader': '历史报告读取权限',
   'evaluations.roles.evaluation-reviewer': '历史报告复核权限',
