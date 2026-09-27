@@ -1,15 +1,31 @@
 # Build tasks
 
 Tasks and append-only comments live in TestManage. Running a task captures an
-immutable requirements/comment snapshot, mirrors it to one factory Issue, and
-explicitly dispatches the existing factory workflow. Saving or commenting never
+immutable requirements/comment snapshot, creates a new factory Issue for that
+execution, closes the new Issue for archival, and explicitly dispatches the
+existing factory workflow. Saving or commenting never
 starts a build. Each click has a durable idempotency key and only one active run
 is permitted per task. GitHub execution success and business acceptance remain
 separate facts. Existing factory report imports supply the final results.
 
+Every intentional new run has its own Issue, Actions execution and result history.
+An idempotent retry returns the existing run without creating or closing another
+Issue. Earlier Issues and snapshots are never rewritten or reopened. Closing an
+external Issue does not mean the build passed or stopped: task status comes from
+Actions and authenticated reports. A failed close is recorded on the run and
+prevents dispatch; its Issue link remains visible for diagnosis.
+
+The task-level Issue link is the latest submission; every run in history links to
+its own Issue. Earlier unmerged PRs do not block another explicit external run;
+the factory creates a separate work branch and PR against the configured target.
+
 The `factory:external` Issue label prevents the Issue-opened event from starting
 a second build; the explicit workflow dispatch is the only submission path.
-The factory integration change must be deployed before enabling dispatch here.
+The factory integration change must be deployed before enabling dispatch here;
+the entry's `factory:external-closed-v1` capability marker is required. Its prepare
+step accepts closed externally labelled Issues only for explicit external runs
+and their validated recovery/continuation chain. Ordinary closed Issues retain
+their existing stop behavior.
 GitHub credentials are server configuration and never reach the browser, task
 snapshot, Issue or report. Existing Problems intake and historical data remain.
 

@@ -37,7 +37,7 @@ const enUS = {
     running: 'Run in progress',
     confirmRun: 'Run this task?',
     runDescription:
-      'Submit the saved requirements and all current comments to GitHub Actions. This starts a real build and uses the factory’s model budget. Later comments are included in the next run.',
+      'Create a new Issue from the saved requirements and all current comments, close it for archival, then start a real GitHub Actions build using the factory’s model budget. Closing the Issue does not stop the build. Later comments are included in the next run.',
     submitting: 'Submitting…',
     submitted: 'Build submitted',
     submitError:
@@ -64,6 +64,7 @@ const enUS = {
     history: 'Run history',
     noRuns: 'This task has not been run.',
     issue: 'Factory Issue',
+    latestIssue: 'Latest Issue',
     actionsRun: 'Actions run',
     pullRequest: 'Code PR',
     report: 'Original report',

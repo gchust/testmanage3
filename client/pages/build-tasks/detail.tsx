@@ -172,7 +172,7 @@ function TaskContent({
               : null
           }
         >
-          {t('buildTasks.issue')}
+          {t('buildTasks.latestIssue')}
         </SafeLink>
       </div>
       <div className='grid items-start gap-6 lg:grid-cols-2'>
@@ -301,6 +301,15 @@ function TaskContent({
                 </dl>
               )}
               <div className='flex flex-wrap items-center gap-4 text-sm'>
+                <SafeLink
+                  url={
+                    r.issueNumber
+                      ? `https://github.com/${data.task.repository}/issues/${r.issueNumber}`
+                      : null
+                  }
+                >
+                  {t('buildTasks.issue')} #{r.issueNumber}
+                </SafeLink>
                 <SafeLink
                   url={
                     r.result?.runUrl ||

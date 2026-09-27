@@ -58,44 +58,33 @@ export class GitHubBuildClient {
       typeof file?.content === 'string' ? file.content : '',
       'base64',
     ).toString('utf8');
-    if (!text.includes('factory:external') || !text.includes('external_run_id'))
+    if (
+      !text.includes('factory:external-closed-v1') ||
+      !text.includes('external_run_id')
+    )
       throw new BuildTaskError('NOT_CONFIGURED', 'FACTORY_ENTRY_NOT_READY');
     // The Issue guard depends on a real repository label, not a requested name
     // that GitHub could omit when the label has not been provisioned.
     await this.api('/labels/factory%3Aexternal');
   }
-  async saveIssue(number: number | null, title: string, body: string) {
-    if (number) {
-      const issue = await this.api(`/issues/${number}`);
-      if (issue?.pull_request)
-        throw new BuildTaskError('CONFLICT', 'FACTORY_ISSUE_INVALID');
-      const labels = Array.isArray(issue?.labels)
-        ? issue.labels.flatMap((label: unknown) => {
-            if (typeof label === 'string') return [label];
-            if (
-              label &&
-              typeof label === 'object' &&
-              'name' in label &&
-              typeof label.name === 'string'
-            )
-              return [label.name];
-            return [];
-          })
-        : [];
-      await this.api(`/issues/${number}`, 'PATCH', {
-        title,
-        body,
-        state: 'open',
-        labels: [...new Set([...labels, 'factory:external'])],
-      });
-      return number;
-    }
+  async createIssue(title: string, body: string) {
     const issue = await this.api('/issues', 'POST', {
       title,
       body,
       labels: ['factory:external'],
     });
-    return Number(issue?.number);
+    const number = Number(issue?.number);
+    if (!Number.isSafeInteger(number) || number < 1)
+      throw new BuildTaskError('GITHUB_ERROR', 'FACTORY_ISSUE_INVALID');
+    return number;
+  }
+  async closeIssue(number: number) {
+    // The Issue archives this submission. Build status belongs to the run.
+    const issue = await this.api(`/issues/${number}`, 'PATCH', {
+      state: 'closed',
+    });
+    if (issue?.state !== 'closed')
+      throw new BuildTaskError('GITHUB_ERROR', 'FACTORY_ISSUE_NOT_CLOSED');
   }
   async dispatch(issue: number, runId: string) {
     const result = await this.api(

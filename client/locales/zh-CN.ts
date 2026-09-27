@@ -34,7 +34,7 @@ const zhCN: AppResource = {
     running: '正在运行',
     confirmRun: '运行这个搭建任务？',
     runDescription:
-      '将已保存的需求和现有全部评论提交到 GitHub Actions。这会启动一次真实搭建并使用工厂的模型额度。之后追加的评论将在下一次运行时提交。',
+      '将已保存的需求和现有全部评论创建为一个新 Issue，自动关闭归档后，启动一次真实的 GitHub Actions 搭建并使用工厂的模型额度。关闭 Issue 不会停止搭建。之后追加的评论将在下一次运行时提交。',
     submitting: '提交中…',
     submitted: '搭建已提交',
     submitError: '暂时无法确认提交结果，请先刷新运行记录再重试。',
@@ -57,6 +57,7 @@ const zhCN: AppResource = {
     history: '运行记录',
     noRuns: '这个任务还没有运行过。',
     issue: '工厂 Issue',
+    latestIssue: '最近一次 Issue',
     actionsRun: 'Actions 运行',
     pullRequest: '代码 PR',
     report: '原始报告',

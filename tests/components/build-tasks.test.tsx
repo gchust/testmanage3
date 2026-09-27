@@ -67,6 +67,38 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 describe('build task UI', () => {
+  it('links each execution to its own Issue and labels the latest Issue separately', async () => {
+    mocks.api.request.mockResolvedValue({
+      data: {
+        ...detail,
+        task: { ...task, issueNumber: 147 },
+        runs: [147, 146].map((issueNumber) => ({
+          id: 'run-' + issueNumber,
+          issueNumber,
+          status: 'completed',
+          active: false,
+          createdAt: '2026-09-27T00:00:00Z',
+          requestedByName: 'Cheng',
+          result: null,
+        })),
+      },
+    });
+    await mount(
+      <Routes>
+        <Route path='/build-tasks/:taskId' element={<TaskDetailPage />} />
+      </Routes>,
+      '/build-tasks/t1',
+    );
+    expect(
+      await screen.findByRole('link', { name: '工厂 Issue #146' }),
+    ).toHaveAttribute('href', 'https://github.com/owner/factory/issues/146');
+    expect(
+      screen.getByRole('link', { name: '工厂 Issue #147' }),
+    ).toHaveAttribute('href', 'https://github.com/owner/factory/issues/147');
+    expect(
+      screen.getByRole('link', { name: '最近一次 Issue' }),
+    ).toHaveAttribute('href', 'https://github.com/owner/factory/issues/147');
+  });
   it('lists tasks and does not start builds while viewing or searching', async () => {
     mocks.api.request.mockResolvedValue({
       data: { tasks: [task], configured: true, repository: 'owner/factory' },

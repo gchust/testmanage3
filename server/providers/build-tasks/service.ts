@@ -232,7 +232,7 @@ export class BuildTasksService {
             snapshot: JSON.stringify(snapshot),
             requestedBy: actor.id,
             requestedByName: actor.name,
-            issueNumber: task.issueNumber ?? null,
+            issueNumber: null,
             createdAt: now(),
             updatedAt: now(),
           },
@@ -257,23 +257,28 @@ export class BuildTasksService {
     let dispatchStarted = false;
     try {
       const snapshot = JSON.parse(scalar(run.snapshot)) as TaskSnapshot;
-      const issueNumber = await this.github.saveIssue(
-        run.issueNumber ? Number(run.issueNumber) : null,
+      const issueNumber = await this.github.createIssue(
         snapshot.title,
         issueBody(snapshot, id, scalar(run.id)),
       );
+      await this.repo('buildTaskRuns').updateOne({
+        filter: { id: scalar(run.id) },
+        values: {
+          issueNumber,
+          runKey: `${this.github.config.repository}/issues/${issueNumber}/initial`,
+          updatedAt: now(),
+        },
+      });
+      // Persist the new Issue on this run before closing it. A failed close
+      // remains visible in history and must not dispatch an unarchived Issue.
+      await this.github.closeIssue(issueNumber);
       await this.repo('buildTasks').updateOne({
         filter: { id },
         values: { issueNumber, updatedAt: now() },
       });
       await this.repo('buildTaskRuns').updateOne({
         filter: { id: scalar(run.id) },
-        values: {
-          issueNumber,
-          runKey: `${this.github.config.repository}/issues/${issueNumber}/initial`,
-          dispatchRequestedAt: now(),
-          updatedAt: now(),
-        },
+        values: { dispatchRequestedAt: now(), updatedAt: now() },
       });
       dispatchStarted = true;
       const workflowRunId = await this.github.dispatch(

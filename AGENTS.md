@@ -378,6 +378,11 @@ Application-owned build tasks live in `client/pages/build-tasks/` and
 Comments append requirements; only an explicit run captures a snapshot and
 triggers GitHub. Preserve the durable idempotency and single-active-run rules.
 `factory:external` Issues require the factory's explicit-dispatch guard.
+Each new run creates its own Issue, persists its identity, closes it for archival,
+and dispatches only after closure succeeds. Never reopen or rewrite an earlier
+run's Issue. Require the factory's `factory:external-closed-v1` entry capability.
+The task Issue field is only the latest-submission link; run history owns every
+Issue identity. An Issue being closed does not determine the execution result.
 Authenticated existing report imports update run results; match the producer
 time to its captured run, so old reports cannot complete a newer request.
 The `build-task-operator` business permission set is independently assignable;

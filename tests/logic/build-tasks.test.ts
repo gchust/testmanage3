@@ -52,13 +52,15 @@ async function setup() {
     connection: db.connection(),
   } as unknown as MigrationContext;
   await migration.up(context);
+  let nextIssue = 146;
   const github = {
     config,
     configured: true,
     verifyWorkflow: vi.fn(async () => {}),
-    saveIssue: vi.fn<
-      (_number: number | null, _title: string, _body: string) => Promise<number>
-    >(async () => 146),
+    createIssue: vi.fn<(_title: string, _body: string) => Promise<number>>(
+      async () => nextIssue++,
+    ),
+    closeIssue: vi.fn<(_number: number) => Promise<void>>(async () => {}),
     dispatch: vi.fn(async () => '100'),
     run: vi.fn(),
     findRun: vi.fn(),
@@ -105,11 +107,16 @@ describe('build tasks', () => {
     await service.comment(id, 'Add workload charts.', actor);
     const snapshot = await service.snapshot(id, String(first?.id));
     expect(snapshot.comments).toHaveLength(1);
-    expect(github.saveIssue.mock.calls[0]?.[2]).toContain(
+    expect(github.createIssue.mock.calls[0]?.[1]).toContain(
       'Escalate after 24 hours.',
     );
     expect((await service.trigger(id, key, actor))?.id).toBe(first?.id);
     expect(github.dispatch).toHaveBeenCalledTimes(1);
+    expect(github.createIssue).toHaveBeenCalledTimes(1);
+    expect(github.closeIssue).toHaveBeenCalledExactlyOnceWith(146);
+    expect(github.closeIssue.mock.invocationCallOrder[0]).toBeLessThan(
+      github.dispatch.mock.invocationCallOrder[0],
+    );
     await expect(
       service.trigger(id, randomUUID(), actor),
     ).rejects.toMatchObject({ code: 'ACTIVE_RUN' });
@@ -148,7 +155,28 @@ describe('build tasks', () => {
       status: 'queued',
       active: true,
     });
-    expect(github.saveIssue.mock.calls[1]?.[0]).toBe(146);
+    expect(github.createIssue).toHaveBeenCalledTimes(2);
+    expect(github.closeIssue.mock.calls).toEqual([[146], [147]]);
+    expect(github.dispatch).toHaveBeenLastCalledWith(147, expect.any(String));
+  });
+  it('retains an Issue when closing fails and does not dispatch or recreate it on replay', async () => {
+    const { service, github } = await setup();
+    github.closeIssue.mockRejectedValueOnce(
+      new BuildTaskError('GITHUB_ERROR', 'GITHUB_HTTP_403'),
+    );
+    const task = await service.save(null, input, actor),
+      id = String(task.id);
+    const key = randomUUID();
+    const run = await service.trigger(id, key, actor);
+    expect(run).toMatchObject({
+      issueNumber: 146,
+      status: 'dispatch_failed',
+      active: false,
+    });
+    expect(github.dispatch).not.toHaveBeenCalled();
+    expect((await service.trigger(id, key, actor))?.id).toBe(run?.id);
+    expect(github.createIssue).toHaveBeenCalledTimes(1);
+    expect((await service.detail(id)).runs[0]?.issueNumber).toBe(146);
   });
   it('links reports to their producer run and protects newer submissions from late results', async () => {
     const { service, github, db } = await setup();
@@ -184,6 +212,10 @@ describe('build tasks', () => {
     });
     github.dispatch.mockResolvedValueOnce('200');
     const second = await service.trigger(id, randomUUID(), actor);
+    expect(first?.issueNumber).toBe(146);
+    expect(second?.issueNumber).toBe(147);
+    expect((await service.detail(id)).task.issueNumber).toBe(147);
+    expect(github.closeIssue.mock.calls).toEqual([[146], [147]]);
     await service.recordReport(
       { ...report, revision: 2 },
       'https://owner.github.io/factory/report.html',
@@ -313,6 +345,43 @@ describe('build tasks', () => {
 });
 
 describe('GitHub bridge', () => {
+  it('creates a fresh externally guarded Issue and only closes that new Issue', async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ number: 147 }), { status: 201 }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ number: 147, state: 'closed' })),
+      );
+    const client = new GitHubBuildClient(config, request);
+    expect(
+      await client.createIssue('New submission', 'Frozen requirements'),
+    ).toBe(147);
+    await client.closeIssue(147);
+    expect(
+      request.mock.calls.map(([url, options]) => ({
+        url,
+        method: options?.method,
+        body: JSON.parse(String(options?.body)),
+      })),
+    ).toEqual([
+      {
+        url: 'https://api.github.com/repos/owner/factory/issues',
+        method: 'POST',
+        body: {
+          title: 'New submission',
+          body: 'Frozen requirements',
+          labels: ['factory:external'],
+        },
+      },
+      {
+        url: 'https://api.github.com/repos/owner/factory/issues/147',
+        method: 'PATCH',
+        body: { state: 'closed' },
+      },
+    ]);
+  });
   it('sends only server credentials and supports the documented run-id response', async () => {
     const request = vi
       .fn<typeof fetch>()
@@ -333,7 +402,9 @@ describe('GitHub bridge', () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
         JSON.stringify({
-          content: Buffer.from('workflow_dispatch:').toString('base64'),
+          content: Buffer.from(
+            'workflow_dispatch: factory:external external_run_id',
+          ).toString('base64'),
         }),
       ),
     );
