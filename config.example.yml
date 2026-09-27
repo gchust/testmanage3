@@ -142,3 +142,12 @@ logging:
     enabled: true
     # Set true for human-readable terminal output.
     pretty: false
+
+# GitHub factory integration (server only). Store the token in deployment
+# configuration or FACTORY_GITHUB_TOKEN, never in source or browser storage.
+buildTasks:
+  enabled: false
+  repository: gchust/nb3-factory
+  workflow: code-agent-task.yml
+  ref: develop
+  token: ''

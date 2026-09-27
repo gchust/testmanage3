@@ -45,6 +45,7 @@ describe('app client routes', () => {
         path: '/progress/missing-items',
       },
       { name: 'testProgressIssuesRedirect', path: '/progress/issues' },
+      { name: 'buildTasks', path: '/build-tasks' },
     ]);
     expect((routes[8] as { navigation?: unknown }).navigation).toBeUndefined();
     expect(applicationRoutes[1]).toEqual({
@@ -99,6 +100,10 @@ describe('app client routes', () => {
       // Old paths stay reachable and are covered by their own page check.
       { name: 'testProgressMissingItemsRedirect', authorizedAs: null },
       { name: 'testProgressIssuesRedirect', authorizedAs: null },
+      { name: 'buildTasks', authorizedAs: 'buildTasks' },
+      { name: 'buildTaskNew', authorizedAs: null },
+      { name: 'buildTaskDetail', authorizedAs: null },
+      { name: 'buildTaskEdit', authorizedAs: null },
     ]);
   });
 });

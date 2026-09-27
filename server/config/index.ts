@@ -18,6 +18,7 @@ import database from './database.js';
 import snowflake from './snowflake.js';
 import ai from './ai.js';
 import workflow from './workflow.js';
+import buildTasks from './build-tasks.js';
 
 const defaultConfigs: AppConfigFactory<{
   auth: ReturnType<typeof auth>;
@@ -36,6 +37,7 @@ const defaultConfigs: AppConfigFactory<{
   snowflake: ReturnType<typeof snowflake>;
   ai: ReturnType<typeof ai>;
   workflow: ReturnType<typeof workflow>;
+  buildTasks: ReturnType<typeof buildTasks>;
 }> = defaultAppConfigs({
   auth,
   authorization,
@@ -53,6 +55,7 @@ const defaultConfigs: AppConfigFactory<{
   snowflake,
   ai,
   workflow,
+  buildTasks,
 });
 
 export default defaultConfigs;

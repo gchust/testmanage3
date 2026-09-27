@@ -17,6 +17,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { evaluationServiceToken } from '../providers/evaluations/index.js';
 import { parseLinkedReport } from '../providers/evaluations/report-links.js';
 import { EvaluationError } from '../providers/evaluations/protocol.js';
+import { buildTasksServiceToken } from '../providers/build-tasks/index.js';
 
 type Env = AuthEnv &
   AuthorizationEnv & {
@@ -155,6 +156,15 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
           idempotencyKey: c.req.header('Idempotency-Key') ?? '',
         });
         const result = await service.importLinkedReport(source, input);
+        if (app.container.has(buildTasksServiceToken)) {
+          await app.container
+            .resolve(buildTasksServiceToken)
+            .recordReport(
+              input.document,
+              input.reportUrl ?? '',
+              result.receipt.receiptId,
+            );
+        }
         // Factory receipts are top-level, without the ordinary data envelope.
         return c.json(result.receipt, result.duplicate ? 200 : 201);
       } finally {

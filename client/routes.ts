@@ -1,4 +1,10 @@
-import { Gauge, ListChecks, Palette, TriangleAlert } from 'lucide-react';
+import {
+  Gauge,
+  ListChecks,
+  Palette,
+  TriangleAlert,
+  Hammer,
+} from 'lucide-react';
 import {
   defineAppRoutes,
   defineDevRoutes,
@@ -143,6 +149,34 @@ const appRoutes: AppClientRouteContribution = defineAppRoutes([
       import('./pages/test-progress/problems/issues-redirect.js'),
     name: 'testProgressIssuesRedirect',
     path: '/progress/issues',
+  },
+  {
+    name: 'buildTasks',
+    path: '/build-tasks',
+    auth: 'required',
+    authz: { resource: { type: 'page', id: 'buildTasks' }, action: 'access' },
+    navigation: { title: 'buildTasks.title', icon: Hammer },
+    breadcrumb: { title: 'buildTasks.title' },
+    componentLoader: () => import('./pages/build-tasks/index.js'),
+    children: [
+      {
+        name: 'buildTaskNew',
+        path: 'new',
+        componentLoader: () => import('./pages/build-tasks/form.js'),
+      },
+      {
+        name: 'buildTaskDetail',
+        path: ':taskId',
+        componentLoader: () => import('./pages/build-tasks/detail.js'),
+        children: [
+          {
+            name: 'buildTaskEdit',
+            path: 'edit',
+            componentLoader: () => import('./pages/build-tasks/form.js'),
+          },
+        ],
+      },
+    ],
   },
 ]);
 

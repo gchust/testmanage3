@@ -370,3 +370,15 @@ Already-deployed migrations and the original permission seed remain immutable. T
 `runtime.paths`, configuration context `paths`, and `app.paths` share one resolved `AppPaths` object. Use `paths.storage('...')`, `paths.database('...')`, or the corresponding directory fields. `AppPathOptions` is input only; application path policies run before the final object is created and configuration is loaded. Standalone entries declare the deployment root in `server/runtime.ts` so the server and CLI share persistent storage outside the compiled code directory.
 
 `server/app.ts` calls `createAppFromRuntime(runtime)` to transfer configuration, paths, mode and Host logging policy and bind `runtime.app`. Keep Provider, middleware and route registration explicit and ordered; `startApplicationInScope` owns startup and shutdown binding.
+
+## Build tasks
+
+Application-owned build tasks live in `client/pages/build-tasks/` and
+`server/providers/build-tasks/`. The configured GitHub token is server-only.
+Comments append requirements; only an explicit run captures a snapshot and
+triggers GitHub. Preserve the durable idempotency and single-active-run rules.
+`factory:external` Issues require the factory's explicit-dispatch guard.
+Authenticated existing report imports update run results; match the producer
+time to its captured run, so old reports cannot complete a newer request.
+The `build-task-operator` business permission set is independently assignable;
+never change root/member configuration to enable this feature.
