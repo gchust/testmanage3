@@ -154,6 +154,22 @@ const enUS = {
     fromGitHub: 'Started from GitHub Actions',
     pullRequest: 'Draft PR',
     actionsRun: 'Actions run',
+    usage: {
+      label: 'Usage',
+      elapsed: 'Total time',
+      session: 'Claude Code session',
+      tokens: 'Tokens (with cache)',
+      cost: 'List-price estimate',
+      turns: '{{turns}} turns',
+      breakdown:
+        'Input {{input}} · output {{output}} · cache write {{cacheWrite}} · cache read {{cacheRead}}',
+      incomplete:
+        'Usage was not fully reported; only the reported part is shown.',
+      unknown: 'Unknown',
+      hours: '{{h}}h {{m}}m {{s}}s',
+      minutes: '{{m}}m {{s}}s',
+      seconds: '{{s}}s',
+    },
     status: {
       dispatching: 'Submitting',
       queued: 'Queued',

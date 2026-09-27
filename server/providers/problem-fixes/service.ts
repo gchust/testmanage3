@@ -12,6 +12,7 @@ import {
   SNAPSHOT_COMMENT_BYTES,
   SNAPSHOT_COMMENT_LIMIT,
   WORKFLOW_RUN_URL,
+  fixUsage,
   resultComment,
   type Actor,
   type ClaimInput,
@@ -99,6 +100,9 @@ export class ProblemFixesService {
       ? (JSON.parse(scalar(run.result)) as Record<string, unknown>)
       : null;
     const workflowRunId = run.workflowRunId ? scalar(run.workflowRunId) : null;
+    // Results stored before usage was reported simply have none.
+    const usage = fixUsage.safeParse(result?.usage);
+    const elapsedMs = result?.elapsedMs;
     return {
       id: scalar(run.id),
       problemId: Number(run.problemId),
@@ -126,6 +130,11 @@ export class ProblemFixesService {
                 ? result.pullRequestUrl
                 : null,
             branch: typeof result.branch === 'string' ? result.branch : null,
+            usage: usage.success ? usage.data : null,
+            elapsedMs:
+              typeof elapsedMs === 'number' && Number.isSafeInteger(elapsedMs)
+                ? elapsedMs
+                : null,
           }
         : null,
     };
@@ -446,9 +455,18 @@ export class ProblemFixesService {
       throw new ProblemFixError('CONFLICT', 'RUN_NOT_CLAIMED');
     const problemId = Number(run.problemId);
     const stamp = now();
+    // From the request (or the manual claim) to this result. Both instants come
+    // from this process's clock: a stored datetime's zone depends on the database.
+    const capturedAt = Date.parse(
+      (JSON.parse(scalar(run.snapshot)) as FixSnapshot).capturedAt,
+    );
+    const elapsed = stamp.getTime() - capturedAt;
+    const elapsedMs =
+      Number.isSafeInteger(elapsed) && elapsed >= 0 ? elapsed : null;
     const result = JSON.stringify({
       ...input,
       reportedAt: stamp.toISOString(),
+      elapsedMs,
     });
     // The test-progress service writes outside a transaction, so the comment
     // and status change use its tables directly here to commit atomically with
@@ -480,7 +498,7 @@ export class ProblemFixesService {
           problemId,
           authorId: FIX_ACTOR.id,
           authorName: FIX_ACTOR.name,
-          content: resultComment(input),
+          content: resultComment(input, { elapsedMs }),
           createdAt: stamp,
           updatedAt: stamp,
         })

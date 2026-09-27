@@ -436,6 +436,98 @@ describe('problem fix runs', () => {
         ?.content,
     ).toContain('无法复现');
   });
+  it('records the usage and total time with the result and in its comment', async () => {
+    const { service, problems, problemId } = await setup();
+    const usage = {
+      engine: 'claude-code',
+      model: 'opus',
+      durationMs: 718_517,
+      turns: 67,
+      costUsd: 3.7372,
+      tokens: {
+        input: 110,
+        output: 36_580,
+        cacheRead: 3_760_135,
+        cacheWrite: 94_205,
+        total: 3_891_030,
+      },
+      complete: true,
+    };
+    const claim = await service.claim(source, {
+      problemId,
+      externalRunId: null,
+      workflowRunId: '800',
+      workflowRunAttempt: 1,
+    });
+    const view = await service.report(
+      source,
+      claim.runId,
+      result({
+        workflowRunId: '800',
+        workflowRunUrl: 'https://github.com/owner/factory/actions/runs/800',
+        usage,
+      }),
+    );
+    expect(view?.result?.usage).toEqual(usage);
+    expect(view?.result?.elapsedMs).toEqual(expect.any(Number));
+    const comment = (await problems.listProblemComments(problemId)).at(
+      -1,
+    )?.content;
+    expect(comment).toContain(
+      '- 用量：3,891,030 tokens（输入 110 · 输出 36,580 · 缓存写入 94,205 · 缓存读取 3,760,135） · 会话 11 分 59 秒 · 67 轮 · 按标价约 $3.74',
+    );
+    expect(comment).toMatch(/- 总耗时：\d+ 秒（从发起到回传结论）/);
+
+    // A result reported before usage existed still reads back, without usage.
+    const old = await setup();
+    const oldClaim = await old.service.claim(source, {
+      problemId: old.problemId,
+      externalRunId: null,
+      workflowRunId: '900',
+      workflowRunAttempt: 1,
+    });
+    const legacy = await old.service.report(
+      source,
+      oldClaim.runId,
+      result({
+        workflowRunId: '900',
+        workflowRunUrl: 'https://github.com/owner/factory/actions/runs/900',
+      }),
+    );
+    expect(legacy?.result?.usage).toBeNull();
+    expect(
+      (await old.problems.listProblemComments(old.problemId)).at(-1)?.content,
+    ).not.toContain('用量');
+  });
+  it('accepts only well-formed usage', () => {
+    const usage = {
+      engine: 'claude-code',
+      model: 'opus',
+      durationMs: null,
+      turns: null,
+      costUsd: null,
+      tokens: {
+        input: 1,
+        output: 2,
+        cacheRead: null,
+        cacheWrite: null,
+        total: null,
+      },
+      complete: false,
+    };
+    expect(result({ usage }).usage).toEqual(usage);
+    expect(resultComment(result({ usage }))).toContain(
+      '- 用量：未知 tokens（输入 1 · 输出 2 · 缓存写入 未知 · 缓存读取 未知）（用量报告不完整）',
+    );
+    for (const bad of [
+      { ...usage, model: 'opus](https://evil.example)' },
+      { ...usage, turns: 1.5 },
+      { ...usage, costUsd: -1 },
+      { ...usage, extra: true },
+      { ...usage, tokens: { ...usage.tokens, reasoning: 1 } },
+    ])
+      expect(() => result({ usage: bad as never })).toThrow();
+  });
   it('rejects a PR on an unconfirmed verdict and keeps long analysis within the comment limit', () => {
     expect(() => result({ verdict: 'needs_info' })).toThrow();
     const comment = resultComment(result({ analysis: 'x'.repeat(20000) }));

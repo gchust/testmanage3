@@ -59,6 +59,37 @@ export const claimInput = z
   .strict();
 export type ClaimInput = z.infer<typeof claimInput>;
 
+const counter = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable();
+// Labels reach a Markdown comment, so they cannot carry markup.
+const label = z
+  .string()
+  .regex(/^[\w.:@/-]{1,100}$/)
+  .nullable();
+/**
+ * What the one Claude Code invocation used, as the factory measured it.
+ * Unknown values are null rather than 0; `costUsd` is a list-price estimate.
+ */
+export const fixUsage = z
+  .object({
+    engine: label,
+    model: label,
+    durationMs: counter,
+    turns: counter,
+    costUsd: z.number().min(0).max(1_000_000).nullable(),
+    tokens: z
+      .object({
+        input: counter,
+        output: counter,
+        cacheRead: counter,
+        cacheWrite: counter,
+        total: counter,
+      })
+      .strict(),
+    complete: z.boolean(),
+  })
+  .strict();
+export type FixUsage = z.infer<typeof fixUsage>;
+
 export const resultInput = z
   .object({
     workflowRunId,
@@ -83,6 +114,7 @@ export const resultInput = z
       .regex(/^[0-9a-f]{40}$/)
       .nullable()
       .default(null),
+    usage: fixUsage.nullable().default(null),
   })
   .strict()
   // Only a confirmed problem is fixed; any other verdict with a PR is a protocol error.
@@ -127,8 +159,34 @@ const LABELS: Record<FixVerdict, string> = {
   error: '执行失败',
 };
 
+const grouped = (value: number | null) =>
+  value === null ? '未知' : value.toLocaleString('en-US');
+function formatDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor(seconds / 60) % 60;
+  return `${h ? `${h} 小时 ` : ''}${h || m ? `${m} 分 ` : ''}${seconds % 60} 秒`;
+}
+/** One comment line: tokens first, then the session, turns and cost. */
+function usageLine(usage: FixUsage): string {
+  const { tokens } = usage;
+  return (
+    [
+      `${grouped(tokens.total)} tokens（输入 ${grouped(tokens.input)} · 输出 ${grouped(tokens.output)} · 缓存写入 ${grouped(tokens.cacheWrite)} · 缓存读取 ${grouped(tokens.cacheRead)}）`,
+      usage.durationMs !== null && `会话 ${formatDuration(usage.durationMs)}`,
+      usage.turns !== null && `${usage.turns} 轮`,
+      usage.costUsd !== null && `按标价约 $${usage.costUsd.toFixed(2)}`,
+    ]
+      .filter(Boolean)
+      .join(' · ') + (usage.complete ? '' : '（用量报告不完整）')
+  );
+}
+
 /** The single problem comment a result produces, within the comment limit. */
-export function resultComment(result: ResultInput): string {
+export function resultComment(
+  result: ResultInput,
+  { elapsedMs = null }: { elapsedMs?: number | null } = {},
+): string {
   const label =
     result.verdict === 'confirmed' && result.pullRequestUrl
       ? '确认存在并已提交修复 PR'
@@ -138,6 +196,10 @@ export function resultComment(result: ResultInput): string {
     result.pullRequestUrl && `- 修复 PR：${result.pullRequestUrl}`,
     result.branch && `- 分支：\`${result.branch}\``,
     result.baseSha && `- 复核源码提交：\`${result.baseSha}\``,
+    result.usage && `- 用量：${usageLine(result.usage)}`,
+    elapsedMs !== null &&
+      elapsedMs >= 0 &&
+      `- 总耗时：${formatDuration(elapsedMs)}（从发起到回传结论）`,
     `- GitHub Actions：${result.workflowRunUrl}`,
   ]
     .filter(Boolean)

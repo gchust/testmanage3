@@ -7,6 +7,22 @@ export type FixVerdict =
   | 'not_framework'
   | 'needs_info'
   | 'error';
+/** Unknown values are null, never 0; `costUsd` is a list-price estimate. */
+export interface FixUsage {
+  engine: string | null;
+  model: string | null;
+  durationMs: number | null;
+  turns: number | null;
+  costUsd: number | null;
+  tokens: {
+    input: number | null;
+    output: number | null;
+    cacheRead: number | null;
+    cacheWrite: number | null;
+    total: number | null;
+  };
+  complete: boolean;
+}
 export interface FixRun {
   id: string;
   problemId: number;
@@ -24,6 +40,9 @@ export interface FixRun {
     summary: string;
     pullRequestUrl: string | null;
     branch: string | null;
+    usage: FixUsage | null;
+    /** From the request to the stored result. */
+    elapsedMs: number | null;
   };
 }
 export interface FixRuns {

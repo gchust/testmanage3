@@ -219,6 +219,7 @@ function FixRunItem({ run }: { readonly run: FixRun }): ReactElement {
           {run.result.summary}
         </p>
       ) : null}
+      {run.result ? <FixRunUsage result={run.result} /> : null}
       <div className='flex flex-wrap items-center gap-4 text-sm'>
         <ExternalLink url={run.result?.pullRequestUrl}>
           {t('problemFixes.pullRequest')}
@@ -228,6 +229,82 @@ function FixRunItem({ run }: { readonly run: FixRun }): ReactElement {
         </ExternalLink>
       </div>
     </li>
+  );
+}
+
+/** How long the run took and what the Claude Code invocation used. */
+function FixRunUsage({
+  result,
+}: {
+  readonly result: NonNullable<FixRun['result']>;
+}): ReactElement | null {
+  const { t } = useTranslation();
+  const { usage, elapsedMs } = result;
+  if (!usage && elapsedMs === null) return null;
+  const unknown = t('problemFixes.usage.unknown');
+  const count = (value: number | null) =>
+    value === null ? unknown : value.toLocaleString();
+  const duration = (ms: number) => {
+    const seconds = Math.round(ms / 1000);
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor(seconds / 60) % 60;
+    return t(
+      h
+        ? 'problemFixes.usage.hours'
+        : m
+          ? 'problemFixes.usage.minutes'
+          : 'problemFixes.usage.seconds',
+      { h, m, s: seconds % 60 },
+    );
+  };
+  const session = usage
+    ? [
+        usage.durationMs === null ? null : duration(usage.durationMs),
+        usage.turns === null
+          ? null
+          : t('problemFixes.usage.turns', { turns: usage.turns }),
+        usage.model,
+      ]
+        .filter((part): part is string => part !== null)
+        .join(' · ') || unknown
+    : null;
+  const items: Array<[string, string]> = [];
+  if (elapsedMs !== null)
+    items.push([t('problemFixes.usage.elapsed'), duration(elapsedMs)]);
+  if (usage && session !== null) {
+    items.push([t('problemFixes.usage.session'), session]);
+    items.push([t('problemFixes.usage.tokens'), count(usage.tokens.total)]);
+    if (usage.costUsd !== null)
+      items.push([
+        t('problemFixes.usage.cost'),
+        `$${usage.costUsd.toFixed(2)}`,
+      ]);
+  }
+  return (
+    <section
+      aria-label={t('problemFixes.usage.label')}
+      className='space-y-1 text-sm'
+    >
+      <dl className='flex flex-wrap gap-x-6 gap-y-1'>
+        {items.map(([name, value]) => (
+          <div className='flex gap-2' key={name}>
+            <dt className='text-muted-foreground'>{name}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {usage ? (
+        <p className='text-muted-foreground'>
+          {t('problemFixes.usage.breakdown', {
+            input: count(usage.tokens.input),
+            output: count(usage.tokens.output),
+            cacheWrite: count(usage.tokens.cacheWrite),
+            cacheRead: count(usage.tokens.cacheRead),
+          })}
+          {usage.complete ? null : ` ${t('problemFixes.usage.incomplete')}`}
+        </p>
+      ) : null}
+    </section>
   );
 }
 

@@ -37,8 +37,10 @@ another key while a run is active returns 409 `ACTIVE_RUN`, and a missing
 integration returns 503 `NOT_CONFIGURED`. A run view is
 `{ id, problemId, origin, status, active, requestedByName, createdAt, updatedAt,
 workflowRunId, workflowRunUrl, error, result }` with
-`result: { verdict, summary, pullRequestUrl, branch } | null`. Snapshots and
-credentials are never returned to the browser.
+`result: { verdict, summary, pullRequestUrl, branch, usage, elapsedMs } | null`.
+`usage` is what the factory reported (below), or null for a result reported
+without it. `elapsedMs` runs from the snapshot capture to the stored result.
+Snapshots and credentials are never returned to the browser.
 
 Statuses: `dispatching`, `queued`, `running`, `awaiting_result` (the workflow
 finished without reporting; the lock is released), `completed`, `failed`,
@@ -71,15 +73,21 @@ older ones left out.
 
 `POST /problem-fixes/factory/runs/:runId/result` with
 `{ workflowRunId, workflowRunUrl, verdict, summary, analysis, pullRequestUrl,
-branch, baseSha }` records the single result. `verdict` is one of `confirmed`,
+branch, baseSha, usage }` records the single result. `usage` is optional:
+`{ engine, model, durationMs, turns, costUsd, tokens: { input, output,
+cacheRead, cacheWrite, total }, complete }`, where every number is a
+non-negative integer except `costUsd`, a list-price estimate. An unknown value
+is null, not 0. Labels are limited to `[\w.:@/-]`, and unknown keys are
+rejected. `verdict` is one of `confirmed`,
 `not_reproducible`, `already_fixed`, `not_framework`, `needs_info`, `error`; a PR
 is accepted only with `confirmed`. `workflowRunUrl` must name the source
 repository and `workflowRunId`, and the run must already be bound to that
 workflow run id (by its claim or the dispatch response). The result, one
 comment by **Claude Code**, and the `pending` → `fixing` change with its timeline
 entry commit in one transaction; a replay returns the stored run without writing
-again. Other statuses are never changed. The comment stays within the 20,000
-character comment limit by truncating the analysis.
+again. Other statuses are never changed. The comment lists the usage and the
+total time with its links, and stays within the 20,000 character comment limit
+by truncating the analysis.
 
 ## Configuration
 

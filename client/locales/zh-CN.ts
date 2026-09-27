@@ -144,6 +144,21 @@ const zhCN: AppResource = {
     fromGitHub: '由 GitHub Actions 手动启动',
     pullRequest: 'Draft PR',
     actionsRun: 'Actions 运行',
+    usage: {
+      label: '用量',
+      elapsed: '总耗时',
+      session: 'Claude Code 会话',
+      tokens: 'Token（含缓存）',
+      cost: '按标价估算',
+      turns: '{{turns}} 轮',
+      breakdown:
+        '输入 {{input}} · 输出 {{output}} · 缓存写入 {{cacheWrite}} · 缓存读取 {{cacheRead}}',
+      incomplete: '用量报告不完整，只显示已报告的部分。',
+      unknown: '未知',
+      hours: '{{h}} 小时 {{m}} 分 {{s}} 秒',
+      minutes: '{{m}} 分 {{s}} 秒',
+      seconds: '{{s}} 秒',
+    },
     status: {
       dispatching: '正在提交',
       queued: '排队中',

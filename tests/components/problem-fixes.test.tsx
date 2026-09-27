@@ -35,6 +35,8 @@ const finished: FixRun = {
     summary: '筛选状态在刷新后丢失。',
     pullRequestUrl: 'https://github.com/nocobase/nocobase3/pull/12',
     branch: 'claude/problem-7',
+    usage: null,
+    elapsedMs: null,
   },
 };
 function runs(list: FixRun[], configured = true) {
@@ -74,6 +76,52 @@ describe('Claude Code problem fix section', () => {
       'href',
       'https://github.com/owner/factory/actions/runs/100',
     );
+  });
+  it('shows how long a finished run took and what it used', async () => {
+    mocks.api.request.mockResolvedValue(
+      runs([
+        {
+          ...finished,
+          result: {
+            ...finished.result!,
+            elapsedMs: 803_000,
+            usage: {
+              engine: 'claude-code',
+              model: 'opus',
+              durationMs: 718_517,
+              turns: 67,
+              costUsd: 3.7372,
+              tokens: {
+                input: 110,
+                output: 36_580,
+                cacheRead: 3_760_135,
+                cacheWrite: 94_205,
+                total: 3_891_030,
+              },
+              complete: true,
+            },
+          },
+        },
+      ]),
+    );
+    await mount();
+    const usage = await screen.findByRole('region', { name: '用量' });
+    const value = (name: string) =>
+      within(usage).getByText(name).nextElementSibling?.textContent;
+    expect(value('总耗时')).toBe('13 分 23 秒');
+    expect(value('Claude Code 会话')).toBe('11 分 59 秒 · 67 轮 · opus');
+    expect(value('Token（含缓存）')).toBe((3_891_030).toLocaleString());
+    expect(value('按标价估算')).toBe('$3.74');
+    expect(usage).toHaveTextContent(
+      `输出 ${(36_580).toLocaleString()} · 缓存写入 ${(94_205).toLocaleString()}`,
+    );
+    expect(usage).not.toHaveTextContent('不完整');
+  });
+  it('shows no usage for a result reported without it', async () => {
+    mocks.api.request.mockResolvedValue(runs([finished]));
+    await mount();
+    await screen.findByText('确认存在');
+    expect(screen.queryByRole('region', { name: '用量' })).toBeNull();
   });
   it('requires an explicit confirmation and submits one idempotent request', async () => {
     mocks.api.request.mockImplementation(
