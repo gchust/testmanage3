@@ -147,3 +147,28 @@ Production verification after the switch:
 - Chrome at desktop width and at 390 pixels showed the section with the button enabled, no horizontal overflow and no page errors. The button was not clicked.
 
 No end-to-end run has been made yet. It needs the factory PR merged and its `CLAUDE_CODE_OAUTH_TOKEN` and `NOCOBASE3_PR_TOKEN` secrets set.
+
+## Deployment — September 27, 2026 (usage and time)
+
+- Application revision: `8a9fbca81319bd191d850d0929a240a79e744444` (PR #1, `feat/integration`).
+- Image: `testmanage3:fix-usage-8a9fbca`, ID `sha256:10e6f2a294737f264acda409f6712b452df11de0b958152e335c3e416e6ffff1`, Linux x64 / glibc / Node 24 / ABI 137.
+- Archive SHA-256: `9b257ff2785e413bf99d80f48ed73369ec016c875a75ec909b18581965f37190`.
+- Switched at `2026-09-27T15:21:18Z` on SSH alias `252`; previous image `testmanage3:problem-fixes-1babd6e`. No configuration change.
+- Backup: `/srv/testmanage3-backups/pre-fix-usage-20260927T152111971001Z`. Release files and evidence: `/srv/testmanage3-fix-usage-8a9fbca/`.
+- Factory companion: gchust/nb3-factory#406, merged. Framework fixes now report `usage`.
+
+An isolated trial ran on a copy of production data with no network and with both integrations disabled. It verified the following:
+
+- Every existing business row was preserved, including the one stored fix run. Existing permission sets were unchanged.
+- The stored result of problem 234, reported before usage existed, reads back with `usage` and `elapsedMs` as null.
+- Under a trial-only source key, a claim and a result with usage were recorded. The run view and the staff list returned the usage and the total time. The comment carried the expected usage line and the total time.
+- A usage with markup in a label, or with an unknown key, was rejected with 400.
+- Data persisted across a restart.
+
+The trial container and its data copy were removed.
+
+Production verification after the switch:
+
+- Business rows were preserved, the problem-fix API reports `configured: true`, the legacy result reads back, and the container is healthy. No error-level log entries appeared after the switch.
+- Public HTTPS checks passed: the application loads (200) with this build's assets, anonymous staff and factory calls return 401, a wrong key returns 401, and unknown paths return a JSON 404.
+- Chrome at desktop width and at 390 pixels showed problem 234's card with the button enabled, no horizontal overflow and no page errors. The button was not clicked.
