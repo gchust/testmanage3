@@ -160,3 +160,11 @@ problemFixes:
   workflow: framework-fix.yml
   ref: develop
   token: ''
+
+# Preview links on factory problems (server only). A report the factory
+# repository produced for its own pull request links to
+# https://nb3-<PR>.<domain>/main/; an empty repository turns the links off.
+# FACTORY_PREVIEW_DOMAIN overrides the domain.
+factoryPreview:
+  repository: gchust/nb3-factory
+  domain: nfvd.net

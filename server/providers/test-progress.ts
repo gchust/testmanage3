@@ -5,6 +5,8 @@ import {
 } from './evaluations/problems.js';
 import { validateDocument } from './evaluations/protocol.js';
 import type { ArchiveManifest } from './evaluations/document.js';
+import type { FactoryPreviewConfig } from '../config/factory-preview.js';
+import { loggingToken } from '@nocobase/app-server/logging';
 import {
   databaseManagerToken,
   type DatabaseManager,
@@ -921,8 +923,35 @@ function toProblemCommentRecord(row: Row): ProblemCommentRecord {
   };
 }
 
+/** The part of the application logger the Problems service reports through. */
+export interface TestProgressLogger {
+  error(details: Record<string, unknown>, message: string): void;
+}
+
+export interface TestProgressServiceOptions {
+  readonly logger?: TestProgressLogger;
+  /** Preview links for factory problems; none when omitted. */
+  readonly factoryPreview?: FactoryPreviewConfig;
+}
+
+/** Parsed report sources kept per process, oldest dropped first beyond this. */
+const REPORT_SOURCE_CACHE_LIMIT = 2000;
+
 class DefaultTestProgressService implements TestProgressService {
-  public constructor(private readonly database: DatabaseManager) {}
+  /**
+   * Report id → its source without `reportUrl`, or null when it has none. A stored
+   * report revision never changes, so it is parsed once per process.
+   */
+  private readonly reportSources = new Map<
+    string,
+    FactoryProblemSource | null
+  >();
+
+  public constructor(
+    private readonly database: DatabaseManager,
+    private readonly logger: TestProgressLogger,
+    private readonly factoryPreview: FactoryPreviewConfig | null,
+  ) {}
 
   public async listFeaturePoints(): Promise<FeaturePointRecord[]> {
     const rows = await this.database
@@ -1294,39 +1323,77 @@ class DefaultTestProgressService implements TestProgressService {
     return record;
   }
 
-  /** Batch report metadata only for problems already selected by the existing read scope. */
+  /**
+   * Report links for problems already selected by the existing read scope. Only
+   * `reportUrl`, which a replay may add once, is read every time; the rest comes
+   * from the parsed report. A report that cannot be read loses its links and is
+   * logged, instead of failing every list that includes one of its problems.
+   */
   private async factorySources(
     reportIds: string[],
   ): Promise<Map<string, FactoryProblemSource>> {
     const sources = new Map<string, FactoryProblemSource>();
     const ids = [...new Set(reportIds)];
     for (let offset = 0; offset < ids.length; offset += 200) {
-      const stored = await this.database
+      const links = await this.database
         .query()
         .selectFrom('evaluationReports')
-        .select(['id', 'document', 'manifest', 'reportUrl', 'bundleFileId'])
+        .select(['id', 'reportUrl'])
         .where('id', 'in', ids.slice(offset, offset + 200))
         .execute();
-      for (const row of stored) {
-        const document = validateDocument(JSON.parse(String(row.document)));
-        if (document.type === 'evaluation-report')
-          sources.set(
-            String(row.id),
-            factoryProblemSource(
-              String(row.id),
-              document,
-              row.bundleFileId == null
-                ? ['evaluation.json']
-                : (
-                    JSON.parse(String(row.manifest)) as ArchiveManifest
-                  ).files.map((file) => file.path),
-              typeof row.reportUrl === 'string' ? row.reportUrl : null,
-              row.bundleFileId != null,
-            ),
-          );
+      const unread = links
+        .map((row) => String(row.id))
+        .filter((id) => !this.reportSources.has(id));
+      if (unread.length > 0) {
+        const stored = await this.database
+          .query()
+          .selectFrom('evaluationReports')
+          .select(['id', 'document', 'manifest', 'bundleFileId'])
+          .where('id', 'in', unread)
+          .execute();
+        for (const row of stored) this.rememberReportSource(row);
+      }
+      for (const row of links) {
+        const source = this.reportSources.get(String(row.id));
+        if (source)
+          sources.set(String(row.id), {
+            ...source,
+            reportUrl: typeof row.reportUrl === 'string' ? row.reportUrl : null,
+          });
       }
     }
     return sources;
+  }
+
+  private rememberReportSource(row: Row): void {
+    const id = String(row.id);
+    let source: FactoryProblemSource | null = null;
+    try {
+      const document = validateDocument(JSON.parse(String(row.document)));
+      if (document.type === 'evaluation-report')
+        source = factoryProblemSource(
+          id,
+          document,
+          row.bundleFileId == null
+            ? ['evaluation.json']
+            : (JSON.parse(String(row.manifest)) as ArchiveManifest).files.map(
+                (file) => file.path,
+              ),
+          null,
+          row.bundleFileId != null,
+          this.factoryPreview,
+        );
+    } catch (error) {
+      this.logger.error(
+        { reportId: id, err: error },
+        'Stored factory report could not be read; its problems are listed without report links.',
+      );
+    }
+    if (this.reportSources.size >= REPORT_SOURCE_CACHE_LIMIT) {
+      const oldest = this.reportSources.keys().next();
+      if (!oldest.done) this.reportSources.delete(oldest.value);
+    }
+    this.reportSources.set(id, source);
   }
 
   public async createProblem(
@@ -2046,8 +2113,15 @@ class DefaultTestProgressService implements TestProgressService {
 
 export function createTestProgressService(
   database: DatabaseManager,
+  options: TestProgressServiceOptions = {},
 ): TestProgressService {
-  return new DefaultTestProgressService(database);
+  return new DefaultTestProgressService(
+    database,
+    options.logger ?? {
+      error: (details, message) => console.error(message, details),
+    },
+    options.factoryPreview ?? null,
+  );
 }
 
 export default class TestProgressProvider extends ServiceProvider<Application> {
@@ -2056,7 +2130,13 @@ export default class TestProgressProvider extends ServiceProvider<Application> {
   public override register(): void {
     this.app.container.singleton(testProgressServiceToken, () => {
       const database = this.app.container.resolve(databaseManagerToken);
-      return createTestProgressService(database);
+      const logger = this.app.container.resolve(loggingToken).getLogger();
+      return createTestProgressService(database, {
+        logger: { error: (details, message) => logger.error(details, message) },
+        factoryPreview:
+          this.app.config.get<FactoryPreviewConfig>('factoryPreview') ??
+          undefined,
+      });
     });
   }
 }

@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import type { FactoryPreviewConfig } from '../../config/factory-preview.js';
 import type { DatabaseConnection } from '@nocobase/db';
 import type { EvaluationReport } from './document.js';
 import { EvaluationError, type EvaluationDocument } from './protocol.js';
@@ -18,6 +19,9 @@ export interface SubmittedProblem {
   qaCriterionId?: string;
   classification?: ProblemClassification;
 }
+/** A host name the preview address rule may be applied to. */
+const PREVIEW_DOMAIN = /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i;
+
 export interface FactoryProblemSource {
   reportId: string;
   taskTitle: string;
@@ -36,31 +40,28 @@ export function factoryProblemSource(
   files: string[],
   reportUrl: string | null = null,
   hasArchive = true,
+  preview: FactoryPreviewConfig | null = null,
 ): FactoryProblemSource {
   const repo = report.run.task.repository;
+  const pullRequest = report.outcome.pullRequest;
   return {
     reportId,
     reportUrl,
     hasArchive,
     taskTitle: report.run.task.title,
     issueUrl: `https://github.com/${repo}/issues/${report.run.task.issue}`,
-    pullRequestUrl: report.outcome.pullRequest
-      ? `https://github.com/${repo}/pull/${report.outcome.pullRequest.number}`
+    pullRequestUrl: pullRequest
+      ? `https://github.com/${repo}/pull/${pullRequest.number}`
       : null,
-    // This integration uses nb3-factory's documented preview-host.mjs address rule.
-    // An address identifies the PR environment; it is not a deployment health check.
+    // The factory's documented preview-host.mjs address rule; see FactoryPreviewConfig.
     environmentUrl:
-      report.source.instance === 'gchust/nb3-factory' &&
-      repo === 'gchust/nb3-factory' &&
-      report.outcome.pullRequest &&
-      /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/i.test(
-        process.env.FACTORY_PREVIEW_DOMAIN ?? 'nfvd.net',
-      )
-        ? 'https://nb3-' +
-          report.outcome.pullRequest.number +
-          '.' +
-          (process.env.FACTORY_PREVIEW_DOMAIN ?? 'nfvd.net') +
-          '/main/'
+      preview &&
+      preview.repository !== '' &&
+      report.source.instance === preview.repository &&
+      repo === preview.repository &&
+      pullRequest &&
+      PREVIEW_DOMAIN.test(preview.domain)
+        ? `https://nb3-${pullRequest.number}.${preview.domain}/main/`
         : null,
     runUrl: `https://github.com/${repo}/actions/runs/${report.precedence.producer.runId}/attempts/${report.precedence.producer.attempt}`,
     files,

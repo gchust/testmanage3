@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { crc32 } from 'node:zlib';
 import { Hono, type Context } from 'hono';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import migration from '../../database/main/migrations/202609250001_create_evaluations.js';
 import issuesMigration from '../../database/main/migrations/202609210003_create_issues.js';
 import issueTypesMigration from '../../database/main/migrations/202609220001_add_issue_type_and_owner.js';
@@ -423,16 +423,25 @@ describe('legacy archive reading', () => {
 describe('factory problem reception', () => {
   it('keeps source Issue, code PR and known factory preview URLs distinct', async () => {
     const d = await report();
-    expect(factoryProblemSource('id', d, []).environmentUrl).toBeNull();
+    const preview = { repository: 'gchust/nb3-factory', domain: 'nfvd.net' };
+    const source = (domain = preview.domain) =>
+      factoryProblemSource('id', d, [], null, true, { ...preview, domain });
+    expect(source().environmentUrl).toBeNull();
     d.source.instance = 'gchust/nb3-factory';
     d.run.task.repository = 'gchust/nb3-factory';
-    expect(factoryProblemSource('id', d, [])).toMatchObject({
+    expect(source()).toMatchObject({
       issueUrl: 'https://github.com/gchust/nb3-factory/issues/146',
       pullRequestUrl: 'https://github.com/gchust/nb3-factory/pull/150',
       environmentUrl: 'https://nb3-150.nfvd.net/main/',
     });
-    d.outcome.pullRequest = null;
+    // The address rule is configuration; without it there is no preview link.
+    expect(source('preview.example.com').environmentUrl).toBe(
+      'https://nb3-150.preview.example.com/main/',
+    );
+    expect(source('not a host').environmentUrl).toBeNull();
     expect(factoryProblemSource('id', d, []).environmentUrl).toBeNull();
+    d.outcome.pullRequest = null;
+    expect(source().environmentUrl).toBeNull();
   });
 
   it('collects submitted problems into the ordinary list with source and report links', async () => {
@@ -458,6 +467,40 @@ describe('factory problem reception', () => {
     expect(await tracker.listProblemActivities(problem.id)).toEqual([
       expect.objectContaining({ actorName: 'GitHub Actions', kind: 'created' }),
     ]);
+  });
+
+  it('reads each report once and lists problems without the links of one it cannot read', async () => {
+    const { save, db } = await setup();
+    const received = await save(report());
+    const reportId = received.receipt.receiptId;
+    const logger = { error: vi.fn() };
+    const tracker = createTestProgressService(db, { logger });
+    const [problem] = await tracker.listProblems({ type: 'automation' });
+    expect(problem.factorySource?.reportId).toBe(reportId);
+
+    // The parsed report is kept, but a report link a replay adds later is seen.
+    await db
+      .query()
+      .updateTable('evaluationReports')
+      .set({ document: '{', reportUrl: 'https://reports.example.com/1.html' })
+      .where('id', '=', reportId)
+      .execute();
+    expect((await tracker.getProblem(problem.id)).factorySource).toMatchObject({
+      reportId,
+      reportUrl: 'https://reports.example.com/1.html',
+    });
+
+    // A report that cannot be read costs its links, not the list, and is logged once.
+    const fresh = createTestProgressService(db, { logger });
+    const listed = await fresh.listProblems({ type: 'automation' });
+    expect(listed.map((row) => row.id)).toEqual([problem.id]);
+    expect(listed[0].factorySource).toBeUndefined();
+    await fresh.listProblems({ type: 'automation' });
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ reportId }),
+      expect.any(String),
+    );
   });
 
   it('deduplicates deliveries and reassessments without overwriting human edits', async () => {

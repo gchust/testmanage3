@@ -20,6 +20,7 @@ import ai from './ai.js';
 import workflow from './workflow.js';
 import buildTasks from './build-tasks.js';
 import problemFixes from './problem-fixes.js';
+import factoryPreview from './factory-preview.js';
 
 const defaultConfigs: AppConfigFactory<{
   auth: ReturnType<typeof auth>;
@@ -40,6 +41,7 @@ const defaultConfigs: AppConfigFactory<{
   workflow: ReturnType<typeof workflow>;
   buildTasks: ReturnType<typeof buildTasks>;
   problemFixes: ReturnType<typeof problemFixes>;
+  factoryPreview: ReturnType<typeof factoryPreview>;
 }> = defaultAppConfigs({
   auth,
   authorization,
@@ -59,6 +61,7 @@ const defaultConfigs: AppConfigFactory<{
   workflow,
   buildTasks,
   problemFixes,
+  factoryPreview,
 });
 
 export default defaultConfigs;
