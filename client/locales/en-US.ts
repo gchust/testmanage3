@@ -367,6 +367,7 @@ const enUS = {
     allDimensions: 'All dimensions',
     onlyMine: 'Only mine',
     ownerNone: 'Unassigned',
+    ownerUnlinked: '{{name}} (no account)',
     allStatuses: 'All statuses',
     createFeature: 'New feature point',
     columnFeature: 'Feature point',

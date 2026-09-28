@@ -240,6 +240,8 @@ export async function collectFactoryProblems(
         'factoryReportId',
         'featurePointId',
         'classificationSource',
+        'owner',
+        'ownerId',
       ])
       .where('factoryKey', '=', scopedKey)
       .executeTakeFirst();
@@ -282,7 +284,10 @@ export async function collectFactoryProblems(
     if (problemId) {
       await q
         .updateTable('issues')
-        .set({ factoryReportId: reportId, ...(classification ?? {}) })
+        .set({
+          factoryReportId: reportId,
+          ...(classification ? classifiedFields(classification, existing) : {}),
+        })
         .where('id', '=', problemId)
         .execute();
     } else {
@@ -295,11 +300,11 @@ export async function collectFactoryProblems(
           featurePointId: null,
           classificationSource: null,
           classificationNote: null,
-          ...(classification ?? {}),
-          type: 'automation',
-          status: 'pending',
           owner: null,
           ownerId: null,
+          ...(classification ? classifiedFields(classification) : {}),
+          type: 'automation',
+          status: 'pending',
           factoryKey: scopedKey,
           factoryReportId: reportId,
           createdAt: now,
@@ -337,7 +342,7 @@ export async function collectFactoryProblems(
       await auditClassification(connection, scopedKey, {
         problemId,
         reportId,
-        ...classification,
+        ...classifiedFields(classification, existing),
       });
   }
 }
@@ -357,7 +362,7 @@ export async function classifyCollectedProblems(
     const scopedKey = problemKey(report, candidate);
     const existing = await connection.query
       .selectFrom('issues')
-      .select('id')
+      .select(['id', 'owner', 'ownerId'])
       .where('factoryKey', '=', scopedKey)
       .where('featurePointId', 'is', null)
       .where('classificationSource', 'is', null)
@@ -366,15 +371,16 @@ export async function classifyCollectedProblems(
       existing &&
       (await applicableClassification(connection, candidate.classification));
     if (!existing || !classification) continue;
+    const fields = classifiedFields(classification, existing);
     await connection.query
       .updateTable('issues')
-      .set(classification)
+      .set(fields)
       .where('id', '=', Number(existing.id))
       .execute();
     await auditClassification(connection, scopedKey, {
       problemId: Number(existing.id),
       reportId,
-      ...classification,
+      ...fields,
     });
   }
 }
@@ -404,30 +410,51 @@ async function auditClassification(
     .execute();
 }
 
+interface ApplicableClassification {
+  featurePointId: number | null;
+  classificationSource: ProblemClassification['method'];
+  classificationNote: string;
+  /** The feature point's owner, inherited by a problem that has none. */
+  inheritedOwner: { owner: unknown; ownerId: unknown } | null;
+}
+
 /** A feature point the factory named must still exist as a feature; otherwise stay unclassified. */
 async function applicableClassification(
   connection: DatabaseConnection,
   classification: ProblemClassification | undefined,
-): Promise<{
-  featurePointId: number | null;
-  classificationSource: ProblemClassification['method'];
-  classificationNote: string;
-} | null> {
+): Promise<ApplicableClassification | null> {
   if (!classification) return null;
   const { featurePointId, method, reason } = classification;
-  if (
-    featurePointId !== null &&
-    !(await connection.query
-      .selectFrom('featurePoints')
-      .select('id')
-      .where('id', '=', featurePointId)
-      .where('level', '=', 'feature')
-      .executeTakeFirst())
-  )
-    return null;
+  const point =
+    featurePointId === null
+      ? null
+      : await connection.query
+          .selectFrom('featurePoints')
+          .select(['owner', 'ownerId'])
+          .where('id', '=', featurePointId)
+          .where('level', '=', 'feature')
+          .executeTakeFirst();
+  if (featurePointId !== null && !point) return null;
   return {
     featurePointId,
     classificationSource: method,
     classificationNote: reason,
+    inheritedOwner:
+      point && (point.owner || point.ownerId)
+        ? { owner: point.owner ?? null, ownerId: point.ownerId ?? null }
+        : null,
+  };
+}
+
+/** Columns to write; an existing owner, set by anyone, is never replaced. */
+function classifiedFields(
+  { inheritedOwner, ...classification }: ApplicableClassification,
+  problem?: { owner?: unknown; ownerId?: unknown },
+) {
+  return {
+    ...classification,
+    ...(inheritedOwner && !problem?.owner && !problem?.ownerId
+      ? inheritedOwner
+      : {}),
   };
 }

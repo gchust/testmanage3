@@ -347,6 +347,7 @@ const zhCN: AppResource = {
     allDimensions: '全部大维度',
     onlyMine: '只看我的',
     ownerNone: '未指定',
+    ownerUnlinked: '{{name}}（未关联账号）',
     allStatuses: '全部状态',
     createFeature: '新建功能点',
     columnFeature: '功能点',

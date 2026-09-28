@@ -36,6 +36,12 @@ interface ProblemFormData {
   readonly members: ProblemMember[];
 }
 
+/**
+ * Picker value for an owner stored as a name with no account (a feature point's
+ * owner is often only a name). Saving leaves that owner as it is.
+ */
+const UNLINKED_OWNER = '__unlinked-owner__';
+
 interface FormValues {
   title: string;
   description: string;
@@ -137,7 +143,7 @@ function ProblemFormFields({
         ownerId:
           initial.ownerId ??
           members.find((member) => member.name === initial.owner)?.id ??
-          '',
+          (initial.owner ? UNLINKED_OWNER : ''),
       };
     }
 
@@ -182,7 +188,12 @@ function ProblemFormFields({
           values.featurePointId === '' ? null : Number(values.featurePointId),
         type: values.type,
         status: values.status,
-        ownerId: values.ownerId.trim() === '' ? null : values.ownerId.trim(),
+        ...(values.ownerId === UNLINKED_OWNER
+          ? {}
+          : {
+              ownerId:
+                values.ownerId.trim() === '' ? null : values.ownerId.trim(),
+            }),
       };
       if (problemId === undefined) {
         await createProblem(api, payload);
@@ -291,6 +302,18 @@ function ProblemFormFields({
           <FormSelect
             options={[
               { value: '', label: t('testProgress.ownerNone') },
+              ...(initial?.owner &&
+              !initial.ownerId &&
+              !members.some((member) => member.name === initial.owner)
+                ? [
+                    {
+                      value: UNLINKED_OWNER,
+                      label: t('testProgress.ownerUnlinked', {
+                        name: initial.owner,
+                      }),
+                    },
+                  ]
+                : []),
               ...members.map((member) => ({
                 value: member.id,
                 label: member.name,

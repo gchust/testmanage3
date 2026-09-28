@@ -1338,7 +1338,9 @@ class DefaultTestProgressService implements TestProgressService {
 
     if (featurePointId !== null) await this.requireFeaturePoint(featurePointId);
     const now = new Date();
-    const owner = await this.resolveOwnerFields(input);
+    let owner = await this.resolveOwnerFields(input);
+    if (featurePointId !== null && !owner.owner && !owner.ownerId)
+      owner = (await this.featurePointOwner(featurePointId)) ?? owner;
     const result = await this.database
       .query()
       .insertInto('issues')
@@ -1381,7 +1383,7 @@ class DefaultTestProgressService implements TestProgressService {
     const existing = await this.database
       .query()
       .selectFrom('issues')
-      .select(['id', 'status', 'featurePointId'])
+      .select(['id', 'status', 'featurePointId', 'owner', 'ownerId'])
       .where('id', '=', id)
       .executeTakeFirst();
 
@@ -1411,6 +1413,17 @@ class DefaultTestProgressService implements TestProgressService {
       if (patch.featurePointId !== previous) {
         set.classificationSource = 'manual';
         set.classificationNote = null;
+        // Filing an ownerless problem under a feature point hands it to that
+        // point's owner; a problem that already has one keeps it.
+        const owner =
+          'ownerId' in set
+            ? set
+            : { owner: existing.owner, ownerId: existing.ownerId };
+        const inherited =
+          patch.featurePointId !== null && !owner.owner && !owner.ownerId
+            ? await this.featurePointOwner(patch.featurePointId)
+            : null;
+        if (inherited) Object.assign(set, inherited);
       }
     }
 
@@ -1898,6 +1911,21 @@ class DefaultTestProgressService implements TestProgressService {
    * resolves to an account when the display name is unique, and stays text
    * otherwise so an environment without accounts keeps working.
    */
+  /** The owner a problem inherits when it is filed under this feature point. */
+  private async featurePointOwner(
+    id: number,
+  ): Promise<{ owner: string | null; ownerId: string | null } | null> {
+    const row = await this.database
+      .query()
+      .selectFrom('featurePoints')
+      .select(['owner', 'ownerId'])
+      .where('id', '=', id)
+      .executeTakeFirst();
+    const owner = asOptionalText(row?.owner);
+    const ownerId = asOptionalText(row?.ownerId);
+    return owner || ownerId ? { owner, ownerId } : null;
+  }
+
   private async resolveOwnerFields(input: {
     readonly ownerId?: string | null;
     readonly owner?: string | null;

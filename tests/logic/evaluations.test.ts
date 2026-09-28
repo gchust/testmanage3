@@ -188,6 +188,8 @@ async function setup() {
     c.string('level');
     c.string('name');
     c.integer('parentId');
+    c.string('owner');
+    c.string('ownerId');
     c.integer('designScore');
   });
   await issuesMigration.up(context);
@@ -856,6 +858,7 @@ describe('factory problem classification', () => {
           level: 'feature',
           name: 'Database',
           parentId: 2,
+          owner: '陈霖',
           designScore: null,
         },
       ])
@@ -1038,6 +1041,44 @@ describe('factory problem classification', () => {
     expect(rows.map((row) => row.factoryReportId)).not.toContain(
       next.receipt.receiptId,
     );
+  });
+
+  it("hands automatically classified problems to the feature point's owner without replacing one", async () => {
+    const { save, db } = await setup();
+    await tree(db);
+    const d = report();
+    const rule = {
+      featurePointId: 3,
+      method: 'rule' as const,
+      reason: 'pkg:@nocobase/db → Building/Database',
+    };
+    const none = {
+      featurePointId: null,
+      method: 'model' as const,
+      reason: 'No feature fits.',
+    };
+    await save(d, classified(d, rule, none, undefined));
+    const tracker = createTestProgressService(db);
+    const owners = async () =>
+      (await tracker.listProblems({ type: 'automation' })).map(
+        ({ owner, ownerId }) => ({ owner, ownerId }),
+      );
+    expect(await owners()).toEqual([
+      { owner: '陈霖', ownerId: null },
+      { owner: null, ownerId: null },
+      { owner: null, ownerId: null },
+    ]);
+    // A problem someone already owns keeps its owner when a replay classifies it.
+    const [, , third] = await tracker.listProblems({ type: 'automation' });
+    await db
+      .query()
+      .updateTable('issues')
+      .set({ owner: '龚诚' })
+      .where('id', '=', third.id)
+      .execute();
+    await save(d, classified(d, rule, none, rule));
+    expect((await tracker.getProblem(third.id)).owner).toBe('龚诚');
+    expect((await tracker.getProblem(third.id)).featurePointId).toBe(3);
   });
 
   it('accepts a different classification on retry and rejects malformed ones', async () => {
