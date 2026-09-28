@@ -247,9 +247,7 @@ function CopyForAgentButton({
       `- ${t('testProgress.fieldOwner')}: ${problem.owner ?? '—'}`,
       '',
       `## ${t('testProgress.fieldProblemDescription')}`,
-      description.trim() === ''
-        ? t('testProgress.noNote')
-        : resolvedDescription,
+      description.trim() === '' ? t('testProgress.noNote') : resolvedDescription,
     ];
 
     if (images.length > 0) {

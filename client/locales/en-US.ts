@@ -526,7 +526,8 @@ const enUS = {
     hint: {
       skills:
         '"Available" needs all three:\n1. Findable: retrievable, with the path recorded;\n2. Workable: main-flow steps, commands or APIs are given;\n3. Verifiable: at least one check or expected result.\nOtherwise use "Missing" and record the gaps as missing items. Boundaries and writing quality are scored separately.',
-      docs: 'Both sources are required:\n1. Plugin source docs (README, docs);\n2. Website docs (code/docs).\nEach must be findable, cover the main flow and be verifiable; record whichever is absent as a missing item.',
+      docs:
+        'Both sources are required:\n1. Plugin source docs (README, docs);\n2. Website docs (code/docs).\nEach must be findable, cover the main flow and be verifiable; record whichever is absent as a missing item.',
       scores:
         'Scores run 0–10, higher is better. Bands: >=8 green, 7–8 blue, 6–7 amber, <6 red; an unrated score shows "—".\nEach score follows the score-rubric (design, development completeness, Agent friendliness, output quality) and must cite its evidence.',
       designScore:
