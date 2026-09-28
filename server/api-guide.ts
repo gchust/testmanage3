@@ -61,7 +61,8 @@ curl -s -H 'x-api-key: <key>' '${api}/test-progress/problems?open=true'
 ## 2. 总览
 
 \`GET ${api}/test-progress/summary\`
-返回大维度/功能点数量、状态分布、准入单元格分布、未关闭问题数、各维度进展。
+返回大维度/功能点数量、状态分布、准入单元格分布、未关闭问题数、各维度进展、各负责人问题数。
+\`uncategorized\` 是待归类问题（没有功能点）的 \`{ open, total }\`：它们计入总数，但不属于任何维度。
 
 ## 3. 功能点（大维度与功能点）
 
@@ -106,8 +107,9 @@ PATCH ${api}/test-progress/feature-points/28
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| GET | \`/test-progress/problems\` | 问题列表，支持 \`featurePointId\`、\`type\`、\`status\`、\`open=true\`（未关闭） |
+| GET | \`/test-progress/problems\` | 问题列表，支持 \`featurePointId\`（\`none\` 为待归类）、\`type\`、\`status\`、\`open=true\`（未关闭）、\`ownerId\`、\`owner\` |
 | GET | \`/test-progress/problems/:id\` | 单个问题 |
+| GET | \`/test-progress/problems/:id/report\` | 下载工厂问题的报告文件：\`?path=evaluation.json\`；旧的归档报告还有 \`bundle.zip\`（默认）、\`report.html\` |
 | POST | \`/test-progress/problems\` | 新建问题（会写入时间线「创建」） |
 | PATCH | \`/test-progress/problems/:id\` | 局部更新（改 \`status\` 会写入时间线） |
 | DELETE | \`/test-progress/problems/:id\` | 删除问题（连同评论与时间线） |
@@ -116,7 +118,11 @@ PATCH ${api}/test-progress/feature-points/28
 - \`status\`：\`pending\` 待确认 | \`fixing\` 修复中 | \`regression\` 待回归 | \`verified\` 已关闭 | \`cancelled\` 已取消
 - \`verified\` 与 \`cancelled\` 都算已关闭：不再计入准入单元格的「缺失 N」
 - 准入单元格由问题派生：该类型有 N 个未关闭问题，就显示「缺失 N」
-- \`description\` 支持 Markdown（表格、图片、代码）
+- \`featurePointId\`：新建时必填；工厂推送、尚未归类的问题为 \`null\`（待归类），编辑时可以不改，但不能把已归类的问题改回 \`null\`
+- 负责人：\`ownerId\`（账号 id，优先）或 \`owner\`（账号姓名，名称唯一时自动解析为账号）；清空传 \`ownerId: null\`
+- **不传负责人时继承功能点负责人**：新建时、以及把没有负责人的问题改到另一个功能点时，都会取该功能点的负责人（只有姓名时同样按唯一姓名关联账号）；要保持无人负责，显式传 \`ownerId: null\`；已有负责人的问题不会被替换
+- \`description\` 支持 Markdown（表格、图片、代码），最长 100000 字符
+- 工厂推送的问题带只读字段 \`factorySource\`（任务、Issue、PR、运行与报告链接）；\`classification\` 是工厂自动归类的来源（\`rule\` / \`model\`）和理由，人工改功能点后为 \`null\`
 
 示例：新建一个问题
 

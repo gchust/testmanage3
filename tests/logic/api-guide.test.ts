@@ -31,5 +31,9 @@ describe('api guide route', () => {
     expect(text).toContain('x-api-key');
     expect(text).toContain('cancelled');
     expect(text).toContain('写入前先 GET 当前值');
+    // Contract details a script relies on when creating and filtering problems.
+    expect(text).toContain('不传负责人时继承功能点负责人');
+    expect(text).toContain('`none` 为待归类');
+    expect(text).toContain('/test-progress/problems/:id/report');
   });
 });
