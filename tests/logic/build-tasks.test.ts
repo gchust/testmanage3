@@ -557,6 +557,34 @@ describe('build tasks', () => {
       '### 目标分支\n\napps/renamed',
     );
   });
+  it('changes only the fields an edit names', async () => {
+    const { service } = await setup();
+    const task = await service.save(
+      null,
+      {
+        ...input,
+        acceptanceCriteria: 'Report downloads',
+        taskType: 'fix',
+        sampleData: false,
+        buildReview: 'off',
+      },
+      actor,
+    );
+    expect(
+      await service.save(String(task.id), { title: 'Renamed' }, actor),
+    ).toMatchObject({
+      title: 'Renamed',
+      requirements: input.requirements,
+      acceptanceCriteria: 'Report downloads',
+      taskType: 'fix',
+      sampleData: false,
+      buildReview: 'off',
+      targetBranch: task.targetBranch,
+    });
+    await expect(
+      service.save(String(task.id), { title: '' }, actor),
+    ).rejects.toThrow();
+  });
   it('treats user Markdown headings as content instead of control fields', () => {
     const body = issueBody(
       {

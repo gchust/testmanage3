@@ -5,6 +5,7 @@ import {
   BuildTaskError,
   issueBody,
   taskInput,
+  taskPatch,
   type Actor,
   type TaskSnapshot,
 } from './model.js';
@@ -208,15 +209,16 @@ export class BuildTasksService {
     return updated.updatedCount > 0;
   }
   async save(id: string | null, input: unknown, actor: Actor) {
-    const values = taskInput.parse(input);
     if (id) {
+      const values = taskPatch.parse(input);
       const task = await this.repo('buildTasks').findOne({ filter: { id } });
       if (!task) return notFound();
       const active = await this.repo('buildTaskRuns').findOne({
         filter: { activeTaskId: id },
       });
       if (active) throw new BuildTaskError('ACTIVE_RUN', 'ACTIVE_RUN');
-      // Blank keeps the current branch: the dedicated one was assigned on create.
+      // Blank or omitted keeps the current branch: the dedicated one was
+      // assigned on create.
       const targetBranch = values.targetBranch || scalar(task.targetBranch);
       if (task.issueNumber && targetBranch !== task.targetBranch)
         throw new BuildTaskError('CONFLICT', 'TARGET_BRANCH_LOCKED');
@@ -229,6 +231,7 @@ export class BuildTasksService {
         ).record,
       );
     }
+    const values = taskInput.parse(input);
     const taskId = randomUUID();
     return dated(
       (

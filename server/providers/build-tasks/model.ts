@@ -1,35 +1,50 @@
 import { z } from 'zod';
 
+const TASK_TYPES = ['create', 'improve', 'fix'] as const;
+const BUILD_REVIEWS = ['auto', 'off', 'full'] as const;
+
+/** A branch name git accepts, or blank for the task's own branch. */
+function isTargetBranch(s: string): boolean {
+  return (
+    !s ||
+    (/^[A-Za-z0-9_][A-Za-z0-9._/-]*$/.test(s) &&
+      s !== 'HEAD' &&
+      !s.includes('..') &&
+      s
+        .split('/')
+        .every(
+          (p) =>
+            p && !p.startsWith('.') && !p.endsWith('.') && !p.endsWith('.lock'),
+        ))
+  );
+}
+
 export const taskInput = z
   .object({
     title: z.string().trim().min(1).max(200),
     requirements: z.string().trim().min(1).max(24000),
     acceptanceCriteria: z.string().trim().max(12000).default(''),
-    taskType: z.enum(['create', 'improve', 'fix']).default('create'),
-    targetBranch: z
-      .string()
-      .trim()
-      .max(120)
-      .default('')
-      .refine(
-        (s) =>
-          !s ||
-          (/^[A-Za-z0-9_][A-Za-z0-9._/-]*$/.test(s) &&
-            s !== 'HEAD' &&
-            !s.includes('..') &&
-            s
-              .split('/')
-              .every(
-                (p) =>
-                  p &&
-                  !p.startsWith('.') &&
-                  !p.endsWith('.') &&
-                  !p.endsWith('.lock'),
-              )),
-      ),
+    taskType: z.enum(TASK_TYPES).default('create'),
+    targetBranch: z.string().trim().max(120).default('').refine(isTargetBranch),
     sampleData: z.boolean().default(true),
-    buildReview: z.enum(['auto', 'off', 'full']).default('auto'),
+    buildReview: z.enum(BUILD_REVIEWS).default('auto'),
   })
+  .strict();
+/**
+ * An edit names only the fields it changes. Unlike `taskInput` it applies no
+ * defaults, so a field the edit leaves out keeps its stored value.
+ */
+export const taskPatch = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    requirements: z.string().trim().min(1).max(24000),
+    acceptanceCriteria: z.string().trim().max(12000),
+    taskType: z.enum(TASK_TYPES),
+    targetBranch: z.string().trim().max(120).refine(isTargetBranch),
+    sampleData: z.boolean(),
+    buildReview: z.enum(BUILD_REVIEWS),
+  })
+  .partial()
   .strict();
 export type TaskInput = z.infer<typeof taskInput>;
 export interface Actor {
