@@ -414,6 +414,22 @@ describe('build tasks', () => {
       active: true,
     });
   });
+  it('replays stored reports but does not ask GitHub once builds are disabled', async () => {
+    const { service, github } = await setup();
+    const task = await service.save(null, input, actor),
+      id = String(task.id);
+    const run = await service.trigger(id, randomUUID(), actor);
+    github.configured = false;
+    expect(await service.refresh(id, String(run?.id))).toMatchObject({
+      status: 'queued',
+      active: true,
+    });
+    expect(github.run).not.toHaveBeenCalled();
+    expect(await service.release(id, String(run?.id), actor)).toMatchObject({
+      status: 'abandoned',
+      active: false,
+    });
+  });
   it('keeps a release made while GitHub is being called', async () => {
     const { service, github } = await setup();
     const task = await service.save(null, input, actor),

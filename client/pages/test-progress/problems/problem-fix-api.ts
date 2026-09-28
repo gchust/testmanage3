@@ -35,6 +35,8 @@ export interface FixRun {
   workflowRunId: string | null;
   workflowRunUrl: string | null;
   error: string | null;
+  /** Set when staff released a run that held the problem. */
+  released: { byName: string; at: string } | null;
   result: null | {
     verdict: FixVerdict;
     summary: string;
@@ -72,6 +74,18 @@ export async function triggerFix(
       path: `problem-fixes/problems/${problemId}/runs`,
       method: 'POST',
       headers: { 'Idempotency-Key': key },
+    })
+  ).data;
+}
+export async function releaseFixRun(
+  api: ApiClient,
+  problemId: number,
+  runId: string,
+) {
+  return (
+    await api.request<{ data: FixRun }>({
+      path: `problem-fixes/problems/${problemId}/runs/${runId}/release`,
+      method: 'POST',
     })
   ).data;
 }

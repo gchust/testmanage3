@@ -446,7 +446,13 @@ export class BuildTasksService {
       });
       if (!run) return notFound();
     }
-    if (!run.activeTaskId || !run.dispatchRequestedAt) return this.runView(run);
+    // Stored reports are replayed above; GitHub is asked only while configured.
+    if (
+      !run.activeTaskId ||
+      !run.dispatchRequestedAt ||
+      !this.github.configured
+    )
+      return this.runView(run);
     const remote = run.workflowRunId
       ? await this.github.run(scalar(run.workflowRunId))
       : await this.github.findRun(runId, instant(run.dispatchRequestedAt));

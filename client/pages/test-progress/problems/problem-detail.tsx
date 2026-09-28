@@ -58,9 +58,9 @@ export default function ProblemDetailPage(): ReactElement {
   const settle = useCallback(() => {
     void fetchProblem(api, id)
       .then((next) => mutate(() => next))
-      .catch(() => {});
+      .catch(() => toast.error(t('problemFixes.settleError')));
     setRevision((value) => value + 1);
-  }, [api, id, mutate]);
+  }, [api, id, mutate, t]);
 
   const notFound =
     !validId ||

@@ -60,14 +60,16 @@ export default function BuildTasksPage() {
             </>
           }
         />
-        {resource.data && !resource.data.configured && (
-          <p
-            role='status'
-            className='rounded-lg border border-border bg-muted p-4 text-sm'
-          >
-            {t('buildTasks.notConfigured')}
-          </p>
-        )}
+        {resource.data &&
+          !resource.data.configured &&
+          resource.data.tasks.length > 0 && (
+            <p
+              role='status'
+              className='rounded-lg border border-border bg-muted p-4 text-sm'
+            >
+              {t('buildTasks.notConfigured')}
+            </p>
+          )}
         <Input
           aria-label={t('buildTasks.search')}
           placeholder={t('buildTasks.search')}
@@ -82,7 +84,16 @@ export default function BuildTasksPage() {
             onRetry={resource.reload}
           />
         ) : !tasks?.length ? (
-          <EmptyPanel message={t('buildTasks.empty')} />
+          <EmptyPanel
+            message={t(
+              // The menu cannot be hidden by configuration, so say why nothing runs.
+              resource.data &&
+                !resource.data.configured &&
+                !resource.data.tasks.length
+                ? 'buildTasks.notEnabled'
+                : 'buildTasks.empty',
+            )}
+          />
         ) : (
           <Card>
             <CardContent className='overflow-x-auto p-0'>

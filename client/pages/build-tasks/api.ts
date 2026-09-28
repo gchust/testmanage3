@@ -31,6 +31,8 @@ export interface BuildRun {
   createdAt: string;
   requestedByName: string;
   error: string | null;
+  /** Set when staff released a run that held the task. */
+  released?: { byName: string; at: string } | null;
   result: null | {
     execution: string;
     acceptance: string;
@@ -92,6 +94,14 @@ export async function triggerTask(api: ApiClient, id: string, key: string) {
       path: `build-tasks/${id}/runs`,
       method: 'POST',
       headers: { 'Idempotency-Key': key },
+    })
+  ).data;
+}
+export async function releaseRun(api: ApiClient, id: string, runId: string) {
+  return (
+    await api.request<{ data: BuildRun }>({
+      path: `build-tasks/${id}/runs/${runId}/release`,
+      method: 'POST',
     })
   ).data;
 }

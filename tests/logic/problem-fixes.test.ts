@@ -392,6 +392,20 @@ describe('problem fix runs', () => {
       service.trigger(problemId, randomUUID(), actor),
     ).rejects.toMatchObject({ code: 'ACTIVE_RUN' });
   });
+  it('does not ask GitHub to refresh a run once fixes are disabled', async () => {
+    const { service, github, problemId } = await setup();
+    github.dispatch.mockRejectedValueOnce(new Error('Timeout'));
+    const run = await service.trigger(problemId, randomUUID(), actor);
+    github.configured = false;
+    expect(await service.refresh(problemId, String(run?.id))).toMatchObject({
+      status: 'dispatch_unknown',
+      active: true,
+    });
+    expect(github.findRun).not.toHaveBeenCalled();
+    expect(
+      await service.release(problemId, String(run?.id), actor),
+    ).toMatchObject({ status: 'abandoned', active: false });
+  });
   it('keeps a release made while GitHub is being called', async () => {
     const { service, github, problemId } = await setup();
     github.dispatch.mockImplementationOnce(async (_problemId, runId) => {

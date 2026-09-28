@@ -2,10 +2,16 @@ import { useApiClient } from '@nocobase/app-client';
 import { useCan } from '@nocobase/app-plugin-authorization/client';
 import { useTranslation } from '@nocobase/i18n/client';
 import { Bot, RefreshCw } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+} from 'react';
 import { toast } from 'sonner';
 
-import { Loading } from '@/components/loading';
+import { ReleaseRunButton } from '@/components/release-run-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +28,7 @@ import { useAsyncResource } from '../use-async-resource.js';
 import {
   listFixRuns,
   refreshFixRun,
+  releaseFixRun,
   triggerFix,
   type FixRun,
 } from './problem-fix-api.js';
@@ -33,6 +40,8 @@ const useFixPermission = (action: 'read' | 'run') =>
  * Sends the problem to the factory's Claude Code workflow and shows its runs.
  * The result arrives as a problem comment (and a status change when a PR is
  * opened), so `onSettled` lets the page reload those when a run finishes.
+ * Where fixes are not enabled the section appears only for problems that have
+ * earlier runs, and then without the send button.
  */
 export function ProblemFixSection({
   problemId,
@@ -52,17 +61,29 @@ function ProblemFixCard({
 }: {
   readonly problemId: number;
   readonly onSettled: () => void;
-}): ReactElement {
+}): ReactElement | null {
   const { t } = useTranslation();
   const api = useApiClient();
   const run = useFixPermission('run');
   const resource = useAsyncResource(`problem-fixes|${problemId}`, (signal) =>
     listFixRuns(api, problemId, signal),
   );
-  const { data, mutate } = resource;
+  const { data, mutate, reload } = resource;
   const activeId = data?.runs.find((r) => r.active)?.id ?? null;
   const [refreshing, setRefreshing] = useState(false);
+  // Set while background polling fails; the next successful poll clears it.
+  const [stale, setStale] = useState(false);
   const previousActiveRef = useRef<string | null>(null);
+  // Refetches in place: reload() would clear the list and hide the section.
+  const sync = useCallback(async () => {
+    try {
+      const next = await listFixRuns(api, problemId);
+      mutate(() => next);
+      setStale(false);
+    } catch {
+      reload();
+    }
+  }, [api, mutate, problemId, reload]);
 
   useEffect(() => {
     if (data === undefined) return;
@@ -81,8 +102,11 @@ function ProblemFixCard({
         : Promise.resolve();
       void request
         .then(() => listFixRuns(api, problemId))
-        .then((next) => mutate(() => next))
-        .catch(() => {})
+        .then((next) => {
+          mutate(() => next);
+          setStale(false);
+        })
+        .catch(() => setStale(true))
         .finally(() => {
           inFlight = false;
         });
@@ -95,13 +119,18 @@ function ProblemFixCard({
     try {
       if (activeId !== null && run.can)
         await refreshFixRun(api, problemId, activeId);
-      resource.reload();
+      await sync();
     } catch {
       toast.error(t('problemFixes.refreshError'));
     } finally {
       setRefreshing(false);
     }
   }
+
+  // Nothing is shown until the first answer says whether the section belongs.
+  if (data === undefined && resource.error === undefined) return null;
+  if (data !== undefined && !data.configured && data.runs.length === 0)
+    return null;
 
   return (
     <Card>
@@ -125,18 +154,17 @@ function ProblemFixCard({
               {t('problemFixes.refresh')}
             </Button>
           ) : null}
-          {data !== undefined ? (
+          {data?.configured ? (
             <FixRunButton
               active={activeId !== null}
               configured={data.configured}
               problemId={problemId}
-              onRun={resource.reload}
+              onRun={() => void sync()}
             />
           ) : null}
         </div>
       </CardHeader>
       <CardContent className='space-y-4'>
-        {resource.loading ? <Loading /> : null}
         {resource.error !== undefined ? (
           <ErrorPanel
             message={t('problemFixes.loadError')}
@@ -146,10 +174,7 @@ function ProblemFixCard({
         {data !== undefined ? (
           <>
             {!data.configured ? (
-              <p
-                className='rounded-lg border border-border bg-muted p-4 text-sm'
-                role='status'
-              >
+              <p className='text-sm text-muted-foreground' role='status'>
                 {t('problemFixes.notConfigured')}
               </p>
             ) : activeId !== null ? (
@@ -157,12 +182,22 @@ function ProblemFixCard({
                 {t('problemFixes.activeHint')}
               </p>
             ) : null}
+            {stale ? (
+              <p className='text-sm text-destructive' role='status'>
+                {t('problemFixes.stale')}
+              </p>
+            ) : null}
             {data.runs.length === 0 ? (
               <EmptyPanel message={t('problemFixes.noRuns')} />
             ) : (
               <ul className='space-y-3'>
                 {data.runs.map((r) => (
-                  <FixRunItem key={r.id} run={r} />
+                  <FixRunItem
+                    key={r.id}
+                    canRelease={run.can}
+                    run={r}
+                    onReleased={sync}
+                  />
                 ))}
               </ul>
             )}
@@ -173,8 +208,17 @@ function ProblemFixCard({
   );
 }
 
-function FixRunItem({ run }: { readonly run: FixRun }): ReactElement {
+function FixRunItem({
+  run,
+  canRelease,
+  onReleased,
+}: {
+  readonly run: FixRun;
+  readonly canRelease: boolean;
+  readonly onReleased: () => Promise<void>;
+}): ReactElement {
   const { t } = useTranslation();
+  const api = useApiClient();
   return (
     <li className='space-y-2 rounded-lg border border-border p-4'>
       <div className='flex flex-wrap items-center gap-3'>
@@ -203,8 +247,34 @@ function FixRunItem({ run }: { readonly run: FixRun }): ReactElement {
             ? t('problemFixes.fromGitHub')
             : run.requestedByName}
         </span>
+        {run.active && canRelease ? (
+          <ReleaseRunButton
+            labels={{
+              trigger: t('problemFixes.release'),
+              title: t('problemFixes.releaseTitle'),
+              description: t('problemFixes.releaseDescription'),
+              confirm: t('problemFixes.releaseSubmit'),
+              busy: t('problemFixes.releasing'),
+              cancel: t('problemFixes.cancel'),
+              success: t('problemFixes.released'),
+              error: t('problemFixes.releaseError'),
+            }}
+            onRelease={async () => {
+              await releaseFixRun(api, run.problemId, run.id);
+              await onReleased();
+            }}
+          />
+        ) : null}
       </div>
-      {run.error ? (
+      {run.released ? (
+        <p className='text-sm text-muted-foreground'>
+          {t('problemFixes.releasedBy', {
+            name: run.released.byName,
+            time: new Date(run.released.at).toLocaleString(),
+          })}
+        </p>
+      ) : null}
+      {run.error && run.status !== 'abandoned' ? (
         <p className='text-sm text-destructive' role='alert'>
           {t(
             run.status === 'dispatch_unknown'

@@ -14,11 +14,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { ReleaseRunButton } from '@/components/release-run-button';
 import { MarkdownContent } from '../test-progress/markdown.js';
 import { EmptyPanel, ErrorPanel } from '../test-progress/shared.js';
 import { useAsyncResource } from '../test-progress/use-async-resource.js';
 import { useRefetchOnReturn } from '../test-progress/use-refetch-on-return.js';
-import { commentTask, getTask, refreshRun, type TaskDetail } from './api.js';
+import {
+  commentTask,
+  getTask,
+  refreshRun,
+  releaseRun,
+  type TaskDetail,
+} from './api.js';
 import { RunButton, SafeLink, TaskStatus } from './shared.js';
 
 export default function TaskDetailPage() {
@@ -72,7 +79,9 @@ function TaskContent({
     run = useTaskPermission('run');
   const [content, setContent] = useState(''),
     [busy, setBusy] = useState(false),
-    [refreshing, setRefreshing] = useState(false);
+    [refreshing, setRefreshing] = useState(false),
+    // Set while background polling fails; the next successful poll clears it.
+    [stale, setStale] = useState(false);
   const [snapshot, setSnapshot] = useState<Record<string, unknown> | null>(
     null,
   );
@@ -88,8 +97,11 @@ function TaskContent({
         : Promise.resolve();
       void request
         .then(() => getTask(api, data.task.id))
-        .then((next) => mutate(() => next))
-        .catch(() => {})
+        .then((next) => {
+          mutate(() => next);
+          setStale(false);
+        })
+        .catch(() => setStale(true))
         .finally(() => {
           inFlight = false;
         });
@@ -259,6 +271,11 @@ function TaskContent({
           </Button>
         </CardHeader>
         <CardContent className='space-y-5'>
+          {stale && (
+            <p role='status' className='text-sm text-destructive'>
+              {t('buildTasks.stale')}
+            </p>
+          )}
           {!data.runs.length && <EmptyPanel message={t('buildTasks.noRuns')} />}
           {data.runs.map((r) => (
             <article
@@ -271,8 +288,34 @@ function TaskContent({
                   {new Date(r.createdAt).toLocaleString()}
                 </time>
                 <span className='text-sm'>{r.requestedByName}</span>
+                {r.active && run.can && (
+                  <ReleaseRunButton
+                    labels={{
+                      trigger: t('buildTasks.release'),
+                      title: t('buildTasks.releaseTitle'),
+                      description: t('buildTasks.releaseDescription'),
+                      confirm: t('buildTasks.releaseSubmit'),
+                      busy: t('buildTasks.releasing'),
+                      cancel: t('buildTasks.cancel'),
+                      success: t('buildTasks.released'),
+                      error: t('buildTasks.releaseError'),
+                    }}
+                    onRelease={async () => {
+                      await releaseRun(api, data.task.id, r.id);
+                      reload();
+                    }}
+                  />
+                )}
               </div>
-              {r.error && (
+              {r.released && (
+                <p className='text-sm text-muted-foreground'>
+                  {t('buildTasks.releasedBy', {
+                    name: r.released.byName,
+                    time: new Date(r.released.at).toLocaleString(),
+                  })}
+                </p>
+              )}
+              {r.error && r.status !== 'abandoned' && (
                 <p role='alert' className='text-sm text-destructive'>
                   {t(
                     r.status === 'dispatch_unknown'

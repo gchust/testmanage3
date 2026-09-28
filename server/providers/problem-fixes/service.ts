@@ -396,7 +396,9 @@ export class ProblemFixesService {
     });
     if (!run) return notFound();
     // A stored result is final; so is a run whose lock is already released.
-    if (run.result || run.activeProblemId == null) return this.runView(run);
+    // Without the integration there is nothing to ask GitHub; release instead.
+    if (run.result || run.activeProblemId == null || !this.github.configured)
+      return this.runView(run);
     const remote = run.workflowRunId
       ? await this.github.run(scalar(run.workflowRunId))
       : run.dispatchRequestedAt

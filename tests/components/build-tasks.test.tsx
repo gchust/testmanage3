@@ -183,6 +183,116 @@ describe('build task UI', () => {
       ),
     ).toBe(false);
   });
+  it('releases an active run only after confirmation and shows who released it', async () => {
+    const stuck = {
+      id: 'r1',
+      issueNumber: 146,
+      status: 'awaiting_result',
+      active: true,
+      createdAt: task.updatedAt,
+      requestedByName: 'Cheng',
+      error: null,
+      released: null,
+      result: null,
+    };
+    let released = false;
+    mocks.api.request.mockImplementation(
+      async (request: { path: string; method?: string }) => {
+        if (request.path.endsWith('/release')) {
+          released = true;
+          return { data: { ...stuck, status: 'abandoned', active: false } };
+        }
+        return {
+          data: {
+            ...detail,
+            runs: [
+              released
+                ? {
+                    ...stuck,
+                    status: 'abandoned',
+                    active: false,
+                    error: 'RELEASED',
+                    released: { byName: 'Lead', at: '2026-09-28T02:00:00Z' },
+                  }
+                : stuck,
+            ],
+          },
+        };
+      },
+    );
+    await mount(
+      <Routes>
+        <Route path='/build-tasks/:taskId' element={<TaskDetailPage />} />
+      </Routes>,
+      '/build-tasks/t1',
+    );
+    fireEvent.click(await screen.findByRole('button', { name: '释放' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/报告一直没有回传/)).toBeInTheDocument();
+    expect(released).toBe(false);
+    fireEvent.click(within(dialog).getByRole('button', { name: '释放运行' }));
+    await waitFor(() =>
+      expect(mocks.api.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: 'build-tasks/t1/runs/r1/release',
+          method: 'POST',
+        }),
+      ),
+    );
+    expect(await screen.findByText(/^Lead 于 .+ 释放$/)).toBeInTheDocument();
+    expect(screen.getAllByText('已释放').length).toBeGreaterThan(0);
+    expect(screen.queryByText('RELEASED')).toBeNull();
+    expect(screen.queryByRole('button', { name: '释放' })).toBeNull();
+  });
+  it('explains that builds are not enabled when there is nothing to run', async () => {
+    mocks.api.request.mockResolvedValue({
+      data: { tasks: [], configured: false, repository: 'owner/factory' },
+    });
+    await mount(<BuildTasksPage />);
+    expect(await screen.findByText(/此部署未启用搭建运行/)).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+  it('marks the run status as stale while polling fails', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const active = {
+        id: 'r1',
+        issueNumber: 146,
+        status: 'running',
+        active: true,
+        createdAt: task.updatedAt,
+        requestedByName: 'Cheng',
+        error: null,
+        result: null,
+      };
+      let failing = true;
+      mocks.api.request.mockImplementation(
+        async (request: { path: string }) => {
+          if (request.path.endsWith('/refresh')) {
+            if (failing) throw new Error('offline');
+            return { data: active };
+          }
+          return { data: { ...detail, runs: [active] } };
+        },
+      );
+      await mount(
+        <Routes>
+          <Route path='/build-tasks/:taskId' element={<TaskDetailPage />} />
+        </Routes>,
+        '/build-tasks/t1',
+      );
+      await screen.findByRole('heading', { name: task.title });
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(await screen.findByText(/正在自动重试/)).toBeInTheDocument();
+      failing = false;
+      await vi.advanceTimersByTimeAsync(20000);
+      await waitFor(() =>
+        expect(screen.queryByText(/正在自动重试/)).toBeNull(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('shows separate acceptance and delivery outcomes and links to the returned report', async () => {
     mocks.api.request.mockResolvedValue({
       data: {

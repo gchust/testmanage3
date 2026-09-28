@@ -1,6 +1,7 @@
 import { I18nRuntime } from '@nocobase/i18n';
 import { I18nProvider } from '@nocobase/i18n/client';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -30,6 +31,7 @@ const finished: FixRun = {
   workflowRunId: '100',
   workflowRunUrl: 'https://github.com/owner/factory/actions/runs/100',
   error: null,
+  released: null,
   result: {
     verdict: 'confirmed',
     summary: '筛选状态在刷新后丢失。',
@@ -160,21 +162,121 @@ describe('Claude Code problem fix section', () => {
       mocks.api.request.mock.calls.filter(([r]) => r.method === 'POST'),
     ).toHaveLength(1);
   });
-  it('disables the button while a run is active or the integration is missing', async () => {
+  it('disables the button while a run is active', async () => {
     mocks.api.request.mockResolvedValue(
       runs([{ ...finished, status: 'running', active: true, result: null }]),
     );
-    const view = await mount();
+    await mount();
     expect(
       await screen.findByRole('button', { name: '正在复核修复' }),
     ).toBeDisabled();
-    view.unmount();
+  });
+  it('shows nothing where fixes are not enabled, and only history once there is some', async () => {
     mocks.api.request.mockResolvedValue(runs([], false));
+    const view = await mount();
+    await waitFor(() => expect(mocks.api.request).toHaveBeenCalled());
+    // Let the answer render before asserting that nothing did.
+    await act(async () => {
+      await mocks.api.request.mock.results[0]?.value;
+    });
+    expect(view.container).toBeEmptyDOMElement();
+    view.unmount();
+    mocks.api.request.mockResolvedValue(runs([finished], false));
     await mount();
+    expect(await screen.findByText('确认存在')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('未启用');
     expect(
-      await screen.findByRole('button', { name: '交给 Claude Code 复核修复' }),
-    ).toBeDisabled();
-    expect(screen.getByRole('status')).toHaveTextContent('管理员');
+      screen.queryByRole('button', { name: '交给 Claude Code 复核修复' }),
+    ).toBeNull();
+  });
+  it('releases a stuck run only after confirmation', async () => {
+    const stuck: FixRun = {
+      ...finished,
+      status: 'dispatch_unknown',
+      active: true,
+      error: 'GITHUB_CONNECTION_ERROR',
+      result: null,
+    };
+    let released = false;
+    mocks.api.request.mockImplementation(
+      async (request: { path: string; method?: string }) => {
+        if (request.path.endsWith('/release')) {
+          released = true;
+          return {
+            data: {
+              ...stuck,
+              status: 'abandoned',
+              active: false,
+              error: 'RELEASED',
+              released: { byName: 'Lead', at: '2026-09-28T02:00:00Z' },
+            },
+          };
+        }
+        return runs([
+          released
+            ? {
+                ...stuck,
+                status: 'abandoned',
+                active: false,
+                error: 'RELEASED',
+                released: { byName: 'Lead', at: '2026-09-28T02:00:00Z' },
+              }
+            : stuck,
+        ]);
+      },
+    );
+    const onSettled = vi.fn();
+    await mount(onSettled);
+    fireEvent.click(await screen.findByRole('button', { name: '释放' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText(/从未启动/)).toBeInTheDocument();
+    expect(released).toBe(false);
+    fireEvent.click(within(dialog).getByRole('button', { name: '释放运行' }));
+    await waitFor(() =>
+      expect(mocks.api.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          path: 'problem-fixes/problems/7/runs/r1/release',
+          method: 'POST',
+        }),
+      ),
+    );
+    expect(await screen.findByText('已释放')).toBeInTheDocument();
+    expect(screen.getByText(/^Lead 于 .+ 释放$/)).toBeInTheDocument();
+    expect(screen.queryByText('RELEASED')).toBeNull();
+    expect(screen.queryByRole('button', { name: '释放' })).toBeNull();
+    await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(1));
+  });
+  it('marks the status as stale while polling fails and clears it once polling recovers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const active = {
+        ...finished,
+        status: 'running',
+        active: true,
+        result: null,
+      };
+      let failing = true;
+      mocks.api.request.mockImplementation(
+        async (request: { path: string }) => {
+          if (request.path.endsWith('/refresh')) {
+            if (failing) throw new Error('offline');
+            return { data: active };
+          }
+          return runs([active]);
+        },
+      );
+      await mount();
+      await screen.findByRole('button', { name: '正在复核修复' });
+      await vi.advanceTimersByTimeAsync(20000);
+      expect(await screen.findByText(/正在自动重试/)).toBeInTheDocument();
+      failing = false;
+      await vi.advanceTimersByTimeAsync(20000);
+      await waitFor(() =>
+        expect(screen.queryByText(/正在自动重试/)).toBeNull(),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('reloads the page data once an active run settles', async () => {
     const active = {

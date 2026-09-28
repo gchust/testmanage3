@@ -40,7 +40,7 @@ const zhCN: AppResource = {
     submitError: '暂时无法确认提交结果，请先刷新运行记录再重试。',
     dispatchFailed: '搭建提交失败，请检查工厂集成配置后重试。',
     dispatchUnknown:
-      'GitHub 可能已接收请求。请刷新状态，确认前不会允许重复启动。',
+      'GitHub 可能已接收请求。请刷新状态，确认或释放前不会允许重复启动。',
     notConfigured: '当前可以编辑任务；运行前需由管理员配置 GitHub 工厂集成。',
     loadError: '无法加载搭建任务，请重试。',
     saveError: '保存失败，请检查必填项、分支规则以及是否存在运行中的任务。',
@@ -83,6 +83,18 @@ const zhCN: AppResource = {
       off: '轻量',
       full: '完整',
     },
+    notEnabled:
+      '此部署未启用搭建运行。现在可以先起草任务，管理员配置 GitHub 工厂集成后即可运行。',
+    stale: '暂时无法刷新运行状态，正在自动重试。',
+    release: '释放',
+    releasing: '释放中…',
+    releaseTitle: '释放这次运行？',
+    releaseDescription:
+      '仅在这次运行不会自行结束时使用，例如 GitHub 从未启动的提交，或报告一直没有回传的 workflow。释放后可以再次编辑和运行任务。这次运行之后若仍回传报告，会记录在它的运行记录里。',
+    releaseSubmit: '释放运行',
+    released: '已释放运行',
+    releaseError: '释放失败，请刷新后重试。',
+    releasedBy: '{{name}} 于 {{time}} 释放',
     status: {
       draft: '未运行',
       dispatching: '正在提交',
@@ -94,6 +106,7 @@ const zhCN: AppResource = {
       cancelled: '已取消',
       dispatch_failed: '提交失败',
       dispatch_unknown: '待确认提交结果',
+      abandoned: '已释放',
     },
     result: {
       running: '运行中',
@@ -133,9 +146,8 @@ const zhCN: AppResource = {
     submitError: '暂时无法确认提交结果，请先刷新运行记录再重试。',
     dispatchFailed: '提交失败，请检查工厂集成配置后重试。',
     dispatchUnknown:
-      'GitHub 可能已经接受了这次请求。请刷新状态；在确认之前不能再次提交。',
-    notConfigured:
-      '需由管理员配置 GitHub 工厂集成后，才能把问题交给 Claude Code。',
+      'GitHub 可能已经接受了这次请求。请刷新状态；在确认或释放之前不能再次提交。',
+    notConfigured: '此部署未启用 Claude Code 复核修复，下面是以往的运行记录。',
     activeHint: '正在运行中，结束后结论会追加到评论里。',
     refresh: '刷新状态',
     refreshError: '无法刷新 GitHub 状态，请重试。',
@@ -159,6 +171,17 @@ const zhCN: AppResource = {
       minutes: '{{m}} 分 {{s}} 秒',
       seconds: '{{s}} 秒',
     },
+    stale: '暂时无法刷新运行状态，正在自动重试。',
+    settleError: '运行已结束，但问题未能重新加载。请刷新页面查看结论。',
+    release: '释放',
+    releasing: '释放中…',
+    releaseTitle: '释放这次运行？',
+    releaseDescription:
+      '仅在这次运行不会自行结束时使用，例如 GitHub 从未启动的提交。释放后可以再次交给 Claude Code。这次运行之后若仍回传结论，会追加到评论里。',
+    releaseSubmit: '释放运行',
+    released: '已释放运行',
+    releaseError: '释放失败，请刷新后重试。',
+    releasedBy: '{{name}} 于 {{time}} 释放',
     status: {
       dispatching: '正在提交',
       queued: '排队中',
@@ -169,6 +192,7 @@ const zhCN: AppResource = {
       cancelled: '已取消',
       dispatch_failed: '提交失败',
       dispatch_unknown: '待确认提交结果',
+      abandoned: '已释放',
     },
     verdict: {
       confirmed: '确认存在',

@@ -45,7 +45,7 @@ const enUS = {
     dispatchFailed:
       'The build was not submitted. Check the factory integration and try again.',
     dispatchUnknown:
-      'GitHub may have accepted this request. Refresh its status; another run stays blocked until it is reconciled.',
+      'GitHub may have accepted this request. Refresh its status; another run stays blocked until it is reconciled or released.',
     notConfigured:
       'Task editing is available. An administrator must configure the GitHub factory integration before running tasks.',
     loadError: 'Unable to load build tasks. Please retry.',
@@ -90,6 +90,18 @@ const enUS = {
       off: 'Lightweight',
       full: 'Full',
     },
+    notEnabled:
+      'Builds are not enabled on this deployment. Tasks can be drafted now and run once an administrator configures the GitHub factory integration.',
+    stale: 'Could not refresh the run status. Retrying automatically.',
+    release: 'Release',
+    releasing: 'Releasing…',
+    releaseTitle: 'Release this run?',
+    releaseDescription:
+      'Use this only when the run will not finish on its own, for example a submission GitHub never started or a workflow whose report never arrived. The task can then be edited and run again. A report that still arrives from this run is recorded in its history.',
+    releaseSubmit: 'Release run',
+    released: 'Run released',
+    releaseError: 'Unable to release the run. Refresh and try again.',
+    releasedBy: 'Released by {{name}} at {{time}}',
     status: {
       draft: 'Not run',
       dispatching: 'Submitting',
@@ -101,6 +113,7 @@ const enUS = {
       cancelled: 'Cancelled',
       dispatch_failed: 'Submission failed',
       dispatch_unknown: 'Submission unconfirmed',
+      abandoned: 'Released',
     },
     result: {
       running: 'Running',
@@ -142,9 +155,9 @@ const enUS = {
     dispatchFailed:
       'The run was not submitted. Check the factory integration and try again.',
     dispatchUnknown:
-      'GitHub may have accepted this request. Refresh its status; another run stays blocked until it is reconciled.',
+      'GitHub may have accepted this request. Refresh its status; another run stays blocked until it is reconciled or released.',
     notConfigured:
-      'An administrator must configure the GitHub factory integration before problems can be sent to Claude Code.',
+      'Sending problems to Claude Code is not enabled on this deployment. Earlier runs are listed below.',
     activeHint:
       'A run is in progress. Its conclusion will be added to the comments when it finishes.',
     refresh: 'Refresh status',
@@ -170,6 +183,18 @@ const enUS = {
       minutes: '{{m}}m {{s}}s',
       seconds: '{{s}}s',
     },
+    stale: 'Could not refresh the run status. Retrying automatically.',
+    settleError:
+      'The run finished, but the problem could not be reloaded. Refresh the page to see its conclusion.',
+    release: 'Release',
+    releasing: 'Releasing…',
+    releaseTitle: 'Release this run?',
+    releaseDescription:
+      'Use this only when the run will not finish on its own, for example a submission GitHub never started. The problem can then be sent again. A conclusion that still arrives from this run is added to the comments.',
+    releaseSubmit: 'Release run',
+    released: 'Run released',
+    releaseError: 'Unable to release the run. Refresh and try again.',
+    releasedBy: 'Released by {{name}} at {{time}}',
     status: {
       dispatching: 'Submitting',
       queued: 'Queued',
@@ -180,6 +205,7 @@ const enUS = {
       cancelled: 'Cancelled',
       dispatch_failed: 'Submission failed',
       dispatch_unknown: 'Submission unconfirmed',
+      abandoned: 'Released',
     },
     verdict: {
       confirmed: 'Confirmed',
