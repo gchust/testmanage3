@@ -21,7 +21,11 @@ import {
   validateDocument,
   type EvaluationDocument,
 } from './protocol.js';
-import { collectFactoryProblems, recordProblemSubmission } from './problems.js';
+import {
+  classifyCollectedProblems,
+  collectFactoryProblems,
+  recordProblemSubmission,
+} from './problems.js';
 
 export interface SourceBinding {
   id: string;
@@ -322,17 +326,12 @@ export class EvaluationService {
               .select('currentReportId')
               .where('id', '=', subjectKey)
               .executeTakeFirst();
-            if (
-              document.type === 'evaluation-report' &&
-              current?.currentReportId === receipt.receiptId
-            ) {
-              await collectFactoryProblems(
-                connection,
-                document,
-                receipt.receiptId,
-                problems,
-              );
-            }
+            if (document.type === 'evaluation-report')
+              await (
+                current?.currentReportId === receipt.receiptId
+                  ? collectFactoryProblems
+                  : classifyCollectedProblems
+              )(connection, document, receipt.receiptId, problems);
             return {
               duplicate: true,
               receipt,
@@ -384,12 +383,12 @@ export class EvaluationService {
               .where('id', '=', subjectKey)
               .where('rank', '<', rank)
               .execute();
-          if (
-            document.type === 'evaluation-report' &&
-            (!current || String(current.rank) < rank)
-          ) {
-            await collectFactoryProblems(connection, document, id, problems);
-          }
+          if (document.type === 'evaluation-report')
+            await (
+              !current || String(current.rank) < rank
+                ? collectFactoryProblems
+                : classifyCollectedProblems
+            )(connection, document, id, problems);
           await recordProblemSubmission(connection, id, problems);
           await this.audit(connection, source.id, 'report.import', id, {
             bundleSha256: sha256,

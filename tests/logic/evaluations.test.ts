@@ -999,6 +999,47 @@ describe('factory problem classification', () => {
     });
   });
 
+  it('classifies the problems a superseded report collected when it is replayed', async () => {
+    const { save, db } = await setup();
+    await tree(db);
+    const first = report();
+    await save(first, classified(first, undefined, undefined));
+    const later = report();
+    later.revision = 2;
+    later.precedence.producer.runId += 10;
+    const next = await save(later, []);
+    const rule = {
+      featurePointId: 3,
+      method: 'rule' as const,
+      reason: 'pkg:@nocobase/db → Building/Database',
+    };
+    // Replaying the superseded revision fills the earlier problems it classifies.
+    expect(
+      (await save(first, classified(first, rule, undefined))).duplicate,
+    ).toBe(true);
+    expect(await automation(db)).toEqual([
+      {
+        title: 'Classified problem 0',
+        featurePointId: 3,
+        classification: { source: 'rule', note: rule.reason },
+      },
+      {
+        title: 'Classified problem 1',
+        featurePointId: null,
+        classification: null,
+      },
+    ]);
+    const rows = await db
+      .query()
+      .selectFrom('issues')
+      .select('factoryReportId')
+      .where('type', '=', 'automation')
+      .execute();
+    expect(rows.map((row) => row.factoryReportId)).not.toContain(
+      next.receipt.receiptId,
+    );
+  });
+
   it('accepts a different classification on retry and rejects malformed ones', async () => {
     const { service } = await setup(),
       app = await router(service),

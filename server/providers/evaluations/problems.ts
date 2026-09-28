@@ -232,11 +232,7 @@ export async function collectFactoryProblems(
   const q = connection.query;
   const now = new Date();
   for (const candidate of problems) {
-    const scopedKey = createHash('sha256')
-      .update(
-        JSON.stringify([report.source.instance, report.run.key, candidate.key]),
-      )
-      .digest('hex');
+    const scopedKey = problemKey(report, candidate);
     const existing = await q
       .selectFrom('issues')
       .select([
@@ -338,18 +334,74 @@ export async function collectFactoryProblems(
         .execute();
     }
     if (classification)
-      await q
-        .insertInto('evaluationAudit')
-        .values({
-          id: randomUUID(),
-          actorId: 'GitHub Actions',
-          action: 'problem.classify',
-          target: scopedKey,
-          detail: JSON.stringify({ problemId, reportId, ...classification }),
-          createdAt: now,
-        })
-        .execute();
+      await auditClassification(connection, scopedKey, {
+        problemId,
+        reportId,
+        ...classification,
+      });
   }
+}
+
+/**
+ * A superseded report collects nothing, but a replay of it may still classify the
+ * problems it collected while it was current, under the same fill-only rule.
+ */
+export async function classifyCollectedProblems(
+  connection: DatabaseConnection,
+  report: EvaluationReport,
+  reportId: string,
+  problems: SubmittedProblem[],
+): Promise<void> {
+  for (const candidate of problems) {
+    if (!candidate.classification) continue;
+    const scopedKey = problemKey(report, candidate);
+    const existing = await connection.query
+      .selectFrom('issues')
+      .select('id')
+      .where('factoryKey', '=', scopedKey)
+      .where('featurePointId', 'is', null)
+      .where('classificationSource', 'is', null)
+      .executeTakeFirst();
+    const classification =
+      existing &&
+      (await applicableClassification(connection, candidate.classification));
+    if (!existing || !classification) continue;
+    await connection.query
+      .updateTable('issues')
+      .set(classification)
+      .where('id', '=', Number(existing.id))
+      .execute();
+    await auditClassification(connection, scopedKey, {
+      problemId: Number(existing.id),
+      reportId,
+      ...classification,
+    });
+  }
+}
+
+const problemKey = (report: EvaluationReport, candidate: SubmittedProblem) =>
+  createHash('sha256')
+    .update(
+      JSON.stringify([report.source.instance, report.run.key, candidate.key]),
+    )
+    .digest('hex');
+
+async function auditClassification(
+  connection: DatabaseConnection,
+  scopedKey: string,
+  detail: Record<string, unknown>,
+): Promise<void> {
+  await connection.query
+    .insertInto('evaluationAudit')
+    .values({
+      id: randomUUID(),
+      actorId: 'GitHub Actions',
+      action: 'problem.classify',
+      target: scopedKey,
+      detail: JSON.stringify(detail),
+      createdAt: new Date(),
+    })
+    .execute();
 }
 
 /** A feature point the factory named must still exist as a feature; otherwise stay unclassified. */

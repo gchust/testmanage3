@@ -36,7 +36,7 @@ Before sending, the delivery workflow reads the feature point tree with the same
 
 The receiver files a problem under that feature point only if it still exists at the `feature` level; otherwise the problem stays unclassified and the decision is dropped. The source and reason are stored in `issues.classificationSource` and `classificationNote`, audited as `problem.classify`, and shown as an “Auto · rule/AI” badge with the reason on the Problems list and detail. Classification is excluded from the submission digest, so a retry or replay may carry a different one without a 409.
 
-Only a problem with no feature point and no classification source is ever classified automatically. That covers new problems, and existing ones when their report is replayed, which is how problems collected before this change are classified. A person changing the feature point sets the source to `manual`, clears the reason and badge, and no later delivery changes it again, even when they clear it back to Uncategorized. An earlier automatic decision is likewise kept.
+Only a problem with no feature point and no classification source is ever classified automatically. That covers new problems, and existing ones when their report is replayed, which is how problems collected before this change are classified. A superseded revision still collects nothing, but its replay classifies the problems it collected while it was current. A person changing the feature point sets the source to `manual`, clears the reason and badge, and no later delivery changes it again, even when they clear it back to Uncategorized. An earlier automatic decision is likewise kept.
 
 ## Problem classification deployment — 2026-09-28
 
