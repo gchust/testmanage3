@@ -42,6 +42,12 @@ interface ProblemFormData {
  */
 const UNLINKED_OWNER = '__unlinked-owner__';
 
+/**
+ * Picker value that files the problem with its feature point's owner. Saving
+ * leaves the owner out, so the server applies that point's owner, name or account.
+ */
+const FEATURE_POINT_OWNER = '__feature-point-owner__';
+
 interface FormValues {
   title: string;
   description: string;
@@ -129,13 +135,18 @@ function ProblemFormFields({
   const api = useApiClient();
   const [searchParams] = useSearchParams();
   const { close, isClosing } = useRouteOverlay();
+  const initialFeaturePointId =
+    initial?.featurePointId == null ? '' : String(initial.featurePointId);
+  // Only an ownerless problem follows the owner of the point it moves to.
+  const followsMovedFeaturePoint =
+    initial !== undefined && !initial.owner && !initial.ownerId;
+  const [ownerChosen, setOwnerChosen] = useState(false);
   const [values, setValues] = useState<FormValues>(() => {
     if (initial !== undefined) {
       return {
         title: initial.title,
         description: initial.description ?? '',
-        featurePointId:
-          initial.featurePointId == null ? '' : String(initial.featurePointId),
+        featurePointId: initialFeaturePointId,
         type: initial.type,
         status: initial.status,
         // Rows written before the account association carry a name only;
@@ -156,7 +167,7 @@ function ProblemFormFields({
         ? (type as ProblemType)
         : 'manual',
       status: 'pending',
-      ownerId: '',
+      ownerId: FEATURE_POINT_OWNER,
     };
   });
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -170,10 +181,46 @@ function ProblemFormFields({
     setValues((existing) => ({ ...existing, [key]: value }));
   }
 
+  function chooseFeaturePoint(featurePointId: string): void {
+    setValues((existing) => {
+      const next = { ...existing, featurePointId };
+      if (followsMovedFeaturePoint) {
+        const moved = featurePointId !== initialFeaturePointId;
+        // Moving an ownerless problem proposes the new point's owner until
+        // someone picks an owner themselves; moving it back withdraws that.
+        if (!moved && next.ownerId === FEATURE_POINT_OWNER) next.ownerId = '';
+        else if (moved && !ownerChosen) next.ownerId = FEATURE_POINT_OWNER;
+      }
+      return next;
+    });
+  }
+
+  const selectedFeaturePoint = featurePoints.find(
+    (feature) => String(feature.id) === values.featurePointId,
+  );
+  const featurePointOwnerName =
+    selectedFeaturePoint === undefined
+      ? null
+      : selectedFeaturePoint.ownerId === null
+        ? selectedFeaturePoint.owner
+        : (members.find((member) => member.id === selectedFeaturePoint.ownerId)
+            ?.name ?? selectedFeaturePoint.owner);
+  const offersFeaturePointOwner =
+    initial === undefined ||
+    (followsMovedFeaturePoint &&
+      values.featurePointId !== initialFeaturePointId);
+  // Uncategorized is where factory intake waits; a person only leaves it there.
+  const allowsUncategorized =
+    initial !== undefined && initial.featurePointId == null;
+
   async function save(): Promise<void> {
     const title = values.title.trim();
     if (title === '') {
       setSaveError(t('testProgress.problemTitleRequired'));
+      return;
+    }
+    if (values.featurePointId === '' && !allowsUncategorized) {
+      setSaveError(t('testProgress.featurePointRequired'));
       return;
     }
 
@@ -184,11 +231,13 @@ function ProblemFormFields({
         title,
         description:
           values.description.trim() === '' ? null : values.description,
-        featurePointId:
-          values.featurePointId === '' ? null : Number(values.featurePointId),
+        ...(values.featurePointId === ''
+          ? {}
+          : { featurePointId: Number(values.featurePointId) }),
         type: values.type,
         status: values.status,
-        ...(values.ownerId === UNLINKED_OWNER
+        ...(values.ownerId === UNLINKED_OWNER ||
+        values.ownerId === FEATURE_POINT_OWNER
           ? {}
           : {
               ownerId:
@@ -258,10 +307,15 @@ function ProblemFormFields({
 
       <div className='grid gap-4 sm:grid-cols-2'>
         <div className='space-y-2'>
-          <Label>{t('testProgress.fieldFeaturePoint')}</Label>
+          <Label>
+            {t('testProgress.fieldFeaturePoint')}
+            <span className='text-destructive'> *</span>
+          </Label>
           <FormSelect
             options={[
-              { value: '', label: t('testProgress.uncategorized') },
+              ...(allowsUncategorized
+                ? [{ value: '', label: t('testProgress.uncategorized') }]
+                : []),
               ...featurePoints.map((feature) => ({
                 value: String(feature.id),
                 label:
@@ -272,7 +326,7 @@ function ProblemFormFields({
             ]}
             placeholder={t('testProgress.selectPlaceholder')}
             value={values.featurePointId}
-            onValueChange={(value) => update('featurePointId', value)}
+            onValueChange={chooseFeaturePoint}
           />
         </div>
         <div className='space-y-2'>
@@ -301,6 +355,18 @@ function ProblemFormFields({
           <Label>{t('testProgress.fieldOwner')}</Label>
           <FormSelect
             options={[
+              ...(offersFeaturePointOwner
+                ? [
+                    {
+                      value: FEATURE_POINT_OWNER,
+                      label: featurePointOwnerName
+                        ? t('testProgress.ownerFromFeaturePoint', {
+                            name: featurePointOwnerName,
+                          })
+                        : t('testProgress.ownerFromFeaturePointNone'),
+                    },
+                  ]
+                : []),
               { value: '', label: t('testProgress.ownerNone') },
               ...(initial?.owner &&
               !initial.ownerId &&
@@ -320,7 +386,10 @@ function ProblemFormFields({
               })),
             ]}
             value={values.ownerId}
-            onValueChange={(value) => update('ownerId', value)}
+            onValueChange={(value) => {
+              setOwnerChosen(true);
+              update('ownerId', value);
+            }}
           />
         </div>
       </div>

@@ -24,7 +24,6 @@ import classificationMigration from '../../database/main/migrations/202609280001
 import seed from '../../database/main/seeds/202609210002_seed_test_progress_data.js';
 import mergeSeed from '../../database/main/seeds/202609220003_seed_merge_missing_items_into_problems.js';
 import ownerBackfillSeed from '../../database/main/seeds/202609220008_seed_backfill_owner_ids.js';
-import problemOwnerSeed from '../../database/main/seeds/202609280001_seed_assign_problem_owners.js';
 import {
   createTestProgressService,
   parseFeaturePointInput,
@@ -628,6 +627,7 @@ describe('test progress schema', () => {
     await service.updateFeaturePoint(database_.id, { owner: '陈霖' });
     await service.updateFeaturePoint(auth.id, { owner: '杨洽' });
 
+    // Saying nothing about the owner files it with the point's owner.
     const filed = await service.createProblem(
       { title: '随功能点分配', featurePointId: database_.id },
       actor,
@@ -638,56 +638,71 @@ describe('test progress schema', () => {
       actor,
     );
     expect(owned.owner).toBe('龚诚');
-
-    const later = await service.createProblem(
-      { title: '稍后归类', featurePointId: null },
+    // An explicit "no owner" is a choice, not a gap to fill.
+    const unassigned = await service.createProblem(
+      { title: '暂不分配', featurePointId: database_.id, ownerId: null },
       actor,
     );
-    expect(later.owner).toBeNull();
+    expect(unassigned).toMatchObject({ owner: null, ownerId: null });
+
+    // Only factory intake files a problem as Uncategorized.
+    await expect(
+      service.createProblem({ title: '稍后归类', featurePointId: null }, actor),
+    ).rejects.toBeInstanceOf(TestProgressValidationError);
+    const client = await knex(database);
+    const [later] = (await client('issues')
+      .insert({
+        title: '稍后归类',
+        feature_point_id: null,
+        type: 'automation',
+        status: 'pending',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .returning('id')) as { id: number }[];
+    const laterId = Number(later.id);
+    // Staff may leave it there while editing, but cannot put a problem back.
     expect(
       await service.updateProblem(
-        later.id,
+        laterId,
+        { featurePointId: null, status: 'fixing' },
+        actor,
+      ),
+    ).toMatchObject({ featurePointId: null, status: 'fixing', owner: null });
+    expect(
+      await service.updateProblem(
+        laterId,
         { featurePointId: database_.id },
         actor,
       ),
     ).toMatchObject({ owner: '陈霖' });
+    await expect(
+      service.updateProblem(laterId, { featurePointId: null }, actor),
+    ).rejects.toBeInstanceOf(TestProgressValidationError);
+
     // Moving an owned problem keeps its owner, and edits that do not send an
     // owner keep a name-only one.
     expect(
-      await service.updateProblem(later.id, { featurePointId: auth.id }, actor),
+      await service.updateProblem(laterId, { featurePointId: auth.id }, actor),
     ).toMatchObject({ owner: '陈霖', featurePointId: auth.id });
     expect(
-      await service.updateProblem(later.id, { status: 'fixing' }, actor),
+      await service.updateProblem(laterId, { status: 'verified' }, actor),
     ).toMatchObject({ owner: '陈霖' });
-    // Clearing the owner in place leaves it unassigned; clearing it while
-    // moving the problem hands it to the new point's owner.
+    // Clearing the owner leaves it unassigned, including while moving it.
     expect(
-      await service.updateProblem(later.id, { ownerId: null }, actor),
+      await service.updateProblem(laterId, { ownerId: null }, actor),
     ).toMatchObject({ owner: null });
     expect(
       await service.updateProblem(
-        later.id,
+        laterId,
         { ownerId: null, featurePointId: database_.id },
         actor,
       ),
-    ).toMatchObject({ owner: '陈霖' });
-
-    // The backfill hands ownerless problems to their point's owner only.
-    const client = await knex(database);
-    await client('issues')
-      .whereIn('id', [filed.id, owned.id])
-      .update({ owner: null, owner_id: null });
-    await client('issues').where('id', '=', owned.id).update({ owner: '龚诚' });
-    const orphan = await service.createProblem(
-      { title: '未归类', featurePointId: null },
-      actor,
-    );
-    await problemOwnerSeed.run(seedContext(database));
-    expect(await service.getProblem(filed.id)).toMatchObject({
-      owner: '陈霖',
-    });
-    expect((await service.getProblem(owned.id)).owner).toBe('龚诚');
-    expect((await service.getProblem(orphan.id)).owner).toBeNull();
+    ).toMatchObject({ owner: null, featurePointId: database_.id });
+    // Moving an ownerless problem without naming an owner hands it over.
+    expect(
+      await service.updateProblem(laterId, { featurePointId: auth.id }, actor),
+    ).toMatchObject({ owner: '杨洽' });
   });
 
   it('summarizes open problems per owner, most open first', async () => {

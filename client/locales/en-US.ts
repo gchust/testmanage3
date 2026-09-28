@@ -368,6 +368,8 @@ const enUS = {
     onlyMine: 'Only mine',
     ownerNone: 'Unassigned',
     ownerUnlinked: '{{name}} (no account)',
+    ownerFromFeaturePoint: 'Feature point owner ({{name}})',
+    ownerFromFeaturePointNone: 'Feature point owner (none)',
     allStatuses: 'All statuses',
     createFeature: 'New feature point',
     columnFeature: 'Feature point',

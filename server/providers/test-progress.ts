@@ -646,16 +646,22 @@ export function parseProblemInput(
     );
   }
   // Owner has two encodings: `ownerId` (account) is authoritative, `owner` (name)
-  // is resolved when unique. Only touch `ownerId` when the payload carries it, so a
-  // create that sends a name does not look like an explicit "clear the owner".
+  // is resolved when unique. Only touch either when the payload carries it: an
+  // explicit null means "no owner", while leaving both out lets a problem filed
+  // under a feature point inherit that point's owner.
   if ('ownerId' in record) {
     input.ownerId = readNullableString(record.ownerId, 'ownerId', 64);
   }
-  if (write('owner')) {
+  if ('owner' in record) {
     input.owner = readNullableString(record.owner, 'owner', 100);
   }
 
   return input;
+}
+
+/** Whether a problem payload says who owns it; null counts as "no owner". */
+function hasOwnerFields(input: ProblemInput): boolean {
+  return input.ownerId !== undefined || input.owner !== undefined;
 }
 
 /** Validates one comment payload; the author always comes from the session. */
@@ -1332,15 +1338,19 @@ class DefaultTestProgressService implements TestProgressService {
     if (!title) {
       throw new TestProgressValidationError('title is required.');
     }
-    if (featurePointId === undefined) {
+    // Only factory intake files a problem as Uncategorized; staff always choose.
+    if (featurePointId === undefined || featurePointId === null) {
       throw new TestProgressValidationError('featurePointId is required.');
     }
 
-    if (featurePointId !== null) await this.requireFeaturePoint(featurePointId);
+    await this.requireFeaturePoint(featurePointId);
     const now = new Date();
-    let owner = await this.resolveOwnerFields(input);
-    if (featurePointId !== null && !owner.owner && !owner.ownerId)
-      owner = (await this.featurePointOwner(featurePointId)) ?? owner;
+    const owner = hasOwnerFields(input)
+      ? await this.resolveOwnerFields(input)
+      : ((await this.featurePointOwner(featurePointId)) ?? {
+          owner: null,
+          ownerId: null,
+        });
     const result = await this.database
       .query()
       .insertInto('issues')
@@ -1396,33 +1406,31 @@ class DefaultTestProgressService implements TestProgressService {
     if (patch.description !== undefined) set.description = patch.description;
     if (patch.type !== undefined) set.type = patch.type;
     if (patch.status !== undefined) set.status = patch.status;
-    if (patch.ownerId !== undefined || patch.owner !== undefined) {
+    if (hasOwnerFields(patch)) {
       const owner = await this.resolveOwnerFields(patch);
       set.owner = owner.owner;
       set.ownerId = owner.ownerId;
     }
-    if (patch.featurePointId !== undefined) {
-      if (patch.featurePointId !== null)
-        await this.requireFeaturePoint(patch.featurePointId);
+    const previousFeaturePointId =
+      existing.featurePointId == null ? null : Number(existing.featurePointId);
+    if (
+      patch.featurePointId !== undefined &&
+      patch.featurePointId !== previousFeaturePointId
+    ) {
+      // Uncategorized is where factory intake waits for a person; staff can
+      // leave a problem there but cannot move a classified one back.
+      if (patch.featurePointId === null) {
+        throw new TestProgressValidationError('featurePointId is required.');
+      }
+      await this.requireFeaturePoint(patch.featurePointId);
       set.featurePointId = patch.featurePointId;
       // A person's choice replaces the factory's, and later deliveries keep it.
-      const previous =
-        existing.featurePointId == null
-          ? null
-          : Number(existing.featurePointId);
-      if (patch.featurePointId !== previous) {
-        set.classificationSource = 'manual';
-        set.classificationNote = null;
-        // Filing an ownerless problem under a feature point hands it to that
-        // point's owner; a problem that already has one keeps it.
-        const owner =
-          'ownerId' in set
-            ? set
-            : { owner: existing.owner, ownerId: existing.ownerId };
-        const inherited =
-          patch.featurePointId !== null && !owner.owner && !owner.ownerId
-            ? await this.featurePointOwner(patch.featurePointId)
-            : null;
+      set.classificationSource = 'manual';
+      set.classificationNote = null;
+      // Filing an ownerless problem under a feature point hands it to that
+      // point's owner, unless this change also says who owns it (null included).
+      if (!hasOwnerFields(patch) && !existing.owner && !existing.ownerId) {
+        const inherited = await this.featurePointOwner(patch.featurePointId);
         if (inherited) Object.assign(set, inherited);
       }
     }
@@ -1905,12 +1913,6 @@ class DefaultTestProgressService implements TestProgressService {
     return new Map(rows.map((row) => [String(row.id), asText(row.name)]));
   }
 
-  /**
-   * Owner writes are account associations: `ownerId` is authoritative and also
-   * refreshes the legacy `owner` text. A name-only write (scripts, older clients)
-   * resolves to an account when the display name is unique, and stays text
-   * otherwise so an environment without accounts keeps working.
-   */
   /** The owner a problem inherits when it is filed under this feature point. */
   private async featurePointOwner(
     id: number,
@@ -1926,6 +1928,12 @@ class DefaultTestProgressService implements TestProgressService {
     return owner || ownerId ? { owner, ownerId } : null;
   }
 
+  /**
+   * Owner writes are account associations: `ownerId` is authoritative and also
+   * refreshes the legacy `owner` text. A name-only write (scripts, older clients)
+   * resolves to an account when the display name is unique, and stays text
+   * otherwise so an environment without accounts keeps working.
+   */
   private async resolveOwnerFields(input: {
     readonly ownerId?: string | null;
     readonly owner?: string | null;

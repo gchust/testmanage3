@@ -957,8 +957,8 @@ describe('factory problem classification', () => {
     );
     const tracker = createTestProgressService(db);
     const rows = await tracker.listProblems({ type: 'automation' });
-    await tracker.updateProblem(rows[human].id, { featurePointId: 1 });
-    await tracker.updateProblem(rows[human].id, { featurePointId: null });
+    // A person files it under a point other than the replay's opinion below.
+    await tracker.updateProblem(rows[human].id, { featurePointId: 3 });
     const other = {
       featurePointId: 1,
       method: 'model' as const,
@@ -973,10 +973,10 @@ describe('factory problem classification', () => {
         featurePointId: 3,
         classification: { source: 'rule', note: rule.reason },
       },
-      // A person cleared it deliberately; the factory does not refill it.
+      // A person chose deliberately; the factory does not override it.
       {
         title: 'Classified problem 1',
-        featurePointId: null,
+        featurePointId: 3,
         classification: null,
       },
       {

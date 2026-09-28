@@ -348,6 +348,8 @@ const zhCN: AppResource = {
     onlyMine: '只看我的',
     ownerNone: '未指定',
     ownerUnlinked: '{{name}}（未关联账号）',
+    ownerFromFeaturePoint: '跟随功能点负责人（{{name}}）',
+    ownerFromFeaturePointNone: '跟随功能点负责人（未指定）',
     allStatuses: '全部状态',
     createFeature: '新建功能点',
     columnFeature: '功能点',
