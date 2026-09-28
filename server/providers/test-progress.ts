@@ -8,6 +8,11 @@ import type { ArchiveManifest } from './evaluations/document.js';
 import type { FactoryPreviewConfig } from '../config/factory-preview.js';
 import { loggingToken } from '@nocobase/app-server/logging';
 import {
+  inheritFeaturePointOwner,
+  linkOwnerName,
+  type OwnerFields,
+} from './problem-owners.js';
+import {
   databaseManagerToken,
   type DatabaseManager,
   type Row,
@@ -1981,18 +1986,14 @@ class DefaultTestProgressService implements TestProgressService {
   }
 
   /** The owner a problem inherits when it is filed under this feature point. */
-  private async featurePointOwner(
-    id: number,
-  ): Promise<{ owner: string | null; ownerId: string | null } | null> {
-    const row = await this.database
-      .query()
+  private async featurePointOwner(id: number): Promise<OwnerFields | null> {
+    const query = this.database.query();
+    const row = await query
       .selectFrom('featurePoints')
       .select(['owner', 'ownerId'])
       .where('id', '=', id)
       .executeTakeFirst();
-    const owner = asOptionalText(row?.owner);
-    const ownerId = asOptionalText(row?.ownerId);
-    return owner || ownerId ? { owner, ownerId } : null;
+    return row ? inheritFeaturePointOwner(query, row) : null;
   }
 
   /**
@@ -2030,18 +2031,7 @@ class DefaultTestProgressService implements TestProgressService {
       return { owner: null, ownerId: null };
     }
 
-    const matches = await this.database
-      .query()
-      .selectFrom('user')
-      .select(['id', 'name'])
-      .where('name', '=', owner)
-      .limit(2)
-      .execute();
-    if (matches.length !== 1) {
-      return { owner, ownerId: null };
-    }
-
-    return { owner: asText(matches[0].name), ownerId: String(matches[0].id) };
+    return linkOwnerName(this.database.query(), owner);
   }
 
   private async requireFeaturePoint(id: number): Promise<void> {

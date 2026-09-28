@@ -1124,6 +1124,28 @@ describe('factory problem classification', () => {
     expect((await tracker.getProblem(third.id)).featurePointId).toBe(3);
   });
 
+  it("links an inherited name-only owner to that name's only account", async () => {
+    const { save, db } = await setup();
+    await tree(db);
+    // The point was given a name before its owner had an account.
+    await db
+      .query()
+      .insertInto('user')
+      .values({ id: 'chen-lin', name: '陈霖' })
+      .execute();
+    const d = report();
+    const rule = {
+      featurePointId: 3,
+      method: 'rule' as const,
+      reason: 'pkg:@nocobase/db → Building/Database',
+    };
+    await save(d, classified(d, rule));
+    const [problem] = await createTestProgressService(db).listProblems({
+      type: 'automation',
+    });
+    expect(problem).toMatchObject({ owner: '陈霖', ownerId: 'chen-lin' });
+  });
+
   it('accepts a different classification on retry and rejects malformed ones', async () => {
     const { service } = await setup(),
       app = await router(service),

@@ -698,6 +698,50 @@ describe('test progress schema', () => {
     ).toMatchObject({ owner: '杨洽' });
   });
 
+  it('links an inherited name-only owner the way a typed name is linked', async () => {
+    const database = createTestDatabase();
+    await migrateAndSeed(database);
+    const service = createTestProgressService(database);
+    const actor = { id: 'actor', name: 'actor' };
+    const points = await service.listFeaturePoints();
+    const database_ = points.find((item) => item.name === '数据库')!;
+    const auth = points.find((item) => item.name === '认证')!;
+    // The points were given names before their owners had accounts.
+    await service.updateFeaturePoint(database_.id, { owner: '陈霖' });
+    await service.updateFeaturePoint(auth.id, { owner: '杨洽' });
+    const client = await knex(database);
+    await client('user').insert([
+      { id: 'account-chenlin', name: '陈霖', username: 'chenlin' },
+      { id: 'account-yangqia', name: '杨洽', username: 'yangqia' },
+    ]);
+
+    expect(
+      await service.createProblem(
+        { title: '随功能点分配', featurePointId: database_.id },
+        actor,
+      ),
+    ).toMatchObject({ owner: '陈霖', ownerId: 'account-chenlin' });
+
+    const unassigned = await service.createProblem(
+      { title: '暂不分配', featurePointId: database_.id, ownerId: null },
+      actor,
+    );
+    expect(
+      await service.updateProblem(
+        unassigned.id,
+        { featurePointId: auth.id },
+        actor,
+      ),
+    ).toMatchObject({ owner: '杨洽', ownerId: 'account-yangqia' });
+
+    // One workload bucket per person: nobody is counted once by account and
+    // again by name.
+    const { owners } = await service.getSummary();
+    expect(owners.filter((owner) => owner.owner === '陈霖')).toEqual([
+      expect.objectContaining({ ownerId: 'account-chenlin' }),
+    ]);
+  });
+
   it('summarizes open problems per owner, most open first', async () => {
     const database = createTestDatabase();
     // No seeds: an empty tracker keeps the expected buckets exact.

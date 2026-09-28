@@ -2,6 +2,10 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { FactoryPreviewConfig } from '../../config/factory-preview.js';
 import type { DatabaseConnection } from '@nocobase/db';
 import type { EvaluationReport } from './document.js';
+import {
+  inheritFeaturePointOwner,
+  type OwnerFields,
+} from '../problem-owners.js';
 import { EvaluationError, type EvaluationDocument } from './protocol.js';
 
 /** The factory's pre-delivery feature point decision; `null` explains why none fits. */
@@ -416,7 +420,7 @@ interface ApplicableClassification {
   classificationSource: ProblemClassification['method'];
   classificationNote: string;
   /** The feature point's owner, inherited by a problem that has none. */
-  inheritedOwner: { owner: unknown; ownerId: unknown } | null;
+  inheritedOwner: OwnerFields | null;
 }
 
 /** A feature point the factory named must still exist as a feature; otherwise stay unclassified. */
@@ -440,10 +444,9 @@ async function applicableClassification(
     featurePointId,
     classificationSource: method,
     classificationNote: reason,
-    inheritedOwner:
-      point && (point.owner || point.ownerId)
-        ? { owner: point.owner ?? null, ownerId: point.ownerId ?? null }
-        : null,
+    inheritedOwner: point
+      ? await inheritFeaturePointOwner(connection.query, point)
+      : null,
   };
 }
 
