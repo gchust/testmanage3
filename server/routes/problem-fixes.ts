@@ -136,6 +136,8 @@ export const problemFixRoutes: AppApiRouteContribution<Application> =
         .resolve(evaluationServiceToken)
         .authenticate(apiKey ?? bearer?.slice(7) ?? '');
       if (!source) return c.json({ code: 'UNAUTHORIZED' }, 401);
+      // 503 while fixes are disabled, 403 for another repository's key.
+      service.authorizeSource(source);
       c.set('source', source);
       await next();
     });

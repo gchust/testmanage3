@@ -41,7 +41,7 @@ afterEach(async () => {
   for (const dispose of disposers.splice(0)) await dispose();
 });
 const actor = { id: 'staff', name: 'Staff' };
-const source = { sourceInstance: 'owner/factory' };
+const source = { sourceInstance: 'owner/factory', project: 'owner/factory' };
 const config = {
   enabled: true,
   repository: 'owner/factory',
@@ -286,8 +286,11 @@ describe('problem fix runs', () => {
       workflowRunAttempt: 1,
     };
     await expect(
-      service.claim({ sourceInstance: 'other/factory' }, claim),
-    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      service.claim(
+        { sourceInstance: 'other/factory', project: 'other/factory' },
+        claim,
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN', message: 'SOURCE_MISMATCH' });
     await expect(
       service.claim(source, { ...claim, problemId: problemId + 1 }),
     ).rejects.toMatchObject({ code: 'NOT_FOUND' });
@@ -672,9 +675,19 @@ describe('problem fix routes', () => {
     fixture.github.configured = configured;
     const container = new ServiceContainer();
     container.instance(problemFixesServiceToken, fixture.service);
+    const keys: Record<string, typeof source> = {
+      'integration-secret': source,
+      'other-source': {
+        sourceInstance: 'other/factory',
+        project: 'other/factory',
+      },
+      'other-project': {
+        sourceInstance: 'owner/factory',
+        project: 'other/project',
+      },
+    };
     container.instance(evaluationServiceToken, {
-      authenticate: async (secret: string) =>
-        secret === 'integration-secret' ? source : null,
+      authenticate: async (secret: string) => keys[secret] ?? null,
     } as never);
     const authenticated: MiddlewareHandler = async (c, next) => {
       if (!c.req.header('x-test-user')) return c.json({}, 401);
@@ -853,5 +866,76 @@ describe('problem fix routes', () => {
         (c) => c.authorName === 'Claude Code',
       ),
     ).toHaveLength(1);
+  });
+  it('serves the factory protocol only while enabled and only to the configured repository', async () => {
+    const claim = (problemId: number) =>
+      JSON.stringify({
+        problemId,
+        externalRunId: null,
+        workflowRunId: '900',
+        workflowRunAttempt: 1,
+      });
+    const post = (app: Hono, key: string, path: string, body: string) =>
+      app.request(path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key },
+        body,
+      });
+    const disabled = await routes(false);
+    const unavailable = await post(
+      disabled.app,
+      'integration-secret',
+      '/problem-fixes/factory/claims',
+      claim(disabled.problemId),
+    );
+    expect(unavailable.status).toBe(503);
+    expect(await unavailable.json()).toMatchObject({ code: 'NOT_CONFIGURED' });
+    expect(
+      (
+        await post(
+          disabled.app,
+          'wrong',
+          '/problem-fixes/factory/claims',
+          claim(disabled.problemId),
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await post(
+          disabled.app,
+          'integration-secret',
+          `/problem-fixes/factory/runs/${randomUUID()}/result`,
+          '{}',
+        )
+      ).status,
+    ).toBe(503);
+    expect(await disabled.service.list(disabled.problemId)).toEqual([]);
+
+    const enabled = await routes();
+    for (const key of ['other-source', 'other-project']) {
+      const refused = await post(
+        enabled.app,
+        key,
+        '/problem-fixes/factory/claims',
+        claim(enabled.problemId),
+      );
+      expect(refused.status).toBe(403);
+      expect(await refused.json()).toMatchObject({
+        code: 'FORBIDDEN',
+        message: 'SOURCE_MISMATCH',
+      });
+    }
+    expect(await enabled.service.list(enabled.problemId)).toEqual([]);
+    expect(
+      await enabled.problems.listProblemComments(enabled.problemId),
+    ).toHaveLength(1);
+    await expect(
+      enabled.service.report(
+        { sourceInstance: 'owner/factory', project: 'other/project' },
+        randomUUID(),
+        result(),
+      ),
+    ).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 });

@@ -28,6 +28,7 @@ export interface ProblemFixesOptions {
 /** The factory identity an integration key is bound to. */
 export interface FixSource {
   sourceInstance: string;
+  project: string;
 }
 
 const now = () => new Date();
@@ -93,6 +94,18 @@ export class ProblemFixesService {
       configured: this.github.configured,
       repository: this.github.config.repository,
     };
+  }
+  /**
+   * The factory protocol reads problems and writes comments, so it serves only
+   * while fixes are enabled, and only the key bound to the configured repository:
+   * a report-delivery key for another source cannot claim or answer a fix.
+   */
+  authorizeSource(source: FixSource) {
+    if (!this.github.configured)
+      throw new ProblemFixError('NOT_CONFIGURED', 'FACTORY_NOT_CONFIGURED');
+    const { repository } = this.github.config;
+    if (source.sourceInstance !== repository || source.project !== repository)
+      throw new ProblemFixError('FORBIDDEN', 'SOURCE_MISMATCH');
   }
   runView(run?: Row | null) {
     if (!run) return null;
@@ -335,6 +348,7 @@ export class ProblemFixesService {
   }
   /** Binds a workflow execution to its run and hands it the frozen snapshot. */
   async claim(source: FixSource, input: ClaimInput) {
+    this.authorizeSource(source);
     if (input.externalRunId) {
       const run = await this.read(input.externalRunId);
       if (!run || Number(run.problemId) !== input.problemId) return notFound();
@@ -443,6 +457,7 @@ export class ProblemFixesService {
    * the status change commit together; a replay returns the stored result.
    */
   async report(source: FixSource, runId: string, input: ResultInput) {
+    this.authorizeSource(source);
     const run = await this.read(runId);
     if (!run) return notFound();
     if (run.repository !== source.sourceInstance)
