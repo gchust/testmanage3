@@ -20,17 +20,16 @@ const scalar = (value: unknown): string =>
 const string = (value: unknown) => (typeof value === 'string' ? value : '');
 const object = (value: unknown): Record<string, unknown> =>
   value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
-// SQLite returns UTC datetimes without a zone suffix. The HTTP contract must
-// include it; otherwise browsers interpret the same instant as local time.
+// A `datetime` column holds wall-clock time without a zone: @nocobase/db writes
+// a Date in the host's local zone and returns `YYYY-MM-DDTHH:mm:ss.SSS`, which
+// Date parses as local time again. Appending `Z` would shift every instant by
+// the host's UTC offset. Every stored instant this service returns or compares
+// goes through here, so the HTTP contract always carries an explicit zone.
+const instant = (value: unknown) => new Date(scalar(value)).toISOString();
 function dated(row: Row): Row {
   const result = { ...row };
-  for (const key of ['createdAt', 'updatedAt', 'dispatchRequestedAt']) {
-    if (row[key] == null) continue;
-    const text = scalar(row[key]);
-    result[key] = new Date(
-      /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text) ? text : text + 'Z',
-    ).toISOString();
-  }
+  for (const key of ['createdAt', 'updatedAt', 'dispatchRequestedAt'])
+    if (row[key] != null) result[key] = instant(row[key]);
   return result;
 }
 const notFound = (): never => {
@@ -217,7 +216,7 @@ export class BuildTasksService {
             id: String(c.id),
             authorName: String(c.authorName),
             content: String(c.content),
-            createdAt: new Date(String(c.createdAt)).toISOString(),
+            createdAt: instant(c.createdAt),
           })),
         };
         const runId = randomUUID();
@@ -347,10 +346,7 @@ export class BuildTasksService {
     if (!run.activeTaskId || !run.dispatchRequestedAt) return this.runView(run);
     const remote = run.workflowRunId
       ? await this.github.run(scalar(run.workflowRunId))
-      : await this.github.findRun(
-          runId,
-          new Date(scalar(run.dispatchRequestedAt)).toISOString(),
-        );
+      : await this.github.findRun(runId, instant(run.dispatchRequestedAt));
     if (!remote) return this.runView(run);
     const result = run.result
       ? (JSON.parse(scalar(run.result)) as Record<string, unknown>)
@@ -429,7 +425,7 @@ export class BuildTasksService {
         (r) =>
           !r.workflowRunId &&
           r.dispatchRequestedAt &&
-          Date.parse(scalar(r.dispatchRequestedAt)) <= startedAt + 1000,
+          Date.parse(instant(r.dispatchRequestedAt)) <= startedAt + 1000,
       );
     if (!run) return;
     const rank = precedenceRank(document);

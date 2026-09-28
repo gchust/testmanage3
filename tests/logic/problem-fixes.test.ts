@@ -187,6 +187,35 @@ describe('problem fix runs', () => {
       commentsOmitted: 0,
     });
   });
+  it('returns and compares stored wall-clock datetimes as the instants written', async () => {
+    const zone = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    try {
+      const { service, github, db, problemId } = await setup();
+      github.dispatch.mockResolvedValueOnce(null as never);
+      const run = await service.trigger(problemId, randomUUID(), actor);
+      await db
+        .query()
+        .updateTable('problemFixRuns')
+        .set({
+          createdAt: new Date('2026-09-21T14:13:19.000Z'),
+          dispatchRequestedAt: new Date('2026-09-21T14:13:19.000Z'),
+        })
+        .where('id', '=', String(run?.id))
+        .execute();
+      github.findRun.mockResolvedValueOnce(null);
+      expect(await service.refresh(problemId, String(run?.id))).toMatchObject({
+        createdAt: '2026-09-21T14:13:19.000Z',
+      });
+      expect(github.findRun).toHaveBeenCalledWith(
+        run?.id,
+        '2026-09-21T14:13:19.000Z',
+      );
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
   it('keeps a timed-out dispatch locked and releases a definite rejection', async () => {
     const { service, github, problemId } = await setup();
     github.dispatch.mockRejectedValueOnce(new Error('Timeout'));

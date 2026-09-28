@@ -38,13 +38,10 @@ const scalar = (value: unknown): string =>
     : typeof value === 'string' || typeof value === 'number'
       ? String(value)
       : '';
-// SQLite returns UTC datetimes without a zone suffix; the HTTP contract carries it.
-const instant = (value: unknown) => {
-  const text = scalar(value);
-  return new Date(
-    /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text) ? text : text + 'Z',
-  ).toISOString();
-};
+// A `datetime` column holds wall-clock time in the host's zone (see
+// @nocobase/db temporal values); Date parses it as local time, and the HTTP
+// contract carries the resulting instant with an explicit zone.
+const instant = (value: unknown) => new Date(scalar(value)).toISOString();
 const notFound = (): never => {
   throw new ProblemFixError('NOT_FOUND', 'NOT_FOUND');
 };

@@ -8,6 +8,8 @@ import { authorizationToken } from '@nocobase/app-plugin-authorization';
 import type { Application } from '@nocobase/app-server/application';
 import { Hono, type MiddlewareHandler } from 'hono';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import evaluationsMigration from '../../database/main/migrations/202609250001_create_evaluations.js';
+import reportLinksMigration from '../../database/main/migrations/202609250003_reference_factory_reports.js';
 import migration from '../../database/main/migrations/202609270001_create_build_tasks.js';
 import { BuildTasksService } from '../../server/providers/build-tasks/service.js';
 import { GitHubBuildClient } from '../../server/providers/build-tasks/github.js';
@@ -235,6 +237,81 @@ describe('build tasks', () => {
     expect(
       (await service.detail(id)).runs.find((r) => r?.id === second?.id)?.active,
     ).toBe(true);
+  });
+  it('reads stored wall-clock datetimes as the instants written on a host west of UTC', async () => {
+    const zone = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    try {
+      const { service, github, db, context } = await setup();
+      // Refresh replays stored reports before asking GitHub.
+      await evaluationsMigration.up(context);
+      await reportLinksMigration.up(context);
+      // Without a run id from dispatch, only the request time links a report.
+      github.dispatch.mockResolvedValueOnce(null as never);
+      const task = await service.save(null, input, actor),
+        id = String(task.id);
+      await service.comment(id, 'Escalate after 24 hours.', actor);
+      const run = await service.trigger(id, randomUUID(), actor);
+      await db
+        .query()
+        .updateTable('buildTaskRuns')
+        .set({ dispatchRequestedAt: new Date('2026-09-21T14:13:19.000Z') })
+        .where('id', '=', String(run?.id))
+        .execute();
+      await db
+        .query()
+        .updateTable('buildTaskComments')
+        .set({ createdAt: new Date('2026-09-21T14:00:00.000Z') })
+        .where('taskId', '=', id)
+        .execute();
+      // The column keeps Los Angeles wall-clock time without a zone.
+      expect(
+        (
+          await db
+            .query()
+            .selectFrom('buildTaskRuns')
+            .select('dispatchRequestedAt')
+            .where('id', '=', String(run?.id))
+            .executeTakeFirst()
+        )?.dispatchRequestedAt,
+      ).toBe('2026-09-21T07:13:19.000');
+      github.findRun.mockResolvedValueOnce(null);
+      await service.refresh(id, String(run?.id));
+      expect(github.findRun).toHaveBeenCalledWith(
+        run?.id,
+        '2026-09-21T14:13:19.000Z',
+      );
+      // The producer started one second after the request.
+      await service.recordReport(
+        {
+          ...structuredClone(reportFixture),
+          outcome: {
+            pullRequest: null,
+            execution: 'completed',
+            acceptance: 'passed',
+            delivery: 'published',
+          },
+        },
+        '',
+        'report-west',
+      );
+      const detail = await service.detail(id);
+      expect(detail.runs[0]).toMatchObject({
+        status: 'completed',
+        active: false,
+        dispatchRequestedAt: '2026-09-21T14:13:19.000Z',
+        result: { reportId: 'report-west' },
+      });
+      expect(detail.comments[0]?.createdAt).toBe('2026-09-21T14:00:00.000Z');
+      github.dispatch.mockResolvedValueOnce('200');
+      await service.trigger(id, randomUUID(), actor);
+      expect(github.createIssue.mock.calls[1]?.[1]).toContain(
+        '2026-09-21T14:00:00.000Z',
+      );
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
   });
   it('keeps the newest report when deliveries race', async () => {
     const { service } = await setup();
