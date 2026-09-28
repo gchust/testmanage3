@@ -233,6 +233,20 @@ describe('test progress API routes', () => {
     });
   });
 
+  it('filters Uncategorized problems with featurePointId=none', async () => {
+    const service = createStubService();
+    const router = await createRouter(service);
+
+    const response = await router.request(
+      '/test-progress/problems?featurePointId=none',
+      { headers: AUTHORIZED_HEADERS },
+    );
+    expect(response.status).toBe(200);
+    expect(service.listProblems).toHaveBeenCalledWith({
+      featurePointId: null,
+    });
+  });
+
   it('creates a feature point with 201 and deletes a problem with 204', async () => {
     const service = createStubService();
     const router = await createRouter(service);

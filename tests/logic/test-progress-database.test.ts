@@ -698,6 +698,40 @@ describe('test progress schema', () => {
     ).toMatchObject({ owner: '杨洽' });
   });
 
+  it('counts Uncategorized problems beside the dimensions and lists them alone', async () => {
+    const database = createTestDatabase();
+    await migrateAndSeed(database);
+    const service = createTestProgressService(database);
+    const before = await service.getSummary();
+    expect(before.uncategorized).toEqual({ total: 0, open: 0 });
+
+    // Only factory intake files a problem with no feature point.
+    const client = await knex(database);
+    const [row] = (await client('issues')
+      .insert({
+        title: '待归类问题',
+        feature_point_id: null,
+        type: 'automation',
+        status: 'pending',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .returning('id')) as { id: number }[];
+
+    const summary = await service.getSummary();
+    expect(summary.uncategorized).toEqual({ total: 1, open: 1 });
+    // Every problem is in exactly one dimension row or in the Uncategorized row.
+    expect(
+      summary.dimensions.reduce((sum, item) => sum + item.problems.total, 0) +
+        summary.uncategorized.total,
+    ).toBe(summary.totals.materialProblems + summary.totals.testProblems);
+    expect(
+      (await service.listProblems({ featurePointId: null })).map(
+        (problem) => problem.id,
+      ),
+    ).toEqual([Number(row.id)]);
+  });
+
   it('links an inherited name-only owner the way a typed name is linked', async () => {
     const database = createTestDatabase();
     await migrateAndSeed(database);

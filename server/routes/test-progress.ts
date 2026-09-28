@@ -115,7 +115,7 @@ function readActor(context: Context): ProblemActor {
 
 function readProblemFilter(context: Context): ProblemFilter {
   const filter: {
-    featurePointId?: number;
+    featurePointId?: number | null;
     type?: ProblemType;
     status?: ProblemStatus;
     open?: boolean;
@@ -124,11 +124,14 @@ function readProblemFilter(context: Context): ProblemFilter {
   } = {};
 
   const featurePointId = context.req.query('featurePointId');
-  if (featurePointId !== undefined && featurePointId !== '') {
+  // `none` selects Uncategorized problems, which factory intake files unplaced.
+  if (featurePointId === 'none') {
+    filter.featurePointId = null;
+  } else if (featurePointId !== undefined && featurePointId !== '') {
     const parsed = Number(featurePointId);
     if (!Number.isInteger(parsed) || parsed <= 0) {
       throw new TestProgressValidationError(
-        'featurePointId must be a positive integer.',
+        'featurePointId must be a positive integer or none.',
       );
     }
     filter.featurePointId = parsed;

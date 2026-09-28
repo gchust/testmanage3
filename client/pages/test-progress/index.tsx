@@ -278,6 +278,28 @@ function Overview({
                     </TableCell>
                   </TableRow>
                 ))}
+                {/* Unplaced factory problems count in the totals above but in no
+                    dimension; this row keeps the table adding up to them. */}
+                {summary.uncategorized.total > 0 ? (
+                  <TableRow>
+                    <TableCell className='font-medium text-muted-foreground'>
+                      {t('testProgress.uncategorized')}
+                    </TableCell>
+                    <TableCell />
+                    <TableCell />
+                    <TableCell className='tabular-nums'>
+                      <Link
+                        className='text-primary underline-offset-4 hover:underline'
+                        to='/progress/problems?featurePointId=none&status=open'
+                      >
+                        {t('testProgress.problemCountValue', {
+                          open: summary.uncategorized.open,
+                          total: summary.uncategorized.total,
+                        })}
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ) : null}
               </TableBody>
             </Table>
           )}

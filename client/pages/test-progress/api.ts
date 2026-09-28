@@ -164,6 +164,8 @@ export interface ProgressSummary {
   readonly exampleExists: ExampleExistsBreakdown;
   readonly problems: ProblemCountsByType;
   readonly dimensions: readonly DimensionSummary[];
+  /** Problems with no feature point: in `totals`, but in no dimension. */
+  readonly uncategorized: ProblemCounts;
   /** Per-owner workload, most open problems first. */
   readonly owners: readonly OwnerWorkload[];
 }
@@ -200,7 +202,8 @@ export interface ProblemPayload {
 }
 
 export interface ProblemFilter {
-  readonly featurePointId?: number;
+  /** `null` selects Uncategorized problems. */
+  readonly featurePointId?: number | null;
   readonly type?: ProblemType;
   readonly status?: ProblemStatus;
   /** Only problems that are not yet verified. */
@@ -328,7 +331,8 @@ export async function fetchProblems(
 ): Promise<Problem[]> {
   const query: Record<string, string> = {};
   if (filter.featurePointId !== undefined) {
-    query.featurePointId = String(filter.featurePointId);
+    query.featurePointId =
+      filter.featurePointId === null ? 'none' : String(filter.featurePointId);
   }
   if (filter.type !== undefined) {
     query.type = filter.type;

@@ -243,7 +243,8 @@ export interface ProblemInput {
 }
 
 export interface ProblemFilter {
-  readonly featurePointId?: number;
+  /** `null` selects Uncategorized problems, which have no feature point. */
+  readonly featurePointId?: number | null;
   readonly type?: ProblemType;
   readonly status?: ProblemStatus;
   /** Only problems that are not yet verified. */
@@ -309,6 +310,12 @@ export interface ProgressSummary {
   readonly exampleExists: ExampleExistsBreakdown;
   readonly problems: Readonly<Record<ProblemType, ProblemCounts>>;
   readonly dimensions: readonly DimensionSummary[];
+  /**
+   * Problems factory intake could not place under a feature point. They count in
+   * `totals` and `owners` but belong to no dimension, so the overview lists them
+   * as their own row.
+   */
+  readonly uncategorized: ProblemCounts;
   /** Per-owner workload, most open problems first. */
   readonly owners: readonly OwnerWorkload[];
 }
@@ -1250,7 +1257,9 @@ class DefaultTestProgressService implements TestProgressService {
         'classificationNote',
       ]);
 
-    if (filter.featurePointId !== undefined) {
+    if (filter.featurePointId === null) {
+      query = query.where('featurePointId', 'is', null);
+    } else if (filter.featurePointId !== undefined) {
       query = query.where('featurePointId', '=', filter.featurePointId);
     }
     if (filter.type !== undefined) {
@@ -1908,6 +1917,11 @@ class DefaultTestProgressService implements TestProgressService {
       exampleExists,
       problems: problemsByType,
       dimensions,
+      uncategorized: sumProblemCounts(
+        countProblems(
+          problems.filter((problem) => problem.featurePointId == null),
+        ),
+      ),
       owners,
     };
   }

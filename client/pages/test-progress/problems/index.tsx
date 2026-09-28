@@ -52,6 +52,8 @@ interface ProblemsData {
 const ALL = 'all';
 const OPEN = 'open';
 const MINE = 'me';
+/** The feature point filter value for problems filed under no feature point. */
+const UNCATEGORIZED = 'none';
 
 /**
  * One problem list for material gaps and test findings alike: the type filter is
@@ -80,13 +82,15 @@ export default function ProblemsPage(): ReactElement {
     `problems|${featurePointFilter}|${typeFilter}|${statusFilter}|${onlyMine ? currentUserId : ''}`,
     async (signal) => {
       const filter: {
-        featurePointId?: number;
+        featurePointId?: number | null;
         type?: ProblemType;
         status?: ProblemStatus;
         open?: boolean;
         ownerId?: string;
       } = {};
-      if (featurePointFilter !== ALL) {
+      if (featurePointFilter === UNCATEGORIZED) {
+        filter.featurePointId = null;
+      } else if (featurePointFilter !== ALL) {
         filter.featurePointId = Number(featurePointFilter);
       }
       if (typeFilter !== ALL) {
@@ -147,6 +151,10 @@ export default function ProblemsPage(): ReactElement {
             className='md:w-72'
             options={[
               { value: ALL, label: t('testProgress.allFeaturePoints') },
+              {
+                value: UNCATEGORIZED,
+                label: t('testProgress.uncategorized'),
+              },
               ...(featurePoints.data ?? []).map((feature) => ({
                 value: String(feature.id),
                 label:
