@@ -83,10 +83,14 @@ async function setup() {
   ])
     await step.up(context(db));
   const problems = createTestProgressService(db);
+  const dimension = await problems.createFeaturePoint({
+    name: 'Refine tables',
+    level: 'dimension',
+  });
   const problem = await problems.createProblem({
     title: 'Refine table loses its filter',
     description: 'Steps: open the list, filter, reload.',
-    featurePointId: null,
+    featurePointId: dimension.id,
     type: 'automation',
   });
   await problems.createProblemComment(
@@ -597,6 +601,43 @@ describe('problem fix GitHub entry', () => {
       inputs: { problem_id: '7', external_run_id: 'external-id' },
     });
     expect(options?.redirect).toBe('error');
+  });
+  it('validates GitHub run responses and pages through dispatches to find a request', async () => {
+    const page = (runs: unknown[], total: number) =>
+      new Response(JSON.stringify({ total_count: total, workflow_runs: runs }));
+    const run = (id: number, title: string | null) => ({
+      id,
+      status: 'in_progress',
+      conclusion: null,
+      display_title: title,
+    });
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        page(
+          Array.from({ length: 100 }, (_, i) =>
+            run(i + 1, `request other-${i}`),
+          ),
+          101,
+        ),
+      )
+      .mockResolvedValueOnce(page([run(700, 'Fix · request wanted')], 101));
+    const client = new ProblemFixGitHubClient(config, request);
+    expect(await client.findRun('wanted', '2026-09-28T00:00:00.000Z')).toEqual(
+      run(700, 'Fix · request wanted'),
+    );
+    expect(String(request.mock.calls[1]?.[0])).toContain('&page=2&');
+    request
+      .mockReset()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ workflow_runs: 3 })),
+      );
+    await expect(
+      client.findRun('wanted', '2026-09-28T00:00:00.000Z'),
+    ).rejects.toMatchObject({
+      code: 'GITHUB_ERROR',
+      message: 'GITHUB_RESPONSE_INVALID',
+    });
   });
   it('refuses to dispatch until the workflow advertises the fix entry', async () => {
     const workflow = (text: string) =>

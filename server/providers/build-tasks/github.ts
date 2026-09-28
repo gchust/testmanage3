@@ -1,14 +1,29 @@
+import { z } from 'zod';
 import type { BuildTasksConfig } from '../../config/build-tasks.js';
 import { BuildTaskError } from './model.js';
 
-export interface WorkflowRun {
-  id: number;
-  status: string;
-  conclusion: string | null;
-  html_url: string;
-  display_title: string;
-  created_at: string;
-}
+/**
+ * The workflow-run fields read here, as GitHub's REST schema declares them:
+ * `status` and `conclusion` are nullable. `display_title` is required there but
+ * modelled as nullable so an unexpected null misses a match instead of throwing.
+ */
+export const workflowRunSchema = z.object({
+  id: z.number().int().positive(),
+  status: z.string().nullable(),
+  conclusion: z.string().nullable(),
+  display_title: z.string().nullable(),
+});
+export type WorkflowRun = z.infer<typeof workflowRunSchema>;
+export const workflowRunPageSchema = z.object({
+  total_count: z.number().int().min(0),
+  workflow_runs: z.array(workflowRunSchema),
+});
+/** GitHub returns at most 1,000 runs for a filtered listing: ten pages of 100. */
+export const WORKFLOW_RUN_PAGE_SIZE = 100;
+export const WORKFLOW_RUN_PAGE_LIMIT = 10;
+/** The run name factory entries end with, so an unconfirmed dispatch is found. */
+export const isRequestRun = (run: WorkflowRun, requestId: string) =>
+  run.display_title?.endsWith(`request ${requestId}`) === true;
 export class GitHubBuildClient {
   constructor(
     readonly config: BuildTasksConfig,
@@ -99,19 +114,31 @@ export class GitHubBuildClient {
       ? String(result.workflow_run_id)
       : null;
   }
-  async run(id: string): Promise<WorkflowRun> {
-    return (await this.api(
-      `/actions/runs/${encodeURIComponent(id)}`,
-    )) as unknown as WorkflowRun;
+  private parse<T>(schema: z.ZodType<T>, value: unknown): T {
+    const parsed = schema.safeParse(value);
+    if (!parsed.success)
+      throw new BuildTaskError('GITHUB_ERROR', 'GITHUB_RESPONSE_INVALID');
+    return parsed.data;
   }
+  async run(id: string): Promise<WorkflowRun> {
+    return this.parse(
+      workflowRunSchema,
+      await this.api(`/actions/runs/${encodeURIComponent(id)}`),
+    );
+  }
+  /** Pages through dispatches created since the request until its run appears. */
   async findRun(id: string, since: string): Promise<WorkflowRun | null> {
-    const result = await this.api(
-      `/actions/workflows/${this.config.workflow}/runs?event=workflow_dispatch&per_page=100&created=${encodeURIComponent('>=' + since)}`,
-    );
-    return (
-      ((result?.workflow_runs ?? []) as WorkflowRun[]).find((r) =>
-        r.display_title.endsWith(`request ${id}`),
-      ) ?? null
-    );
+    for (let page = 1; page <= WORKFLOW_RUN_PAGE_LIMIT; page++) {
+      const result = this.parse(
+        workflowRunPageSchema,
+        await this.api(
+          `/actions/workflows/${this.config.workflow}/runs?event=workflow_dispatch&per_page=${WORKFLOW_RUN_PAGE_SIZE}&page=${page}&created=${encodeURIComponent('>=' + since)}`,
+        ),
+      );
+      const run = result.workflow_runs.find((r) => isRequestRun(r, id));
+      if (run) return run;
+      if (page * WORKFLOW_RUN_PAGE_SIZE >= result.total_count) break;
+    }
+    return null;
   }
 }

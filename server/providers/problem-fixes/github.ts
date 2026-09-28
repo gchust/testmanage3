@@ -1,5 +1,13 @@
+import type { z } from 'zod';
 import type { ProblemFixesConfig } from '../../config/problem-fixes.js';
-import type { WorkflowRun } from '../build-tasks/github.js';
+import {
+  isRequestRun,
+  WORKFLOW_RUN_PAGE_LIMIT,
+  WORKFLOW_RUN_PAGE_SIZE,
+  workflowRunPageSchema,
+  workflowRunSchema,
+  type WorkflowRun,
+} from '../build-tasks/github.js';
 import { PROBLEM_FIX_MARKER, ProblemFixError } from './model.js';
 
 /**
@@ -72,19 +80,31 @@ export class ProblemFixGitHubClient {
       ? String(result.workflow_run_id)
       : null;
   }
-  async run(id: string): Promise<WorkflowRun> {
-    return (await this.api(
-      `/actions/runs/${encodeURIComponent(id)}`,
-    )) as unknown as WorkflowRun;
+  private parse<T>(schema: z.ZodType<T>, value: unknown): T {
+    const parsed = schema.safeParse(value);
+    if (!parsed.success)
+      throw new ProblemFixError('GITHUB_ERROR', 'GITHUB_RESPONSE_INVALID');
+    return parsed.data;
   }
+  async run(id: string): Promise<WorkflowRun> {
+    return this.parse(
+      workflowRunSchema,
+      await this.api(`/actions/runs/${encodeURIComponent(id)}`),
+    );
+  }
+  /** Pages through dispatches created since the request until its run appears. */
   async findRun(id: string, since: string): Promise<WorkflowRun | null> {
-    const result = await this.api(
-      `/actions/workflows/${this.config.workflow}/runs?event=workflow_dispatch&per_page=100&created=${encodeURIComponent('>=' + since)}`,
-    );
-    return (
-      ((result?.workflow_runs ?? []) as WorkflowRun[]).find((r) =>
-        r.display_title.endsWith(`request ${id}`),
-      ) ?? null
-    );
+    for (let page = 1; page <= WORKFLOW_RUN_PAGE_LIMIT; page++) {
+      const result = this.parse(
+        workflowRunPageSchema,
+        await this.api(
+          `/actions/workflows/${this.config.workflow}/runs?event=workflow_dispatch&per_page=${WORKFLOW_RUN_PAGE_SIZE}&page=${page}&created=${encodeURIComponent('>=' + since)}`,
+        ),
+      );
+      const run = result.workflow_runs.find((r) => isRequestRun(r, id));
+      if (run) return run;
+      if (page * WORKFLOW_RUN_PAGE_SIZE >= result.total_count) break;
+    }
+    return null;
   }
 }

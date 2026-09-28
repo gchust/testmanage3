@@ -398,6 +398,53 @@ describe('GitHub bridge', () => {
     });
     expect(options?.redirect).toBe('error');
   });
+  it('validates GitHub run responses and pages through dispatches to find a request', async () => {
+    const page = (runs: unknown[], total: number) =>
+      new Response(JSON.stringify({ total_count: total, workflow_runs: runs }));
+    const run = (id: number, title: string | null) => ({
+      id,
+      status: 'queued',
+      conclusion: null,
+      display_title: title,
+    });
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        page(
+          Array.from({ length: 100 }, (_, i) =>
+            run(i + 1, `request other-${i}`),
+          ),
+          150,
+        ),
+      )
+      .mockResolvedValueOnce(
+        page([run(500, null), run(501, 'Build · request wanted')], 150),
+      );
+    const client = new GitHubBuildClient(config, request);
+    expect(await client.findRun('wanted', '2026-09-28T00:00:00.000Z')).toEqual(
+      run(501, 'Build · request wanted'),
+    );
+    expect(request.mock.calls.map(([url]) => String(url))).toEqual([
+      expect.stringContaining(
+        '&page=1&created=%3E%3D2026-09-28T00%3A00%3A00.000Z',
+      ),
+      expect.stringContaining('&page=2&'),
+    ]);
+    request.mockReset().mockResolvedValueOnce(page([run(1, 'request x')], 1));
+    expect(await client.findRun('missing', '2026-09-28T00:00:00.000Z')).toBe(
+      null,
+    );
+    expect(request).toHaveBeenCalledTimes(1);
+    request
+      .mockReset()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'x', status: 'queued' })),
+      );
+    await expect(client.run('100')).rejects.toMatchObject({
+      code: 'GITHUB_ERROR',
+      message: 'GITHUB_RESPONSE_INVALID',
+    });
+  });
   it('does not send an Issue until the external entry guard is installed', async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
