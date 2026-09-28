@@ -125,7 +125,12 @@ function ProblemDetail({
   return (
     <div className='mb-6 space-y-6'>
       <PageHeader
-        title={problem.title}
+        title={
+          // Titles may span lines; the header is the only place they are shown.
+          <span className='whitespace-pre-wrap break-words'>
+            {problem.title}
+          </span>
+        }
         description={<ProblemStatusBadge status={problem.status} />}
         actions={
           <Button render={<Link to='edit' />} variant='outline'>
