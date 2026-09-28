@@ -40,7 +40,15 @@ const terminal = new Set([
   'failed',
   'cancelled',
   'dispatch_failed',
+  'abandoned',
 ]);
+/** The audit action a staff release records in the integration audit log. */
+export const RELEASE_AUDIT_ACTION = 'buildTaskRun.release';
+/** Who released an abandoned run, and when. */
+export interface Released {
+  byName: string;
+  at: string;
+}
 
 export class BuildTasksService {
   constructor(
@@ -84,12 +92,13 @@ export class BuildTasksService {
       latestRun: this.runView(runs.find((r) => r.taskId === task.id)),
     }));
   }
-  private runView(run?: Row | null) {
+  private runView(run?: Row | null, released?: Released | null) {
     if (!run) return null;
     const { snapshot: _snapshot, activeTaskId, result, ...rest } = run;
     return {
       ...dated(rest),
       active: activeTaskId != null,
+      released: released ?? null,
       result: result
         ? (JSON.parse(scalar(result)) as Record<string, unknown>)
         : null,
@@ -108,11 +117,95 @@ export class BuildTasksService {
       sort: (s) => s.field('createdAt').desc(),
       limit: 100,
     });
+    const releases = await this.releases(
+      runs.filter((r) => r.status === 'abandoned').map((r) => scalar(r.id)),
+    );
     return {
       task: dated(task),
       comments: comments.map(dated),
-      runs: runs.map((r) => this.runView(r)),
+      runs: runs.map((r) => this.runView(r, releases.get(scalar(r.id)))),
     };
+  }
+  /** Who released each run, from the audit log the release wrote. */
+  private async releases(runIds: string[]) {
+    const found = new Map<string, Released>();
+    if (!runIds.length) return found;
+    const rows = await this.db
+      .query()
+      .selectFrom('evaluationAudit')
+      .select(['target', 'detail', 'createdAt'])
+      .where('action', '=', RELEASE_AUDIT_ACTION)
+      .where('target', 'in', runIds)
+      .execute();
+    for (const row of rows) {
+      const detail = JSON.parse(scalar(row.detail)) as { actorName?: unknown };
+      found.set(scalar(row.target), {
+        byName: typeof detail.actorName === 'string' ? detail.actorName : '',
+        at: instant(row.createdAt),
+      });
+    }
+    return found;
+  }
+  /**
+   * Frees a task held by a run that will not finish on its own: an unconfirmed
+   * dispatch GitHub never ran, a workflow whose report never arrived, a stuck
+   * submission. The run stays in history as `abandoned` with who released it;
+   * a report that arrives later is still recorded but never takes the task back.
+   */
+  async release(taskId: string, runId: string, actor: Actor) {
+    if (!(await this.repo('buildTasks').findOne({ filter: { id: taskId } })))
+      return notFound();
+    const run = await this.repo('buildTaskRuns').findOne({
+      filter: { id: runId, taskId },
+    });
+    if (!run) return notFound();
+    const stamp = now();
+    const released = await this.db.transaction(async (connection) => {
+      // Conditional on the lock: a terminal report stored meanwhile released it.
+      const updated = await this.repo('buildTaskRuns', connection).updateMany({
+        filter: { id: runId, activeTaskId: taskId },
+        values: {
+          status: 'abandoned',
+          activeTaskId: null,
+          error: 'RELEASED',
+          updatedAt: stamp,
+        },
+      });
+      if (updated.updatedCount === 0) return false;
+      await connection.query
+        .insertInto('evaluationAudit')
+        .values({
+          id: randomUUID(),
+          actorId: actor.id,
+          action: RELEASE_AUDIT_ACTION,
+          target: runId,
+          detail: JSON.stringify({
+            taskId,
+            fromStatus: scalar(run.status),
+            actorName: actor.name,
+          }),
+          createdAt: stamp,
+        })
+        .execute();
+      return true;
+    });
+    if (!released) throw new BuildTaskError('CONFLICT', 'RUN_NOT_ACTIVE');
+    return this.runView(
+      await this.repo('buildTaskRuns').findOne({ filter: { id: runId } }),
+      { byName: actor.name, at: stamp.toISOString() },
+    );
+  }
+  /** Updates a run only while it still holds the task; false once released. */
+  private async whileHolding(
+    runId: string,
+    taskId: string,
+    values: Record<string, unknown>,
+  ) {
+    const updated = await this.repo('buildTaskRuns').updateMany({
+      filter: { id: runId, activeTaskId: taskId },
+      values,
+    });
+    return updated.updatedCount > 0;
   }
   async save(id: string | null, input: unknown, actor: Actor) {
     const values = taskInput.parse(input);
@@ -123,13 +216,15 @@ export class BuildTasksService {
         filter: { activeTaskId: id },
       });
       if (active) throw new BuildTaskError('ACTIVE_RUN', 'ACTIVE_RUN');
-      if (task.issueNumber && values.targetBranch !== task.targetBranch)
+      // Blank keeps the current branch: the dedicated one was assigned on create.
+      const targetBranch = values.targetBranch || scalar(task.targetBranch);
+      if (task.issueNumber && targetBranch !== task.targetBranch)
         throw new BuildTaskError('CONFLICT', 'TARGET_BRANCH_LOCKED');
       return dated(
         (
           await this.repo('buildTasks').updateOne({
             filter: { id },
-            values: { ...values, updatedAt: now() },
+            values: { ...values, targetBranch, updatedAt: now() },
           })
         ).record,
       );
@@ -275,18 +370,29 @@ export class BuildTasksService {
         filter: { id },
         values: { issueNumber, updatedAt: now() },
       });
-      await this.repo('buildTaskRuns').updateOne({
-        filter: { id: scalar(run.id) },
-        values: { dispatchRequestedAt: now(), updatedAt: now() },
-      });
+      // From here every write is conditional on the lock, so a staff release
+      // while GitHub is being called is never undone, and a released run is
+      // not sent. Its Issue stays recorded and archived.
+      if (
+        !(await this.whileHolding(scalar(run.id), id, {
+          dispatchRequestedAt: now(),
+          updatedAt: now(),
+        }))
+      )
+        return this.runView(
+          await this.repo('buildTaskRuns').findOne({
+            filter: { id: scalar(run.id) },
+          }),
+        );
       dispatchStarted = true;
       const workflowRunId = await this.github.dispatch(
         issueNumber,
         scalar(run.id),
       );
-      await this.repo('buildTaskRuns').updateOne({
-        filter: { id: scalar(run.id) },
-        values: { status: 'queued', workflowRunId, updatedAt: now() },
+      await this.whileHolding(scalar(run.id), id, {
+        status: 'queued',
+        workflowRunId,
+        updatedAt: now(),
       });
     } catch (error) {
       const safeError =
@@ -298,14 +404,11 @@ export class BuildTasksService {
         dispatchStarted &&
         (!(error instanceof BuildTaskError) ||
           /^GITHUB_HTTP_5/.test(error.message));
-      await this.repo('buildTaskRuns').updateOne({
-        filter: { id: scalar(run.id) },
-        values: {
-          status: unknown ? 'dispatch_unknown' : 'dispatch_failed',
-          error: safeError,
-          activeTaskId: unknown ? id : null,
-          updatedAt: now(),
-        },
+      await this.whileHolding(scalar(run.id), id, {
+        status: unknown ? 'dispatch_unknown' : 'dispatch_failed',
+        error: safeError,
+        ...(unknown ? {} : { activeTaskId: null }),
+        updatedAt: now(),
       });
     }
     return this.runView(
@@ -371,15 +474,13 @@ export class BuildTasksService {
         : remote.status === 'in_progress'
           ? 'running'
           : 'queued';
-    await this.repo('buildTaskRuns').updateOne({
-      filter: { id: runId, activeTaskId: taskId },
-      values: {
-        workflowRunId: String(remote.id),
-        status,
-        ...(failed ? { activeTaskId: null } : {}),
-        error: null,
-        updatedAt: now(),
-      },
+    // Filtering on the lock leaves a run released meanwhile as it is.
+    await this.whileHolding(runId, taskId, {
+      workflowRunId: String(remote.id),
+      status,
+      ...(failed ? { activeTaskId: null } : {}),
+      error: null,
+      updatedAt: now(),
     });
     return this.runView(
       await this.repo('buildTaskRuns').findOne({ filter: { id: runId } }),
@@ -483,15 +584,22 @@ export class BuildTasksService {
         ? (JSON.parse(scalar(current.result)) as Record<string, unknown>)
         : null;
       if (old && string(old.rank) >= rank) return;
-      // A report import and a refresh can race. Compare the stored result in
-      // the UPDATE itself so an older delivery cannot overwrite a newer one.
+      // A released run records a late report but keeps its status until the
+      // report is final, and never takes the task back.
+      const next =
+        current.status === 'abandoned' && !terminal.has(status)
+          ? 'abandoned'
+          : status;
+      // A report import, a refresh and a release can race. Compare the stored
+      // result and lock in the UPDATE itself, so an older delivery cannot
+      // overwrite a newer one and a released lock is not restored.
       const updated = await this.db
         .query()
         .updateTable('buildTaskRuns')
         .set({
-          status,
+          status: next,
           result: JSON.stringify(result),
-          activeTaskId: terminal.has(status) ? null : current.activeTaskId,
+          activeTaskId: terminal.has(next) ? null : current.activeTaskId,
           error: null,
           updatedAt: now(),
         })
@@ -500,6 +608,11 @@ export class BuildTasksService {
           'result',
           current.result == null ? 'is' : '=',
           current.result ?? null,
+        )
+        .where(
+          'activeTaskId',
+          current.activeTaskId == null ? 'is' : '=',
+          current.activeTaskId ?? null,
         )
         .execute();
       if ((updated.updatedCount ?? 0) > 0) return;

@@ -146,6 +146,13 @@ export const buildTaskRoutes: AppApiRouteContribution<Application> =
           .refresh(c.req.param('id'), c.req.param('runId')),
       }),
     );
+    routes.post('/:id/runs/:runId/release', permit('run'), async (c) =>
+      c.json({
+        data: await c
+          .get('buildTasks')
+          .release(c.req.param('id'), c.req.param('runId'), actor(c)),
+      }),
+    );
     routes.get('/:id/runs/:runId/snapshot', permit('read'), async (c) =>
       c.json({
         data: await c

@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import type { DatabaseManager, RepositoryPolicy, Row } from '@nocobase/db';
+import type {
+  DatabaseConnection,
+  DatabaseManager,
+  RepositoryPolicy,
+  Row,
+} from '@nocobase/db';
 import { joinBasePath } from '@nocobase/app-server/support';
 import {
   TestProgressNotFoundError,
@@ -45,6 +50,8 @@ const instant = (value: unknown) => new Date(scalar(value)).toISOString();
 const notFound = (): never => {
   throw new ProblemFixError('NOT_FOUND', 'NOT_FOUND');
 };
+/** The audit action a staff release records in the integration audit log. */
+export const RELEASE_AUDIT_ACTION = 'problemFix.release';
 const FAILED_CONCLUSIONS = [
   'failure',
   'cancelled',
@@ -52,6 +59,12 @@ const FAILED_CONCLUSIONS = [
   'action_required',
   'startup_failure',
 ];
+
+/** Who released an abandoned run, and when. */
+export interface Released {
+  byName: string;
+  at: string;
+}
 
 export class ProblemFixesService {
   constructor(
@@ -70,21 +83,18 @@ export class ProblemFixesService {
       policies,
     );
   }
-  private runs() {
+  private runs(connection: DatabaseConnection = this.db.connection()) {
     const p = this.policies?.problemFixRuns;
-    return this.db
-      .connection()
-      .repository<Row>('problemFixRuns')
-      .withPolicy(
-        this.policies
-          ? {
-              read: p?.read ?? false,
-              create: p?.create ?? false,
-              update: p?.update ?? false,
-              delete: false,
-            }
-          : { read: true, create: true, update: true, delete: false },
-      );
+    return connection.repository<Row>('problemFixRuns').withPolicy(
+      this.policies
+        ? {
+            read: p?.read ?? false,
+            create: p?.create ?? false,
+            update: p?.update ?? false,
+            delete: false,
+          }
+        : { read: true, create: true, update: true, delete: false },
+    );
   }
   configuration() {
     return {
@@ -104,7 +114,7 @@ export class ProblemFixesService {
     if (source.sourceInstance !== repository || source.project !== repository)
       throw new ProblemFixError('FORBIDDEN', 'SOURCE_MISMATCH');
   }
-  runView(run?: Row | null) {
+  runView(run?: Row | null, released?: Released | null) {
     if (!run) return null;
     const result = run.result
       ? (JSON.parse(scalar(run.result)) as Record<string, unknown>)
@@ -131,6 +141,7 @@ export class ProblemFixesService {
           ? `https://github.com/${scalar(run.repository)}/actions/runs/${workflowRunId}`
           : null),
       error: run.error ? scalar(run.error) : null,
+      released: released ?? null,
       result: result
         ? {
             verdict: scalar(result.verdict),
@@ -221,7 +232,88 @@ export class ProblemFixesService {
       sort: (s) => s.field('createdAt').desc(),
       limit: 100,
     });
-    return runs.map((run) => this.runView(run));
+    const releases = await this.releases(
+      runs.filter((r) => r.status === 'abandoned').map((r) => scalar(r.id)),
+    );
+    return runs.map((run) => this.runView(run, releases.get(scalar(run.id))));
+  }
+  /** Who released each run, from the audit log the release wrote. */
+  private async releases(runIds: string[]) {
+    const found = new Map<string, Released>();
+    if (!runIds.length) return found;
+    const rows = await this.db
+      .query()
+      .selectFrom('evaluationAudit')
+      .select(['target', 'detail', 'createdAt'])
+      .where('action', '=', RELEASE_AUDIT_ACTION)
+      .where('target', 'in', runIds)
+      .execute();
+    for (const row of rows) {
+      const detail = JSON.parse(scalar(row.detail)) as { actorName?: unknown };
+      found.set(scalar(row.target), {
+        byName: typeof detail.actorName === 'string' ? detail.actorName : '',
+        at: instant(row.createdAt),
+      });
+    }
+    return found;
+  }
+  /**
+   * Frees a problem held by a run that will not finish on its own: an
+   * unconfirmed dispatch GitHub never ran, a lost workflow, a stuck submission.
+   * The run stays in history as `abandoned` with who released it. A result its
+   * workflow reports later is still stored and commented, but never takes the
+   * problem back; a claim of the released run is refused.
+   */
+  async release(problemId: number, runId: string, actor: Actor) {
+    const run = await this.runs().findOne({ filter: { id: runId, problemId } });
+    if (!run) return notFound();
+    const stamp = now();
+    const released = await this.db.transaction(async (connection) => {
+      // Conditional on the lock: a result stored meanwhile has released it.
+      const updated = await this.runs(connection).updateMany({
+        filter: { id: runId, activeProblemId: problemId },
+        values: {
+          status: 'abandoned',
+          activeProblemId: null,
+          error: 'RELEASED',
+          updatedAt: stamp,
+        },
+      });
+      if (updated.updatedCount === 0) return false;
+      await connection.query
+        .insertInto('evaluationAudit')
+        .values({
+          id: randomUUID(),
+          actorId: actor.id,
+          action: RELEASE_AUDIT_ACTION,
+          target: runId,
+          detail: JSON.stringify({
+            problemId,
+            fromStatus: scalar(run.status),
+            actorName: actor.name,
+          }),
+          createdAt: stamp,
+        })
+        .execute();
+      return true;
+    });
+    if (!released) throw new ProblemFixError('CONFLICT', 'RUN_NOT_ACTIVE');
+    return this.runView(await this.runs().findOne({ filter: { id: runId } }), {
+      byName: actor.name,
+      at: stamp.toISOString(),
+    });
+  }
+  /** Updates a run only while it still holds the problem; false once released. */
+  private async whileHolding(
+    id: string,
+    problemId: number,
+    values: Record<string, unknown>,
+  ) {
+    const updated = await this.runs().updateMany({
+      filter: { id, activeProblemId: problemId },
+      values,
+    });
+    return updated.updatedCount > 0;
   }
   async trigger(problemId: number, requestKey: string, actor: Actor) {
     if (!this.github.configured)
@@ -261,17 +353,23 @@ export class ProblemFixesService {
     }
     // The committed activeProblemId is the admission lock. Network work runs
     // after it; an uncertain dispatch is reconciled, never retried blindly.
+    // Every write after it is conditional on the lock, so a staff release while
+    // GitHub is being called is never undone, and a released run is not sent.
     let dispatchStarted = false;
     try {
-      await this.runs().updateOne({
-        filter: { id },
-        values: { dispatchRequestedAt: now(), updatedAt: now() },
-      });
+      if (
+        !(await this.whileHolding(id, problemId, {
+          dispatchRequestedAt: now(),
+          updatedAt: now(),
+        }))
+      )
+        return this.runView(await this.runs().findOne({ filter: { id } }));
       dispatchStarted = true;
       const workflowRunId = await this.github.dispatch(problemId, id);
-      await this.runs().updateOne({
-        filter: { id },
-        values: { status: 'queued', workflowRunId, updatedAt: now() },
+      await this.whileHolding(id, problemId, {
+        status: 'queued',
+        workflowRunId,
+        updatedAt: now(),
       });
     } catch (error) {
       const safeError =
@@ -283,14 +381,11 @@ export class ProblemFixesService {
         dispatchStarted &&
         (!(error instanceof ProblemFixError) ||
           /^GITHUB_HTTP_5/.test(error.message));
-      await this.runs().updateOne({
-        filter: { id },
-        values: {
-          status: unknown ? 'dispatch_unknown' : 'dispatch_failed',
-          error: safeError,
-          activeProblemId: unknown ? problemId : null,
-          updatedAt: now(),
-        },
+      await this.whileHolding(id, problemId, {
+        status: unknown ? 'dispatch_unknown' : 'dispatch_failed',
+        error: safeError,
+        ...(unknown ? {} : { activeProblemId: null }),
+        updatedAt: now(),
       });
     }
     return this.runView(await this.runs().findOne({ filter: { id } }));
@@ -416,6 +511,9 @@ export class ProblemFixesService {
   private async attach(run: Row, input: ClaimInput) {
     if (run.result)
       throw new ProblemFixError('CONFLICT', 'RESULT_ALREADY_RECORDED');
+    // Staff released it; a rerun must not take the problem back.
+    if (run.status === 'abandoned')
+      throw new ProblemFixError('CONFLICT', 'RUN_RELEASED');
     if (run.workflowRunId && scalar(run.workflowRunId) !== input.workflowRunId)
       throw new ProblemFixError('CONFLICT', 'RUN_ALREADY_CLAIMED');
     // A released run can only come back through a GitHub rerun of the same

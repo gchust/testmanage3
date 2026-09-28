@@ -17,6 +17,7 @@ import issuesMigration from '../../database/main/migrations/202609210003_create_
 import problemTypeMigration from '../../database/main/migrations/202609220001_add_issue_type_and_owner.js';
 import commentsMigration from '../../database/main/migrations/202609220002_create_problem_comments.js';
 import activitiesMigration from '../../database/main/migrations/202609220003_create_problem_activities.js';
+import evaluationsMigration from '../../database/main/migrations/202609250001_create_evaluations.js';
 import ownerIdMigration from '../../database/main/migrations/202609220006_add_owner_id.js';
 import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
 import classificationMigration from '../../database/main/migrations/202609280001_add_problem_classification.js';
@@ -77,6 +78,8 @@ async function setup() {
     commentsMigration,
     activitiesMigration,
     ownerIdMigration,
+    // The release audit lives in the integration audit log.
+    evaluationsMigration,
     factoryMigration,
     classificationMigration,
     migration,
@@ -304,6 +307,110 @@ describe('problem fix runs', () => {
       status: 'running',
       active: true,
     });
+  });
+  it('releases a stuck run for another one, records who did it and refuses its claim', async () => {
+    const { service, github, db, problemId } = await setup();
+    github.dispatch.mockRejectedValueOnce(new Error('Timeout'));
+    const stuck = await service.trigger(problemId, randomUUID(), actor);
+    expect(stuck).toMatchObject({ status: 'dispatch_unknown', active: true });
+    const released = await service.release(problemId, String(stuck?.id), {
+      id: 'lead',
+      name: 'Lead',
+    });
+    expect(released).toMatchObject({
+      status: 'abandoned',
+      active: false,
+      error: 'RELEASED',
+      released: { byName: 'Lead', at: expect.stringMatching(/Z$/) },
+    });
+    const audit = await db
+      .query()
+      .selectFrom('evaluationAudit')
+      .selectAll()
+      .where('target', '=', String(stuck?.id))
+      .execute();
+    expect(audit).toMatchObject([
+      { actorId: 'lead', action: 'problemFix.release' },
+    ]);
+    expect(JSON.parse(String(audit[0]?.detail))).toEqual({
+      problemId,
+      fromStatus: 'dispatch_unknown',
+      actorName: 'Lead',
+    });
+    expect((await service.list(problemId))[0]).toMatchObject({
+      released: { byName: 'Lead' },
+    });
+    await expect(
+      service.release(problemId, String(stuck?.id), actor),
+    ).rejects.toMatchObject({ code: 'CONFLICT', message: 'RUN_NOT_ACTIVE' });
+    await expect(
+      service.release(problemId, randomUUID(), actor),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+    // GitHub did start it after all: its claim must not take the problem back.
+    await expect(
+      service.claim(source, {
+        problemId,
+        externalRunId: String(stuck?.id),
+        workflowRunId: '100',
+        workflowRunAttempt: 1,
+      }),
+    ).rejects.toMatchObject({ code: 'CONFLICT', message: 'RUN_RELEASED' });
+    expect(await service.trigger(problemId, randomUUID(), actor)).toMatchObject(
+      { status: 'queued', active: true },
+    );
+  });
+  it('stores a result reported after a release without taking the problem back', async () => {
+    const { service, github, problems, problemId } = await setup();
+    const first = await service.trigger(problemId, randomUUID(), actor);
+    await service.claim(source, {
+      problemId,
+      externalRunId: String(first?.id),
+      workflowRunId: '100',
+      workflowRunAttempt: 1,
+    });
+    await service.release(problemId, String(first?.id), actor);
+    github.dispatch.mockResolvedValueOnce('101');
+    const second = await service.trigger(problemId, randomUUID(), actor);
+    expect(second).toMatchObject({ active: true, workflowRunId: '101' });
+    expect(
+      await service.report(source, String(first?.id), result()),
+    ).toMatchObject({
+      status: 'completed',
+      active: false,
+      result: { verdict: 'confirmed' },
+    });
+    const runs = await service.list(problemId);
+    expect(runs.find((r) => r?.id === second?.id)).toMatchObject({
+      active: true,
+    });
+    expect(
+      (await problems.listProblemComments(problemId)).filter(
+        (c) => c.authorName === 'Claude Code',
+      ),
+    ).toHaveLength(1);
+    await expect(
+      service.trigger(problemId, randomUUID(), actor),
+    ).rejects.toMatchObject({ code: 'ACTIVE_RUN' });
+  });
+  it('keeps a release made while GitHub is being called', async () => {
+    const { service, github, problemId } = await setup();
+    github.dispatch.mockImplementationOnce(async (_problemId, runId) => {
+      await service.release(problemId, runId, actor);
+      throw new Error('Timeout');
+    });
+    expect(await service.trigger(problemId, randomUUID(), actor)).toMatchObject(
+      { status: 'abandoned', active: false },
+    );
+    github.dispatch.mockImplementationOnce(async (_problemId, runId) => {
+      await service.release(problemId, runId, actor);
+      return '300';
+    });
+    expect(await service.trigger(problemId, randomUUID(), actor)).toMatchObject(
+      { status: 'abandoned', active: false },
+    );
+    expect(await service.trigger(problemId, randomUUID(), actor)).toMatchObject(
+      { status: 'queued', active: true },
+    );
   });
   it('binds one workflow execution to a run and refuses foreign or conflicting claims', async () => {
     const { service, problemId } = await setup();
@@ -802,6 +909,59 @@ describe('problem fix routes', () => {
     expect(
       (await app.request('/problem-fixes/unknown', { headers: staff })).status,
     ).toBe(404);
+  });
+  it('releases an active run only for a permitted user and only while it holds the problem', async () => {
+    const { app, problemId, github } = await routes();
+    github.dispatch.mockRejectedValueOnce(new Error('Timeout'));
+    const runs = `/problem-fixes/problems/${problemId}/runs`;
+    const started = await app.request(runs, {
+      method: 'POST',
+      headers: { ...staff, 'Idempotency-Key': randomUUID() },
+    });
+    const run = (await started.json()).data;
+    expect(run).toMatchObject({ status: 'dispatch_unknown', active: true });
+    const release = `${runs}/${run.id}/release`;
+    expect((await app.request(release, { method: 'POST' })).status).toBe(401);
+    expect(
+      (
+        await app.request(release, {
+          method: 'POST',
+          headers: { 'x-test-user': '1' },
+        })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await app.request(`${runs}/not-a-uuid/release`, {
+          method: 'POST',
+          headers: staff,
+        })
+      ).status,
+    ).toBe(400);
+    const released = await app.request(release, {
+      method: 'POST',
+      headers: staff,
+    });
+    expect(released.status).toBe(200);
+    expect((await released.json()).data).toMatchObject({
+      status: 'abandoned',
+      active: false,
+      released: { byName: 'Staff' },
+    });
+    const again = await app.request(release, {
+      method: 'POST',
+      headers: staff,
+    });
+    expect(again.status).toBe(409);
+    expect(await again.json()).toMatchObject({ message: 'RUN_NOT_ACTIVE' });
+    expect(
+      (
+        await app.request(runs, {
+          method: 'POST',
+          headers: { ...staff, 'Idempotency-Key': randomUUID() },
+        })
+      ).status,
+    ).toBe(202);
   });
   it('reports an unconfigured integration without creating a run', async () => {
     const { app, problemId, service } = await routes(false);
