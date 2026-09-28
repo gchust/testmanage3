@@ -43,18 +43,25 @@ const auth: AppConfigFactory<AuthConfig> = defineAppConfig((_runtime) => ({
   ],
   hooks: {
     before: createAuthMiddleware(async (context) => {
+      // Trusted server calls have no request and manage every configuration.
+      if (!context.request || !context.path.startsWith('/api-key/')) return;
       // Reserved integration keys can only be managed through the application
-      // API, which binds each key to its source. Trusted server calls have no request.
+      // API, which binds each key to its source.
       const body = context.body as { configId?: unknown } | undefined;
       if (
-        context.request &&
-        context.path.startsWith('/api-key/') &&
-        (body?.configId === 'evaluation-import' ||
-          context.query?.configId === 'evaluation-import')
+        body?.configId === 'evaluation-import' ||
+        context.query?.configId === 'evaluation-import'
       ) {
         throw new APIError('FORBIDDEN', {
           message: 'Use evaluation integration management.',
         });
+      }
+      // Without a configId Better Auth lists every configuration's keys, which
+      // put integration keys on the API Keys page, whose delete cannot reach them.
+      if (context.path === '/api-key/list' && !context.query?.configId) {
+        return {
+          context: { query: { ...context.query, configId: 'default' } },
+        };
       }
     }),
   },

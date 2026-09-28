@@ -777,6 +777,33 @@ describe('app server', () => {
         )
       ).status,
     ).toBe(404);
+    // The API Keys page lists without a configId; it shows the user's own keys
+    // and not the integration key it could not delete.
+    const own = await requestApp(app, baseUrl + 'auth/api-key/create', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ name: 'Personal key' }),
+    });
+    expect(own.status).toBe(200);
+    const ownKey = (await own.json()) as { id: string };
+    const listed = await requestApp(app, baseUrl + 'auth/api-key/list', {
+      headers,
+    });
+    expect(listed.status).toBe(200);
+    const listedIds = (
+      (await listed.json()) as { apiKeys: { id: string }[] }
+    ).apiKeys.map((key) => key.id);
+    expect(listedIds).toContain(ownKey.id);
+    expect(listedIds).not.toContain(source.data.apiKeyId);
+    expect(
+      (
+        await requestApp(
+          app,
+          baseUrl + 'auth/api-key/list?configId=evaluation-import',
+          { headers },
+        )
+      ).status,
+    ).toBe(403);
     expect(
       (await requestApp(app, baseUrl + 'evaluations/sources', { headers }))
         .status,
