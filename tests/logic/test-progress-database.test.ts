@@ -205,9 +205,7 @@ describe('test progress schema', () => {
 
     const examples = await service.listProblems({ type: 'example' });
     expect(examples).toHaveLength(50);
-    expect(examples.every((problem) => problem.status === 'pending')).toBe(
-      true,
-    );
+    expect(examples.every((problem) => problem.status === 'pending')).toBe(true);
 
     // A second run must not duplicate anything, and must not overwrite edits.
     const target = first.find((item) => item.name === '数据库');
@@ -398,9 +396,7 @@ describe('test progress schema', () => {
       featurePointName: '认证',
     });
 
-    const fixing = await service.updateProblem(created.id, {
-      status: 'fixing',
-    });
+    const fixing = await service.updateProblem(created.id, { status: 'fixing' });
     expect(fixing.status).toBe('fixing');
 
     const listed = await service.listProblems({
@@ -418,10 +414,7 @@ describe('test progress schema', () => {
       }),
     ).toHaveLength(1);
     expect(
-      await service.listProblems({
-        featurePointId: feature.id,
-        type: 'skills',
-      }),
+      await service.listProblems({ featurePointId: feature.id, type: 'skills' }),
     ).toHaveLength(0);
 
     const open = (await service.listFeaturePoints()).find(
@@ -519,7 +512,7 @@ describe('test progress schema', () => {
     expect(
       (await service.listProblems({ owner: '陈霖' })).map((p) => p.title),
     ).toEqual(['陈霖的问题']);
-    expect(await service.listProblems({ owner: '无人' })).toHaveLength(0);
+    expect((await service.listProblems({ owner: '无人' }))).toHaveLength(0);
     // 50 problems come from the workbook seed; the three above are added here.
     expect(await service.listProblems()).toHaveLength(53);
   });
@@ -914,7 +907,10 @@ describe('test progress schema', () => {
       parseFeaturePointInput({ name: '' }, { partial: false }),
     ).toThrow(TestProgressValidationError);
     expect(() =>
-      parseProblemInput({ title: 'x', featurePointId: 0 }, { partial: false }),
+      parseProblemInput(
+        { title: 'x', featurePointId: 0 },
+        { partial: false },
+      ),
     ).toThrow(TestProgressValidationError);
     expect(() =>
       parseProblemInput(

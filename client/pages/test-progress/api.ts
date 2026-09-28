@@ -14,10 +14,13 @@ export type FeatureStatus =
   | 'unspecified';
 
 /** Material gaps and test findings are one table with a type. */
-export type ProblemType =
-  'skills' | 'docs' | 'example' | 'automation' | 'manual';
+export type ProblemType = 'skills' | 'docs' | 'example' | 'automation' | 'manual';
 export type ProblemStatus =
-  'pending' | 'fixing' | 'regression' | 'verified' | 'cancelled';
+  | 'pending'
+  | 'fixing'
+  | 'regression'
+  | 'verified'
+  | 'cancelled';
 
 /** Per-type problem counts; `open` means not yet verified. */
 export interface ProblemCounts {

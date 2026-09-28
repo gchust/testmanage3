@@ -98,7 +98,8 @@ function readIdParam(context: Context, name: string): number {
 function readActor(context: Context): ProblemActor {
   const session = (context as Context<AuthEnv>).get('auth');
   const user = session?.user as
-    { id?: unknown; name?: unknown; username?: unknown } | undefined;
+    | { id?: unknown; name?: unknown; username?: unknown }
+    | undefined;
   const id = typeof user?.id === 'string' && user.id !== '' ? user.id : null;
   // The display name is what the team reads; the username is the fallback for
   // accounts that never set one.
@@ -310,13 +311,15 @@ export const testProgressApiRoutes: AppApiRouteContribution<Application> =
         201,
       ),
     );
-    router.delete('/test-progress/problem-comments/:commentId', (context) =>
-      respondNoContent(context, () =>
-        service.deleteProblemComment(
-          readIdParam(context, 'commentId'),
-          readActor(context),
+    router.delete(
+      '/test-progress/problem-comments/:commentId',
+      (context) =>
+        respondNoContent(context, () =>
+          service.deleteProblemComment(
+            readIdParam(context, 'commentId'),
+            readActor(context),
+          ),
         ),
-      ),
     );
 
     return router;

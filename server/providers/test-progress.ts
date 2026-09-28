@@ -667,9 +667,7 @@ function hasOwnerFields(input: ProblemInput): boolean {
 }
 
 /** Validates one comment payload; the author always comes from the session. */
-export function parseProblemCommentInput(
-  payload: unknown,
-): ProblemCommentInput {
+export function parseProblemCommentInput(payload: unknown): ProblemCommentInput {
   const record = requireRecord(payload);
   return {
     content: readRequiredString(record.content, 'content', 20000),
@@ -899,7 +897,12 @@ function toProblemActivityRecord(row: Row): ProblemActivityRecord {
     problemId: Number(row.problemId),
     actorId: asOptionalText(row.actorId),
     actorName: asText(row.actorName),
-    kind: readEnum(PROBLEM_ACTIVITY_KINDS, row.kind, 'kind', 'created'),
+    kind: readEnum(
+      PROBLEM_ACTIVITY_KINDS,
+      row.kind,
+      'kind',
+      'created',
+    ),
     fromStatus:
       row.fromStatus === null || row.fromStatus === undefined
         ? null
@@ -972,8 +975,7 @@ class DefaultTestProgressService implements TestProgressService {
     >();
     for (const problem of problemRows) {
       const key = Number(problem.featurePointId);
-      const grouped =
-        problemsByFeaturePoint.get(key) ?? emptyProblemCountsByType();
+      const grouped = problemsByFeaturePoint.get(key) ?? emptyProblemCountsByType();
       const type = readEnum(PROBLEM_TYPES, problem.type, 'type', 'manual');
       const status = readEnum(
         PROBLEM_STATUSES,
@@ -1809,8 +1811,7 @@ class DefaultTestProgressService implements TestProgressService {
         'unspecified',
       );
       const grouped =
-        problemsByFeaturePoint.get(Number(row.id)) ??
-        emptyProblemCountsByType();
+        problemsByFeaturePoint.get(Number(row.id)) ?? emptyProblemCountsByType();
 
       if (level === 'dimension') {
         dimensionById.set(Number(row.id), {
@@ -1935,8 +1936,7 @@ class DefaultTestProgressService implements TestProgressService {
             : `name:${ownerText}`;
       const bucket = buckets.get(key) ?? {
         ownerId,
-        owner:
-          ownerId !== null ? (ownerNames.get(ownerId) ?? ownerText) : ownerText,
+        owner: ownerId !== null ? (ownerNames.get(ownerId) ?? ownerText) : ownerText,
         open: 0,
         total: 0,
       };

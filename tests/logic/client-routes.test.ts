@@ -47,7 +47,9 @@ describe('app client routes', () => {
       { name: 'testProgressIssuesRedirect', path: '/progress/issues' },
       { name: 'buildTasks', path: '/build-tasks' },
     ]);
-    expect((routes[8] as { navigation?: unknown }).navigation).toBeUndefined();
+    expect(
+      (routes[8] as { navigation?: unknown }).navigation,
+    ).toBeUndefined();
     expect(applicationRoutes[1]).toEqual({
       parent: 'settings',
       routes: [],

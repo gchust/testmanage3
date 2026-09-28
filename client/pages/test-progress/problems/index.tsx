@@ -132,6 +132,7 @@ export default function ProblemsPage(): ReactElement {
     setSearchParams(next, { replace: true });
   }
 
+
   return (
     <PageContainer>
       <PageHeader

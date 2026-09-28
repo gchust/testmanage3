@@ -133,11 +133,10 @@ export function MarkdownEditor({
       icon: <List aria-hidden='true' className='size-3.5' />,
       label: t('testProgress.markdownList'),
       apply: (selected) => ({
-        text:
-          selected
-            .split('\n')
-            .map((line) => `- ${line}`)
-            .join('\n') || '- ',
+        text: selected
+          .split('\n')
+          .map((line) => `- ${line}`)
+          .join('\n') || '- ',
       }),
     },
     {

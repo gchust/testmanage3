@@ -349,17 +349,21 @@ describe('test progress API routes', () => {
     );
     expect(anonymous.status).toBe(401);
 
-    const listed = await router.request('/test-progress/problems/3/comments', {
-      headers: AUTHORIZED_HEADERS,
-    });
+    const listed = await router.request(
+      '/test-progress/problems/3/comments',
+      { headers: AUTHORIZED_HEADERS },
+    );
     expect(listed.status).toBe(200);
     expect(service.listProblemComments).toHaveBeenCalledWith(3);
 
-    const created = await router.request('/test-progress/problems/3/comments', {
-      method: 'POST',
-      headers: { ...AUTHORIZED_HEADERS, 'content-type': 'application/json' },
-      body: JSON.stringify({ content: '**复现了**' }),
-    });
+    const created = await router.request(
+      '/test-progress/problems/3/comments',
+      {
+        method: 'POST',
+        headers: { ...AUTHORIZED_HEADERS, 'content-type': 'application/json' },
+        body: JSON.stringify({ content: '**复现了**' }),
+      },
+    );
     expect(created.status).toBe(201);
     expect(service.createProblemComment).toHaveBeenCalledWith(
       3,
@@ -374,10 +378,10 @@ describe('test progress API routes', () => {
     });
     expect(empty.status).toBe(400);
 
-    const deleted = await router.request('/test-progress/problem-comments/21', {
-      method: 'DELETE',
-      headers: AUTHORIZED_HEADERS,
-    });
+    const deleted = await router.request(
+      '/test-progress/problem-comments/21',
+      { method: 'DELETE', headers: AUTHORIZED_HEADERS },
+    );
     expect(deleted.status).toBe(204);
     expect(service.deleteProblemComment).toHaveBeenCalledWith(21, {
       id: 'user-tester',
