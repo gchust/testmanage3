@@ -36,6 +36,7 @@ import {
 } from '../shared.js';
 import { useAsyncResource } from '../use-async-resource.js';
 import { useRefetchOnReturn } from '../use-refetch-on-return.js';
+import { ClassificationBadge } from './classification-badge.js';
 import { FactoryLinks, FactorySource } from './factory-source.js';
 import { ProblemFixSection } from './problem-fix.js';
 
@@ -148,15 +149,27 @@ function ProblemDetail({
               <ProblemStatusBadge status={problem.status} />
             </DefinitionItem>
             <DefinitionItem label={t('testProgress.fieldFeaturePoint')}>
-              {problem.featurePointId == null ? (
-                <span>{t('testProgress.uncategorized')}</span>
-              ) : (
-                <Link
-                  className='text-primary underline-offset-4 hover:underline'
-                  to={`/progress/features/${problem.featurePointId}`}
-                >
-                  {problem.featurePointName ?? '—'}
-                </Link>
+              <span className='inline-flex flex-wrap items-center gap-1.5'>
+                {problem.featurePointId == null ? (
+                  <span>{t('testProgress.uncategorized')}</span>
+                ) : (
+                  <Link
+                    className='text-primary underline-offset-4 hover:underline'
+                    to={`/progress/features/${problem.featurePointId}`}
+                  >
+                    {problem.featurePointName ?? '—'}
+                  </Link>
+                )}
+                {problem.classification && (
+                  <ClassificationBadge
+                    classification={problem.classification}
+                  />
+                )}
+              </span>
+              {problem.classification?.note && (
+                <p className='mt-1 text-xs leading-5 text-muted-foreground'>
+                  {problem.classification.note}
+                </p>
               )}
             </DefinitionItem>
             <DefinitionItem label={t('testProgress.fieldOwner')}>

@@ -410,6 +410,11 @@ const zhCN: AppResource = {
     fieldRemark: '备注',
     fieldFeaturePoint: '所属功能点',
     uncategorized: '待归类',
+    autoClassification: {
+      rule: '自动分类 · 规则',
+      model: '自动分类 · AI',
+      noNote: '工厂未给出分类原因。',
+    },
     factorySourceTitle: '完整测试报告',
     factoryIssue: '来源 Issue',
     factoryPullRequest: '代码 PR',

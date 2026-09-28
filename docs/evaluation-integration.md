@@ -2,7 +2,7 @@
 
 ## Supported workflow
 
-GitHub Actions selects unresolved findings and final failed QA checks, then submits explicit problems, structured report metadata and an immutable report URL. TestManage validates and records the submission in the existing Problems page. It does not run another evaluation. New problems are automation/pending and Uncategorized; staff use the existing form to classify them.
+GitHub Actions selects unresolved findings and final failed QA checks, then submits explicit problems, structured report metadata and an immutable report URL. TestManage validates and records the submission in the existing Problems page. It does not run another evaluation. New problems are automation/pending. The factory classifies each problem into a feature point before delivery (see [Problem classification](#problem-classification)); one it did not classify stays Uncategorized, and staff use the existing form either way.
 
 The problem list and detail distinguish Issue, code PR and PR preview environment links. Reports open in a sandboxed iframe with an “Open original report” link. Missing PR/environment data is shown explicitly. For gchust/nb3-factory, preview URLs follow https://nb3-<PR>.nfvd.net/main/; FACTORY_PREVIEW_DOMAIN can mirror a changed factory domain. A link is not a claim that the preview is currently running.
 
@@ -29,6 +29,14 @@ A first import returns HTTP 201 with an unwrapped receipt. Identical retries ret
 Native API Keys use the separate non-session `evaluation-import` configuration and repository/project source binding. Keys cannot authenticate browser sessions or call ordinary APIs. Source management remains at `GET/POST /api/evaluations/sources` and `DELETE /api/evaluations/sources/:id`, protected by native Authentication and Authorization. Create with `{name, sourceInstance, project}`; tokens are returned once, expire after 365 days and can be revoked. The native permission set key `evaluation-manager` is retained for deployed assignments and displayed as “Factory integration manager”; only credential management remains. Staff report access follows the existing Problems permission and record scope.
 
 Use the application-local NocoBase 3 Skills. Credentials, permission sets, policy-bound Repositories, transactions, File Repository, Drive, API client, i18n and UI primitives come from the installed infrastructure. The application owns only the protocol adapter and problem collection behavior.
+
+## Problem classification
+
+Before sending, the delivery workflow reads the feature point tree with the same source credential: `GET <app-base>/api/evaluations/feature-points` returns `{version: 1, featurePoints: [{id, name, level, parentId}]}` to an enabled source, and 401 to anything else, including browser sessions. It maps each problem's subject keys through its own rules, asks its Agent about the rest, and adds an optional `classification: {featurePointId, method, reason}` to the problem. `method` is `rule` or `model`, `reason` is 1–1000 characters, and `featurePointId: null` states why no feature point fits; any other key or value rejects the submission with 400.
+
+The receiver files a problem under that feature point only if it still exists at the `feature` level; otherwise the problem stays unclassified and the decision is dropped. The source and reason are stored in `issues.classificationSource` and `classificationNote`, audited as `problem.classify`, and shown as an “Auto · rule/AI” badge with the reason on the Problems list and detail. Classification is excluded from the submission digest, so a retry or replay may carry a different one without a 409.
+
+Only a problem with no feature point and no classification source is ever classified automatically. That covers new problems, and existing ones when their report is replayed, which is how problems collected before this change are classified. A person changing the feature point sets the source to `manual`, clears the reason and badge, and no later delivery changes it again, even when they clear it back to Uncategorized. An earlier automatic decision is likewise kept.
 
 ## Removal and compatibility boundaries
 

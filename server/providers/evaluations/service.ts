@@ -214,6 +214,29 @@ export class EvaluationService {
     return owner ? binding(row) : null;
   }
 
+  /** The tree an authenticated source classifies problems into before delivery. */
+  async listFeaturePoints(): Promise<
+    Array<{
+      id: number;
+      name: string;
+      level: string;
+      parentId: number | null;
+    }>
+  > {
+    const rows = await this.database
+      .query()
+      .selectFrom('featurePoints')
+      .select(['id', 'name', 'level', 'parentId'])
+      .orderBy('id')
+      .execute();
+    return rows.map((row) => ({
+      id: Number(row.id),
+      name: String(row.name),
+      level: String(row.level),
+      parentId: row.parentId == null ? null : Number(row.parentId),
+    }));
+  }
+
   async importLinkedReport(
     source: SourceBinding,
     input: ReturnType<typeof parseLinkedReport>,

@@ -25,6 +25,7 @@ import issueTypesMigration from '../../database/main/migrations/202609220001_add
 import activityMigration from '../../database/main/migrations/202609220003_create_problem_activities.js';
 import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
 import linkMigration from '../../database/main/migrations/202609250003_reference_factory_reports.js';
+import classificationMigration from '../../database/main/migrations/202609280001_add_problem_classification.js';
 import { createTestProgressService } from '../../server/providers/test-progress.js';
 import {
   factoryProblemSource,
@@ -186,6 +187,7 @@ async function setup() {
     c.increments('id');
     c.string('level');
     c.string('name');
+    c.integer('parentId');
     c.integer('designScore');
   });
   await issuesMigration.up(context);
@@ -196,6 +198,7 @@ async function setup() {
   });
   await factoryMigration.up(context);
   await linkMigration.up(context);
+  await classificationMigration.up(context);
   await db.query().insertInto('user').values({ id: 'admin' }).execute();
   await db
     .query()
@@ -820,6 +823,280 @@ describe('factory problem reception', () => {
     expect(
       await db.query().selectFrom('evaluationReports').selectAll().execute(),
     ).toEqual([]);
+  });
+});
+
+describe('factory problem classification', () => {
+  const classified = (
+    d: EvaluationDocument,
+    ...classifications: Array<SubmittedProblem['classification']>
+  ): SubmittedProblem[] =>
+    classifications.map((classification, index) => ({
+      ...submittedProblems(d)[0],
+      key: hash(`classified-${index}`),
+      title: `Classified problem ${index}`,
+      ...(classification ? { classification } : {}),
+    }));
+  const automation = async (db: Awaited<ReturnType<typeof setup>>['db']) =>
+    (
+      await createTestProgressService(db).listProblems({ type: 'automation' })
+    ).map(({ title, featurePointId, classification }) => ({
+      title,
+      featurePointId,
+      classification,
+    }));
+  async function tree(db: Awaited<ReturnType<typeof setup>>['db']) {
+    await db
+      .query()
+      .insertInto('featurePoints')
+      .values([
+        { id: 2, level: 'dimension', name: 'Building', designScore: null },
+        {
+          id: 3,
+          level: 'feature',
+          name: 'Database',
+          parentId: 2,
+          designScore: null,
+        },
+      ])
+      .execute();
+  }
+
+  it('files new problems under the feature point and reason the factory chose', async () => {
+    const { save, db } = await setup();
+    await tree(db);
+    const d = report();
+    await save(
+      d,
+      classified(
+        d,
+        {
+          featurePointId: 3,
+          method: 'rule',
+          reason: 'pkg:@nocobase/db → Building/Database',
+        },
+        { featurePointId: null, method: 'model', reason: 'No feature fits.' },
+        { featurePointId: 999, method: 'model', reason: 'Deleted since.' },
+        { featurePointId: 2, method: 'model', reason: 'A dimension.' },
+        undefined,
+      ),
+    );
+    expect(await automation(db)).toEqual([
+      {
+        title: 'Classified problem 0',
+        featurePointId: 3,
+        classification: {
+          source: 'rule',
+          note: 'pkg:@nocobase/db → Building/Database',
+        },
+      },
+      {
+        title: 'Classified problem 1',
+        featurePointId: null,
+        classification: { source: 'model', note: 'No feature fits.' },
+      },
+      // A feature point that no longer exists, or a dimension, is not a decision.
+      {
+        title: 'Classified problem 2',
+        featurePointId: null,
+        classification: null,
+      },
+      {
+        title: 'Classified problem 3',
+        featurePointId: null,
+        classification: null,
+      },
+      {
+        title: 'Classified problem 4',
+        featurePointId: null,
+        classification: null,
+      },
+    ]);
+    const [problem] = await createTestProgressService(db).listProblems({
+      featurePointId: 3,
+    });
+    expect(problem.featurePointName).toBe('Database');
+    expect(
+      (
+        await db
+          .query()
+          .selectFrom('evaluationAudit')
+          .select('detail')
+          .where('action', '=', 'problem.classify')
+          .execute()
+      ).map((row) => JSON.parse(String(row.detail))),
+    ).toEqual([
+      expect.objectContaining({
+        problemId: problem.id,
+        featurePointId: 3,
+        classificationSource: 'rule',
+      }),
+      expect.objectContaining({
+        featurePointId: null,
+        classificationSource: 'model',
+      }),
+    ]);
+  });
+
+  it('classifies existing problems on replay without overriding people or earlier results', async () => {
+    const { save, db } = await setup();
+    await tree(db);
+    const d = report();
+    const rule = {
+      featurePointId: 3,
+      method: 'rule' as const,
+      reason: 'pkg:@nocobase/db → Building/Database',
+    };
+    await save(d, classified(d, undefined, undefined, rule));
+    // Replaying the same revision fills only the problems nobody has classified.
+    const human = (await automation(db)).findIndex(
+      (row) => row.title === 'Classified problem 1',
+    );
+    const tracker = createTestProgressService(db);
+    const rows = await tracker.listProblems({ type: 'automation' });
+    await tracker.updateProblem(rows[human].id, { featurePointId: 1 });
+    await tracker.updateProblem(rows[human].id, { featurePointId: null });
+    const other = {
+      featurePointId: 1,
+      method: 'model' as const,
+      reason: 'A different opinion.',
+    };
+    expect((await save(d, classified(d, rule, other, other))).duplicate).toBe(
+      true,
+    );
+    expect(await automation(db)).toEqual([
+      {
+        title: 'Classified problem 0',
+        featurePointId: 3,
+        classification: { source: 'rule', note: rule.reason },
+      },
+      // A person cleared it deliberately; the factory does not refill it.
+      {
+        title: 'Classified problem 1',
+        featurePointId: null,
+        classification: null,
+      },
+      {
+        title: 'Classified problem 2',
+        featurePointId: 3,
+        classification: { source: 'rule', note: rule.reason },
+      },
+    ]);
+    // A person's choice ends the automatic marking; later edits keep their choice.
+    await tracker.updateProblem(rows[2].id, { featurePointId: 1 });
+    await tracker.updateProblem(rows[2].id, { title: 'Renamed' });
+    expect(await tracker.getProblem(rows[2].id)).toMatchObject({
+      featurePointId: 1,
+      classification: null,
+    });
+    await tracker.updateProblem(rows[0].id, {
+      title: 'Renamed too',
+      featurePointId: 3,
+    });
+    expect((await tracker.getProblem(rows[0].id)).classification).toEqual({
+      source: 'rule',
+      note: rule.reason,
+    });
+  });
+
+  it('accepts a different classification on retry and rejects malformed ones', async () => {
+    const { service } = await setup(),
+      app = await router(service),
+      p = packet(report());
+    const problems = (reason: string, extra = {}) =>
+      submittedProblems(p.document).map((problem) => ({
+        ...problem,
+        classification: {
+          featurePointId: 1,
+          method: 'model',
+          reason,
+          ...extra,
+        },
+      }));
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(p, 'integration-secret', {
+            problems: problems('First'),
+          }),
+        )
+      ).status,
+    ).toBe(201);
+    expect(
+      (
+        await app.fetch(
+          linkedRequest(p, 'integration-secret', {
+            problems: problems('Second'),
+          }),
+        )
+      ).status,
+    ).toBe(200);
+    for (const extra of [
+      { method: 'guess' },
+      { featurePointId: 0 },
+      { featurePointId: '1' },
+      { reason: ' ' },
+      { reason: 'x'.repeat(1001) },
+      { confidence: 0.9 },
+    ])
+      expect(
+        (
+          await app.fetch(
+            linkedRequest(p, 'integration-secret', {
+              problems: problems('Third', extra),
+            }),
+          )
+        ).status,
+      ).toBe(400);
+  });
+
+  it('serves the feature point tree only to an enabled factory source', async () => {
+    const { service, db } = await setup(),
+      app = await router(service);
+    await tree(db);
+    const get = (headers: Record<string, string>) =>
+      app.request('/evaluations/feature-points', { headers });
+    expect((await get({})).status).toBe(401);
+    expect((await get({ 'x-api-key': 'wrong' })).status).toBe(401);
+    expect(
+      (
+        await get({
+          'x-api-key': 'integration-secret',
+          authorization: 'Bearer integration-secret',
+        })
+      ).status,
+    ).toBe(401);
+    // A browser session is not a factory source.
+    expect((await get({ 'x-user': 'admin' })).status).toBe(401);
+    const response = await get({ authorization: 'Bearer integration-secret' });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      version: 1,
+      featurePoints: [
+        { id: 1, name: 'Existing feature', level: 'feature', parentId: null },
+        { id: 2, name: 'Building', level: 'dimension', parentId: null },
+        { id: 3, name: 'Database', level: 'feature', parentId: 2 },
+      ],
+    });
+    await db
+      .query()
+      .updateTable('evaluationSources')
+      .set({ enabled: false })
+      .where('id', '=', source.id)
+      .execute();
+    expect((await get({ 'x-api-key': 'integration-secret' })).status).toBe(401);
+  });
+
+  it('adds and removes the classification columns', async () => {
+    const { db, context } = await setup();
+    await classificationMigration.down!(context);
+    const [row] = await db.query().selectFrom('issues').selectAll().execute();
+    expect(row).not.toHaveProperty('classificationSource');
+    expect(row).not.toHaveProperty('classificationNote');
+    await classificationMigration.up(context);
+    expect(
+      (await db.query().selectFrom('issues').selectAll().execute())[0],
+    ).toMatchObject({ classificationSource: null, classificationNote: null });
   });
 });
 

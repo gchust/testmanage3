@@ -3,6 +3,12 @@ import type { DatabaseConnection } from '@nocobase/db';
 import type { EvaluationReport } from './document.js';
 import { EvaluationError, type EvaluationDocument } from './protocol.js';
 
+/** The factory's pre-delivery feature point decision; `null` explains why none fits. */
+export interface ProblemClassification {
+  featurePointId: number | null;
+  method: 'rule' | 'model';
+  reason: string;
+}
 export interface SubmittedProblem {
   key: string;
   title: string;
@@ -10,6 +16,7 @@ export interface SubmittedProblem {
   subjectKeys: string[];
   findingIds: string[];
   qaCriterionId?: string;
+  classification?: ProblemClassification;
 }
 export interface FactoryProblemSource {
   reportId: string;
@@ -80,6 +87,28 @@ export function parseProblemSubmission(
     Array.isArray(v) && v.length <= 300
       ? v.map((x) => text(x, max))
       : invalid();
+  const classificationOf = (
+    v: Record<string, unknown>,
+  ): ProblemClassification => {
+    if (
+      Object.keys(v).some(
+        (k) => !['featurePointId', 'method', 'reason'].includes(k),
+      ) ||
+      (v.featurePointId !== null &&
+        !(
+          Number.isSafeInteger(v.featurePointId) && Number(v.featurePointId) > 0
+        )) ||
+      (v.method !== 'rule' && v.method !== 'model')
+    )
+      return invalid();
+    const reason = text(v.reason, 1000);
+    if (!reason.trim()) return invalid();
+    return {
+      featurePointId: v.featurePointId as number | null,
+      method: v.method,
+      reason,
+    };
+  };
   const body = object(value);
   if (
     body.version !== 1 ||
@@ -111,6 +140,7 @@ export function parseProblemSubmission(
             'subjectKeys',
             'findingIds',
             'qaCriterionId',
+            'classification',
           ].includes(k),
       )
     )
@@ -122,6 +152,10 @@ export function parseProblemSubmission(
       findingIds = list(v.findingIds, 251);
     const qaCriterionId =
       v.qaCriterionId === undefined ? undefined : text(v.qaCriterionId, 300);
+    const classification =
+      v.classification === undefined
+        ? undefined
+        : classificationOf(object(v.classification));
     if (
       !/^[a-f0-9]{64}$/.test(key) ||
       keys.has(key) ||
@@ -139,9 +173,15 @@ export function parseProblemSubmission(
       subjectKeys,
       findingIds,
       ...(qaCriterionId === undefined ? {} : { qaCriterionId }),
+      ...(classification === undefined ? {} : { classification }),
     };
   });
 }
+
+// A classification is advisory metadata, decided per delivery: retries and replays
+// may carry a different one without changing which problems a report submitted.
+const identity = (problems: SubmittedProblem[]) =>
+  problems.map(({ classification: _classification, ...problem }) => problem);
 
 export async function recordProblemSubmission(
   connection: DatabaseConnection,
@@ -149,7 +189,7 @@ export async function recordProblemSubmission(
   problems: SubmittedProblem[],
 ): Promise<void> {
   const sha = createHash('sha256')
-    .update(JSON.stringify(problems))
+    .update(JSON.stringify(identity(problems)))
     .digest('hex');
   const q = connection.query;
   const existing = await q
@@ -199,7 +239,12 @@ export async function collectFactoryProblems(
       .digest('hex');
     const existing = await q
       .selectFrom('issues')
-      .select(['id', 'factoryReportId'])
+      .select([
+        'id',
+        'factoryReportId',
+        'featurePointId',
+        'classificationSource',
+      ])
       .where('factoryKey', '=', scopedKey)
       .executeTakeFirst();
     let problemId = existing ? Number(existing.id) : undefined;
@@ -232,10 +277,16 @@ export async function collectFactoryProblems(
         .executeTakeFirst())
     )
       continue;
+    // Fill only a problem nobody has classified; people and earlier results win.
+    const classification =
+      !existing ||
+      (existing.featurePointId == null && existing.classificationSource == null)
+        ? await applicableClassification(connection, candidate.classification)
+        : null;
     if (problemId) {
       await q
         .updateTable('issues')
-        .set({ factoryReportId: reportId })
+        .set({ factoryReportId: reportId, ...(classification ?? {}) })
         .where('id', '=', problemId)
         .execute();
     } else {
@@ -244,8 +295,11 @@ export async function collectFactoryProblems(
         .values({
           title: candidate.title.slice(0, 200),
           description: candidate.description,
-          // Staff classify imported problems through the existing Problems page.
+          // Without a factory classification, staff classify it on the Problems page.
           featurePointId: null,
+          classificationSource: null,
+          classificationNote: null,
+          ...(classification ?? {}),
           type: 'automation',
           status: 'pending',
           owner: null,
@@ -283,5 +337,45 @@ export async function collectFactoryProblems(
         })
         .execute();
     }
+    if (classification)
+      await q
+        .insertInto('evaluationAudit')
+        .values({
+          id: randomUUID(),
+          actorId: 'GitHub Actions',
+          action: 'problem.classify',
+          target: scopedKey,
+          detail: JSON.stringify({ problemId, reportId, ...classification }),
+          createdAt: now,
+        })
+        .execute();
   }
+}
+
+/** A feature point the factory named must still exist as a feature; otherwise stay unclassified. */
+async function applicableClassification(
+  connection: DatabaseConnection,
+  classification: ProblemClassification | undefined,
+): Promise<{
+  featurePointId: number | null;
+  classificationSource: ProblemClassification['method'];
+  classificationNote: string;
+} | null> {
+  if (!classification) return null;
+  const { featurePointId, method, reason } = classification;
+  if (
+    featurePointId !== null &&
+    !(await connection.query
+      .selectFrom('featurePoints')
+      .select('id')
+      .where('id', '=', featurePointId)
+      .where('level', '=', 'feature')
+      .executeTakeFirst())
+  )
+    return null;
+  return {
+    featurePointId,
+    classificationSource: method,
+    classificationNote: reason,
+  };
 }

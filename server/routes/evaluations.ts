@@ -121,16 +121,26 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
         );
       throw error;
     });
-    // This protocol route uses a non-session API key, bound to a single factory
-    // source/project. It does not accept browser cookies or ordinary user API keys.
-    router.post('/evaluations/import', async (c) => {
+    // These protocol routes use a non-session API key, bound to a single factory
+    // source/project. They do not accept browser cookies or ordinary user API keys.
+    const factorySource = (c: Context) => {
       const apiKey = c.req.header('x-api-key');
       const bearer = c.req.header('authorization');
       if ((apiKey && bearer) || (bearer && !bearer.startsWith('Bearer ')))
+        return Promise.resolve(null);
+      return service.authenticate(apiKey ?? bearer?.slice(7) ?? '');
+    };
+    // The factory classifies problems into this tree before it delivers them.
+    router.get('/evaluations/feature-points', async (c) => {
+      if (!(await factorySource(c)))
         return c.json({ code: 'UNAUTHORIZED' }, 401);
-      const source = await service.authenticate(
-        apiKey ?? bearer?.slice(7) ?? '',
-      );
+      return c.json({
+        version: 1,
+        featurePoints: await service.listFeaturePoints(),
+      });
+    });
+    router.post('/evaluations/import', async (c) => {
+      const source = await factorySource(c);
       if (!source) return c.json({ code: 'UNAUTHORIZED' }, 401);
       if (importing >= 4)
         return c.json({ code: 'BUSY' }, 429, { 'Retry-After': '5' });

@@ -433,6 +433,11 @@ const enUS = {
     fieldRemark: 'Remark',
     fieldFeaturePoint: 'Feature point',
     uncategorized: 'Uncategorized',
+    autoClassification: {
+      rule: 'Auto · rule',
+      model: 'Auto · AI',
+      noNote: 'The factory gave no reason for this classification.',
+    },
     factorySourceTitle: 'Complete test report',
     factoryIssue: 'Source Issue',
     factoryPullRequest: 'Code PR',

@@ -146,6 +146,14 @@ export interface ProblemRecord {
   readonly owner: string | null;
   readonly ownerId: string | null;
   readonly factorySource?: FactoryProblemSource;
+  /** Set only while the feature point is the factory's own decision. */
+  readonly classification: ProblemClassificationRecord | null;
+}
+
+/** How the factory classified a problem before delivering it. */
+export interface ProblemClassificationRecord {
+  readonly source: 'rule' | 'model';
+  readonly note: string | null;
 }
 
 /** One comment under a problem; `authorId` is the Better Auth user id. */
@@ -856,6 +864,14 @@ function toProblemRecord(
     status: readEnum(PROBLEM_STATUSES, row.status, 'status', 'pending'),
     owner: resolveOwnerName(row, ownerNames),
     ownerId: asOptionalText(row.ownerId),
+    classification:
+      row.classificationSource === 'rule' ||
+      row.classificationSource === 'model'
+        ? {
+            source: row.classificationSource,
+            note: asOptionalText(row.classificationNote),
+          }
+        : null,
   };
 }
 
@@ -1188,6 +1204,8 @@ class DefaultTestProgressService implements TestProgressService {
         'owner',
         'ownerId',
         'factoryReportId',
+        'classificationSource',
+        'classificationNote',
       ]);
 
     if (filter.featurePointId !== undefined) {
@@ -1246,6 +1264,8 @@ class DefaultTestProgressService implements TestProgressService {
         'owner',
         'ownerId',
         'factoryReportId',
+        'classificationSource',
+        'classificationNote',
       ])
       .where('id', '=', id)
       .executeTakeFirst();
@@ -1361,7 +1381,7 @@ class DefaultTestProgressService implements TestProgressService {
     const existing = await this.database
       .query()
       .selectFrom('issues')
-      .select(['id', 'status'])
+      .select(['id', 'status', 'featurePointId'])
       .where('id', '=', id)
       .executeTakeFirst();
 
@@ -1383,6 +1403,15 @@ class DefaultTestProgressService implements TestProgressService {
       if (patch.featurePointId !== null)
         await this.requireFeaturePoint(patch.featurePointId);
       set.featurePointId = patch.featurePointId;
+      // A person's choice replaces the factory's, and later deliveries keep it.
+      const previous =
+        existing.featurePointId == null
+          ? null
+          : Number(existing.featurePointId);
+      if (patch.featurePointId !== previous) {
+        set.classificationSource = 'manual';
+        set.classificationNote = null;
+      }
     }
 
     const now = new Date();

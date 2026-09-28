@@ -75,6 +75,11 @@ export interface Problem {
     reportUrl?: string | null;
     hasArchive?: boolean;
   };
+  /** The factory's own feature point decision, until someone changes it. */
+  readonly classification?: {
+    readonly source: 'rule' | 'model';
+    readonly note: string | null;
+  } | null;
 }
 
 /** One Markdown comment under a problem. */

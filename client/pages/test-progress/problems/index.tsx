@@ -43,6 +43,7 @@ import {
 } from '../shared.js';
 import { useAsyncResource } from '../use-async-resource.js';
 import { useRefetchOnReturn } from '../use-refetch-on-return.js';
+import { ClassificationBadge } from './classification-badge.js';
 
 interface ProblemsData {
   readonly problems: Problem[];
@@ -257,18 +258,25 @@ export default function ProblemsPage(): ReactElement {
                         {problem.owner ?? '—'}
                       </TableCell>
                       <TableCell>
-                        {problem.featurePointId == null ? (
-                          <span className='text-muted-foreground'>
-                            {t('testProgress.uncategorized')}
-                          </span>
-                        ) : (
-                          <Link
-                            className='text-primary underline-offset-4 hover:underline'
-                            to={`/progress/features/${problem.featurePointId}`}
-                          >
-                            {problem.featurePointName ?? '—'}
-                          </Link>
-                        )}
+                        <span className='inline-flex items-center gap-1.5 whitespace-nowrap'>
+                          {problem.featurePointId == null ? (
+                            <span className='text-muted-foreground'>
+                              {t('testProgress.uncategorized')}
+                            </span>
+                          ) : (
+                            <Link
+                              className='text-primary underline-offset-4 hover:underline'
+                              to={`/progress/features/${problem.featurePointId}`}
+                            >
+                              {problem.featurePointName ?? '—'}
+                            </Link>
+                          )}
+                          {problem.classification && (
+                            <ClassificationBadge
+                              classification={problem.classification}
+                            />
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell
                         className={PROBLEM_STATUS_CELL_CLASS[problem.status]}

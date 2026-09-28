@@ -20,6 +20,7 @@ import problemCommentsMigration from '../../database/main/migrations/20260922000
 import problemActivitiesMigration from '../../database/main/migrations/202609220003_create_problem_activities.js';
 import ownerIdMigration from '../../database/main/migrations/202609220006_add_owner_id.js';
 import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
+import classificationMigration from '../../database/main/migrations/202609280001_add_problem_classification.js';
 import seed from '../../database/main/seeds/202609210002_seed_test_progress_data.js';
 import mergeSeed from '../../database/main/seeds/202609220003_seed_merge_missing_items_into_problems.js';
 import ownerBackfillSeed from '../../database/main/seeds/202609220008_seed_backfill_owner_ids.js';
@@ -96,6 +97,7 @@ async function migrateOnly(database: DatabaseManager): Promise<void> {
   await problemActivitiesMigration.up(migrationContext(database));
   await ownerIdMigration.up(migrationContext(database));
   await factoryMigration.up(migrationContext(database));
+  await classificationMigration.up(migrationContext(database));
 }
 
 async function migrateAndSeed(database: DatabaseManager): Promise<void> {

@@ -11,6 +11,7 @@ import {
   ProblemStatusBadge,
   ScoreValue,
 } from '../../client/pages/test-progress/shared.js';
+import { ClassificationBadge } from '../../client/pages/test-progress/problems/classification-badge.js';
 
 async function runtime(): Promise<I18nRuntime> {
   const value = new I18nRuntime({
@@ -55,5 +56,32 @@ describe('test progress badges', () => {
     expect(screen.getByText('没有')).toBeVisible();
     expect(screen.getByText('完整')).toBeVisible();
     expect(screen.getByText('无')).toBeVisible();
+  });
+
+  it("labels the factory's classification with its source and reason", async () => {
+    const value = await runtime();
+    render(
+      <I18nProvider runtime={value}>
+        <ClassificationBadge
+          classification={{
+            source: 'rule',
+            note: 'pkg:@nocobase/db → 应用搭建/数据库',
+          }}
+        />
+        <ClassificationBadge classification={{ source: 'model', note: null }} />
+      </I18nProvider>,
+    );
+
+    expect(
+      screen.getByRole('button', {
+        name: 'Auto · rule: pkg:@nocobase/db → 应用搭建/数据库',
+      }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Auto · AI' })).toBeVisible();
+
+    await act(() => value.changeLanguage('zh-CN'));
+
+    expect(screen.getByText('自动分类 · 规则')).toBeVisible();
+    expect(screen.getByText('自动分类 · AI')).toBeVisible();
   });
 });
