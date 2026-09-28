@@ -1,177 +1,50 @@
-# Build task deployment — September 27, 2026
+# Build task deployment
 
-## Per-run Issue update
+What a deployment has to prepare before enabling build tasks, and what to check
+afterwards. The API and configuration contract is in [Build tasks](build-tasks.md);
+earlier report intake is in [Evaluation integration](evaluation-integration.md).
 
-The update deployed at `2026-09-27T08:08:02Z` (16:08 Singapore time) replaces
-the original one-Issue-per-task behavior. Each intentional run now creates a new
-Issue, persists its identity, closes it for archival, and explicitly starts the
-factory. Idempotent replays return the existing run. Earlier Issues, snapshots
-and results are preserved, and every history entry links to its own Issue.
+## Prerequisites
 
-- Application revision: `522a49cd74ef3591c99f3ea24dbe674c7cc1c8c0`.
-- Image: `testmanage3:build-tasks-522a49c`.
-- Image ID: `sha256:80102328313eed79af533735d3fafb5f6f9787e63ac520ba406aa951b29dfddc`.
-- Archive SHA-256: `f519b497eeff5ca339a8714f502cc0e21d3e8eb34a6d37088efde2580991aaab`.
-- Previous image: `testmanage3:build-tasks-58a08e4`.
-- Backup: `/srv/testmanage3-backups/pre-build-tasks-20260927T080746238666Z`.
-- Factory PR #394 merged as `ba6358a34a6478c2b539e86614c3d7a9d3d9b917`.
+1. Deploy the factory side first. Its selected workflow must declare the
+   `factory:external-closed-v1` capability marker and an `external_run_id`
+   input, and its run name must end with `request <external_run_id>`. The
+   repository needs the `factory:external` label, which keeps the Issue-opened
+   event from starting a second build. TestManage checks all three before it
+   creates an Issue.
+2. Store a credential scoped to the factory repository (Issues write, Actions
+   write, Contents read) in the private runtime configuration as
+   `buildTasks.token` or `FACTORY_GITHUB_TOKEN`. It never reaches the browser,
+   a snapshot, an Issue or a report.
+3. Keep `buildTasks.enabled: false` until the factory side is merged. Tasks can
+   be drafted and commented while it is disabled; runs stay disabled.
 
-The factory accepts closed externally labelled Issues for explicit dispatches
-and their validated recovery/handoff chains. A prior external submission's open
-PR does not block the new run; its work branch and PR remain independent. Ordinary
-closed Issues and ordinary application-branch serialization retain their existing
-behavior. The application requires the `factory:external-closed-v1` capability
-before it creates an Issue. Closing an Issue is separate from build acceptance.
+## Upgrade
 
-Verification passed 20 focused application tests and 34 factory tests, scoped
-ESLint, client/server/node-project type checks and locale checks. Factory CI passed.
-The Linux x64 / Node 24 image passed archive and native-runtime verification and
-all 28 runtime dependency checks. The isolated production clone passed permission,
-CRUD, disabled-dispatch and restart checks. Production replacement preserved 139
-problems, 26 reports, one task, two comments, two existing runs, all other inspected
-business rows and existing grants. Runtime configuration bytes were unchanged.
-The isolated trial container and data copy were removed.
+The migration creates `build_tasks`, `build_task_comments` and
+`build_task_runs`; existing tables are unchanged. The seed adds the unassigned
+`build-task-operator` permission set without changing existing sets or
+assigning anyone. Administrators assign the **Build task operator** role
+through Users.
 
-Live verification created Issue #396 for run
-`46fd6cfa-2224-4c20-b324-1b2383b847bb` on the existing acceptance task. Issue #396
-was closed at `2026-09-27T08:08:46Z` before Actions run `36305279913` started.
-The workflow completed successfully at `2026-09-27T08:24:13Z`, including independent
-final verification, and published separate code PR #397 from `agent/issue-396`.
-Issue #396 remained closed throughout. The automatic Issue-opened workflow
-`36305279546` skipped every job, so creation did not start a duplicate build.
-Replaying the idempotency key returned the same run; the task has three runs,
-while both previous #384 records and the old Issue's title, body and state stayed
-unchanged.
-
-The authenticated callback stored receipt/report
-`adc64f1c-7bd6-427b-af5d-31cc90a330e3` at `2026-09-27T08:25:00.784Z`, while the
-browser was closed. The import returned HTTP 201. The run is `completed`, acceptance
-is `passed`, delivery is `published`, and the active-task lock is released.
-
-Public HTTPS Chrome verification at `2026-09-27T08:26:19.393Z` confirmed the returned
-result, the #396 Issue/PR/report links, both retained historical results and the
-available Run once button. The original report returned HTTP 200, the 390-pixel
-view had no horizontal overflow, and no browser page errors occurred. Final
-production checks confirmed a healthy container, unchanged runtime configuration,
-SQLite integrity, retained permission sets and no error-level container logs. The
-database contains one task, two comments, three runs, 27 reports and 139 problems.
-
-Original report:
-`https://gchust.github.io/nb3-factory/reports/issues/396/runs/36305279913/attempt-1/index.html`.
-Release evidence is under `/srv/testmanage3-build-tasks-522a49c/`.
-
-## Initial feature and timezone release
-
-- Application: TestManage3, PR #1, branch `feat/integration` (PR remains open).
-- Destination: SSH alias `252`, existing Docker service `testmanage3`.
-- Public page: `https://test3.nfvd.net/main/build-tasks`.
-- Application revision: `58a08e49d7f23a3c646c3f59a72281bd88c31edd`.
-- Image: `testmanage3:build-tasks-58a08e4`.
-- Image ID: `sha256:dfbfea30fb87151c966032565242d613b6503b62d4b2e62e6b01fc565eb8dcdd`.
-- Archive SHA-256: `20c5af8e018240cd53d2737cae29c72879d61e6b6ed44b2f1b75083ce8f0a25e`.
-- Platform: Linux x64, glibc, Node 24, ABI 137.
-- Switched at `2026-09-27T06:54:30Z` (14:54 Singapore time).
-
-The first build-task release, `b3c444f10cf1a9f59609ccc64fe0954292efcc99`, went live
-at `2026-09-27T05:11:26Z`. The final release fixes timestamp serialization: SQLite
-UTC timestamps now have an explicit zone in API responses, and the browser renders
-them in the user's local timezone. This replacement did not submit another factory
-run. A later documentation-only commit does not change the deployed artifact.
-
-The image contains the production build, dependencies and example configuration.
-Runtime secrets and business storage remain in the existing host mounts. The
-archive excludes `.env` files, and the final switch verified that runtime
-configuration bytes were unchanged.
-The GitHub trigger credential is in the private runtime configuration only.
-The factory companion PR #382 was merged as
-`24c0eb1d2457b48fbc3d369ef8a0e5aafb6295e4`, and the
-`factory:external` label was provisioned before enabling dispatch.
-
-## Upgrade and preservation
-
-The new migration creates `build_tasks`, `build_task_comments` and
-`build_task_runs`. The new seed adds `build-task-operator` without changing
-existing permission sets or assigning permissions to existing users. Administrators
-assign the **Build task operator** role through Users.
-
-A production-data clone, with no network or published ports, passed startup,
-migrations, native administrator authentication, anonymous rejection, ordinary
-user rejection, granting the operator role, task creation/editing, commenting,
-disabled-dispatch rejection and restart persistence. Saving or commenting
-created no execution. The clone's sessions were revoked. The final image repeated
-these checks against the latest production snapshot, including the existing
-completed task and its history.
-
-The final pre-switch consistent SQLite and storage backup is retained at
-`/srv/testmanage3-backups/pre-build-tasks-20260927T065413648771Z`.
-The previous image is `testmanage3:build-tasks-b3c444f`. The initial deployment also
-retains its backup at
-`/srv/testmanage3-backups/pre-build-tasks-20260927T051110866426Z` and previous image
-`testmanage3:metadata-ea403dd`. Rollback switches code and
-configuration; it does not discard accepted business writes or reverse schema
-history. The added tables do not replace existing ones.
-
-Exact comparisons at the final switch preserved all 33 feature points, 136 problems,
-93 missing items, 140 activities, 21 report records, 16 report subjects, three
-archive records, one build task, two comments and one execution. Existing comment,
-image and permission records were unchanged. The initial deployment had preserved
-129 problems and 14 reports; additional report intake occurred between releases.
-SQLite integrity checks passed. The application's base path, public
-origin, port binding, data mount and stable authentication secrets were retained.
+Before switching a production instance, apply the release to an isolated copy
+of production data with integrations disabled and no network, and compare
+business rows and permission sets before and after. Back up the database
+consistently and keep the previous image for rollback. Rolling back switches
+code and configuration; it does not discard accepted business writes or reverse
+schema history.
 
 ## Verification
 
-- Client, server and node-project type checks passed. Local checks used the Node
-  selected by pnpm; they are not evidence of a local Node 24 test run.
-- Scoped formatting, ESLint and client/server locale checks passed.
-- The six-file regression run passed 92 tests. Subsequent focused verification
-  passed all 17 build-task tests (12 logic and five component tests), including
-  report races and continuation ancestry. These scoped runs cover 94 distinct
-  tests overall.
-- Linux x64 production build, native-module retargeting, archive inspection and
-  all 28 server runtime dependency checks passed. The image and live container
-  were independently verified as Node 24 / ABI 137.
-- Public HTTPS Chrome validation created a task, added a comment and clicked
-  the explicit run confirmation. No browser page errors occurred.
-- Replaying the same idempotency key returned the same run. A second comment
-  during execution did not change the submitted snapshot. Automatic refresh
-  preserved an unsaved comment draft. The 390-pixel mobile view did not overflow.
-- Production restart and final container replacement preserved the task, two
-  comments, execution and successful result. Authentication, existing Problems
-  and Build Tasks APIs remained functional. Test sessions were revoked.
-- Final browser verification at `2026-09-27T06:54:53.001Z` confirmed UTC API
-  timestamps and the first comment displayed as `2026/9/27 13:13:39` in
-  Asia/Singapore. Exactly one run remained, Run once was available, PR/report links
-  were correct and the original report returned HTTP 200. Production logs contained
-  no error-level entries at the final check.
-
-## Live execution and callback
-
-- Task: `e91bf52c-2b6f-4123-bd82-49e40b9ef0e8`.
-- Run: `5d027168-ecc5-4c19-89ff-2bb3d8fb3b2d`.
-- Factory Issue: `gchust/nb3-factory#384`.
-- GitHub workflow run: `36300103008`.
-- Published code PR: `gchust/nb3-factory#385` (open).
-- Receipt/report ID: `fb4faa25-6d6d-4db4-a40c-a7f185d031f2`.
-- Report stored at `2026-09-27T06:41:12.372Z`; authenticated import returned HTTP 201. The callback completed on the server while the browser was closed.
-- Final result: execution `completed`, acceptance `passed`, delivery `published`.
-  The active-task lock was released, and the result appears in run history.
-- The saved requirements and first comment are present in the submitted Issue.
-  The second comment is retained for a later submission.
-- The automatic Issue-opened workflow `36300104015` skipped every job, confirming
-  that Issue creation did not start a duplicate build. The replacement deployment
-  kept the single original execution.
-
-Original report:
-`https://gchust.github.io/nb3-factory/reports/issues/384/runs/36300103008/attempt-1/index.html`.
-
-## Evidence and cleanup
-
-Final image, trial, deployment, browser and health evidence is stored on 252 under
-`/srv/testmanage3-build-tasks-58a08e4/`. Initial deployment, restart and receipt
-evidence remains under `/srv/testmanage3-build-tasks-b3c444f/`. Credentials are
-excluded from evidence. Both isolated validation containers and temporary database
-copies were removed; consistent backups and previous images remain available.
-
-API and configuration contract: [Build tasks](build-tasks.md). Earlier intake
-history: [Evaluation integration](evaluation-integration.md).
+- Anonymous requests and users without the operator role are refused (401 and
+  403); after assigning the role the task list loads.
+- Saving or commenting a task creates no execution; a run with the integration
+  disabled returns 503 and creates none.
+- With the integration enabled, one confirmed run creates a new Issue, closes it
+  for archival, dispatches the workflow and appears in run history. Replaying
+  its idempotency key returns the same run, and the Issue-opened workflow skips.
+- The factory's authenticated report import completes the run, and its
+  execution, acceptance and delivery appear with the original report link.
+- A run released from the UI shows as released with who released it, and the
+  task can run again.
+- API timestamps carry an explicit zone and display in the viewer's time zone.

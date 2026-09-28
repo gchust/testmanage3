@@ -13,7 +13,8 @@ existing comments into the run, then dispatches the configured workflow. Later
 comments reach only the next run. One run may be active per problem; a click has
 a durable idempotency key, so a retry returns the same run. No Issue is created.
 An uncertain GitHub submission stays active as `dispatch_unknown` and is
-reconciled by Refresh through its external request id, never resubmitted.
+reconciled by Refresh through its external request id, never resubmitted. A run
+that will not finish on its own can be released (below).
 
 A maintainer can also start the workflow manually from GitHub with a problem id.
 That execution registers itself as a run (origin `github`) under the same lock
@@ -22,7 +23,7 @@ and history, and reports back the same way.
 ## Staff API
 
 Paths are relative to the application API base
-(`https://test3.nfvd.net/main/api`). They require a session or native user API
+(`<public origin><base path>/api`). They require a session or native user API
 key and the `problemFixes` resource permission.
 
 | Method | Path                                                  | Purpose                    | Permission |
@@ -30,13 +31,15 @@ key and the `problemFixes` resource permission.
 | GET    | `/problem-fixes/problems/:problemId/runs`             | Runs and integration state | read       |
 | POST   | `/problem-fixes/problems/:problemId/runs`             | Submit one frozen run      | run        |
 | POST   | `/problem-fixes/problems/:problemId/runs/:id/refresh` | Reconcile with GitHub      | run        |
+| POST   | `/problem-fixes/problems/:problemId/runs/:id/release` | Release a run holding it   | run        |
 
 `GET` returns `{ data: { runs, configured, repository } }`, newest first. `POST
 …/runs` requires a UUID `Idempotency-Key` header and returns 202 `{ data: run }`;
 another key while a run is active returns 409 `ACTIVE_RUN`, and a missing
 integration returns 503 `NOT_CONFIGURED`. A run view is
 `{ id, problemId, origin, status, active, requestedByName, createdAt, updatedAt,
-workflowRunId, workflowRunUrl, error, result }` with
+workflowRunId, workflowRunUrl, error, released, result }` with
+`released: { byName, at } | null` and
 `result: { verdict, summary, pullRequestUrl, branch, usage, elapsedMs } | null`.
 `usage` is what the factory reported (below), or null for a result reported
 without it. `elapsedMs` runs from the snapshot capture to the stored result.
@@ -44,7 +47,27 @@ Snapshots and credentials are never returned to the browser.
 
 Statuses: `dispatching`, `queued`, `running`, `awaiting_result` (the workflow
 finished without reporting; the lock is released), `completed`, `failed`,
-`cancelled`, `dispatch_failed`, `dispatch_unknown`.
+`cancelled`, `dispatch_failed`, `dispatch_unknown`, `abandoned` (released by
+staff).
+
+Where fixes are not enabled, a problem shows the section only when it has
+earlier runs, as history without the send button, and Refresh does not call
+GitHub.
+
+### Releasing a stuck run
+
+A run can hold its problem with nothing left to finish it: a `dispatch_unknown`
+submission GitHub never started, or a submission interrupted mid-dispatch.
+**Release**, confirmed in a dialog, calls `POST …/runs/:id/release`. It succeeds
+only while the run still holds the problem (otherwise 409 `RUN_NOT_ACTIVE`),
+marks it `abandoned`, and records who released it and when in the integration
+audit log (`evaluationAudit`, action `problemFix.release`); the run shows both.
+The problem can then be sent again. Every write after a run takes the lock is
+conditional on still holding it, so a release made while GitHub is being called
+is not undone and a released run is not dispatched. A claim of a released run
+is refused with 409 `RUN_RELEASED`. A result that its already-claimed workflow
+reports later is still stored with its comment and status change, but never
+takes the problem back.
 
 The **问题修复操作员** (`problem-fix-operator`) permission set grants both
 actions. It is not assigned to anyone; administrators assign it through Users.
@@ -53,16 +76,20 @@ actions. It is not assigned to anyone; administrators assign it through Users.
 
 The factory authenticates with the same source-bound integration key that
 `POST /evaluations/import` accepts (`x-api-key` or `Authorization: Bearer`).
-Sessions and ordinary user API keys are rejected with 401. A run belongs to the
-source that dispatched or registered it.
+Sessions and ordinary user API keys are rejected with 401. The protocol reads
+problems and writes comments, so it answers only while `problemFixes` is
+configured (503 `NOT_CONFIGURED` otherwise), and only to a key whose source
+instance and project are both `problemFixes.repository` (403 `SOURCE_MISMATCH`
+otherwise). A run belongs to the source that dispatched or registered it.
 
 `POST /problem-fixes/factory/claims` with
 `{ problemId, externalRunId: uuid | null, workflowRunId: "digits", workflowRunAttempt }`
 binds the execution to its run and returns `{ data: { runId, snapshot } }`:
 200 for an existing run, 201 when a manual GitHub dispatch registers a new one.
-A claim of another workflow run id, or of a run that already has a result, is 409. A GitHub rerun of the same workflow run may re-claim a run that Refresh
-released as failed, cancelled or `awaiting_result`, while no other run holds the
-problem.
+A claim of another workflow run id, of a run that already has a result, or of a
+run staff released is 409. A GitHub rerun of the same workflow run may re-claim
+a run that Refresh released as failed, cancelled or `awaiting_result`, while no
+other run holds the problem.
 
 The snapshot is
 `{ version: 1, capturedAt, problemUrl, problem: { id, title, description, type,
@@ -94,7 +121,7 @@ by truncating the analysis.
 ```yaml
 problemFixes:
   enabled: false
-  repository: gchust/nb3-factory
+  repository: owner/factory # the factory repository
   workflow: framework-fix.yml
   ref: develop
   token: '' # empty reuses buildTasks.token
@@ -111,64 +138,10 @@ on the server.
    workflow at `ref` and requires the `testmanage:problem-fix-v1` marker and an
    `external_run_id` input. Its run name must end with
    `request <external_run_id>` so Refresh can find an unconfirmed submission.
-2. The factory must hold an enabled source-bound integration key for its
-   repository (the existing report-delivery key serves).
+2. The factory must hold an enabled source-bound integration key whose source
+   instance and project are both `problemFixes.repository` (the existing
+   report-delivery key for that repository serves).
 3. Deploy TestManage. The migration creates `problem_fix_runs`; the seed adds the
    unassigned operator permission set. Existing tables are unchanged.
 4. Set `problemFixes.enabled: true`, assign the operator permission set, and
    verify one run end to end.
-
-## Deployment — September 27, 2026
-
-- Application revision: `1babd6efd089dd6bcdda2607b4cf1f9d3a372359` (PR #1, `feat/integration`).
-- Image: `testmanage3:problem-fixes-1babd6e`, ID `sha256:d51b593238711ea51b3d955cd125b60251bf235769e2294a7132bc56c3b73a71`, Linux x64 / glibc / Node 24 / ABI 137.
-- Archive SHA-256: `57845fb1ac2e9370265f2ae61f1ab5682448b708ae513e306bae929210c388b6`.
-- Switched at `2026-09-27T12:21:08Z` on SSH alias `252`; previous image `testmanage3:build-tasks-522a49c`.
-- Backup: `/srv/testmanage3-backups/pre-problem-fixes-20260927T122102173584Z`. Release files and evidence: `/srv/testmanage3-problem-fixes-1babd6e/`.
-- The only runtime configuration change is `problemFixes.enabled: true`. The token falls back to the existing `buildTasks` credential, and the API reports the integration as configured.
-- Factory companion: gchust/nb3-factory#402. Until it merges, a click is rejected with 503 `FACTORY_ENTRY_NOT_READY` and no run is created.
-
-An isolated trial ran on a copy of production data with no network and with both integrations disabled. It verified the following:
-
-- Every existing business row was preserved: 143 problems, 147 activities, 29 reports, and all build-task data. Existing permission sets were unchanged.
-- The new permission set exists.
-- A user without the permission gets 403. After `problem-fix-operator` is assigned, the list returns 200.
-- A submission against the disabled integration returns 503 and creates no run.
-- Anonymous and wrong-key protocol calls return 401.
-- Data persists across a restart.
-
-The trial container and its data copy were removed.
-
-Production verification after the switch:
-
-- Business rows were preserved, the problem-fix API reports `configured: true`, and the container is healthy.
-- Public HTTPS checks passed: the application loads (200), anonymous staff and factory calls return 401, and unknown paths return a JSON 404.
-- The only error-level log entry comes from the deliberate wrong-key check.
-- Chrome at desktop width and at 390 pixels showed the section with the button enabled, no horizontal overflow and no page errors. The button was not clicked.
-
-No end-to-end run has been made yet. It needs the factory PR merged and its `CLAUDE_CODE_OAUTH_TOKEN` and `NOCOBASE3_PR_TOKEN` secrets set.
-
-## Deployment — September 27, 2026 (usage and time)
-
-- Application revision: `8a9fbca81319bd191d850d0929a240a79e744444` (PR #1, `feat/integration`).
-- Image: `testmanage3:fix-usage-8a9fbca`, ID `sha256:10e6f2a294737f264acda409f6712b452df11de0b958152e335c3e416e6ffff1`, Linux x64 / glibc / Node 24 / ABI 137.
-- Archive SHA-256: `9b257ff2785e413bf99d80f48ed73369ec016c875a75ec909b18581965f37190`.
-- Switched at `2026-09-27T15:21:18Z` on SSH alias `252`; previous image `testmanage3:problem-fixes-1babd6e`. No configuration change.
-- Backup: `/srv/testmanage3-backups/pre-fix-usage-20260927T152111971001Z`. Release files and evidence: `/srv/testmanage3-fix-usage-8a9fbca/`.
-- Factory companion: gchust/nb3-factory#406, merged. Framework fixes now report `usage`.
-
-An isolated trial ran on a copy of production data with no network and with both integrations disabled. It verified the following:
-
-- Every existing business row was preserved, including the one stored fix run. Existing permission sets were unchanged.
-- The stored result of problem 234, reported before usage existed, reads back with `usage` and `elapsedMs` as null.
-- Under a trial-only source key, a claim and a result with usage were recorded. The run view and the staff list returned the usage and the total time. The comment carried the expected usage line and the total time.
-- A usage with markup in a label, or with an unknown key, was rejected with 400.
-- Data persisted across a restart.
-
-The trial container and its data copy were removed.
-
-Production verification after the switch:
-
-- Business rows were preserved, the problem-fix API reports `configured: true`, the legacy result reads back, and the container is healthy. No error-level log entries appeared after the switch.
-- Public HTTPS checks passed: the application loads (200) with this build's assets, anonymous staff and factory calls return 401, a wrong key returns 401, and unknown paths return a JSON 404.
-- Chrome at desktop width and at 390 pixels showed problem 234's card with the button enabled, no horizontal overflow and no page errors. The button was not clicked.

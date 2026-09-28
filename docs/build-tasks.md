@@ -37,8 +37,8 @@ original report links are visible in the run history.
 
 ## API and authorization
 
-All paths below are relative to the deployed application API base, currently
-`https://test3.nfvd.net/main/api`. Requests use the application's authenticated
+All paths below are relative to the application API base
+(`<public origin><base path>/api`). Requests use the application's authenticated
 session or native user API key and the `buildTasks` resource permissions.
 The source-bound evaluation-import credential cannot create or run tasks.
 
@@ -51,6 +51,7 @@ The source-bound evaluation-import credential cannot create or run tasks.
 | POST   | `/build-tasks/:id/comments`             | Append `{ "content": "..." }`  | comment    |
 | POST   | `/build-tasks/:id/runs`                 | Submit one saved snapshot      | run        |
 | POST   | `/build-tasks/:id/runs/:runId/refresh`  | Reconcile an existing run      | run        |
+| POST   | `/build-tasks/:id/runs/:runId/release`  | Release a run holding the task | run        |
 | GET    | `/build-tasks/:id/runs/:runId/snapshot` | Read the submitted snapshot    | read       |
 
 The run endpoint requires a UUID `Idempotency-Key` header. A retry with the same
@@ -61,7 +62,12 @@ Concurrent report deliveries preserve the highest producer/review/revision rank.
 Task, comment and execution timestamps are returned as ISO 8601 UTC instants
 with a zone suffix; the browser displays them in the user's local timezone.
 
-The new **Build task operator** permission set grants page access and the four
+Statuses: `dispatching`, `queued`, `running`, `awaiting_result` and
+`dispatch_unknown` hold the task; `completed`, `failed`, `cancelled`,
+`dispatch_failed` and `abandoned` do not. A run view also carries `active`
+(whether it holds the task) and `released: { byName, at } | null`.
+
+The **Build task operator** permission set grants page access and the four
 actions above. Administrators assign it through Users; it is not automatically
 granted to every existing account. Task editing is locked during an active run;
 comments remain appendable for the next run. The target branch is fixed once an
@@ -78,5 +84,26 @@ The factory's selected workflow must contain the `factory:external` guard and
 `external_run_id` input, and the repository label must exist before enablement.
 
 An uncertain GitHub submission remains active as `dispatch_unknown`. Refresh
-finds the workflow using its external request identifier; it never automatically
-resubmits a request whose delivery cannot be confirmed.
+finds the workflow using its external request identifier, paging through the
+dispatches created since the request; it never automatically resubmits a
+request whose delivery cannot be confirmed. While the integration is disabled,
+Refresh only replays stored reports and does not call GitHub, and the run
+button stays disabled. The menu entry remains, because route navigation cannot
+depend on configuration; an empty list says builds are not enabled.
+
+## Releasing a stuck run
+
+A run that will not finish on its own keeps the task locked: a
+`dispatch_unknown` submission GitHub never started, a workflow that finished
+(`awaiting_result`) but whose report never arrived, or a submission interrupted
+mid-dispatch. **Release** on that run, confirmed in a dialog, calls
+`POST /build-tasks/:id/runs/:runId/release`. It succeeds only while the run
+still holds the task (otherwise 409 `RUN_NOT_ACTIVE`), marks it `abandoned`, and
+records who released it and when in the integration audit log
+(`evaluationAudit`, action `buildTaskRun.release`); run history shows both.
+The task can then be edited and run again. Every write after a run takes the
+lock is conditional on still holding it, so a release made while GitHub is
+being called is not undone and a released run is not dispatched. A report that
+arrives later is still recorded on the released run; a non-final report leaves
+it `abandoned`, a final one sets its final status, and neither takes the task
+back.
