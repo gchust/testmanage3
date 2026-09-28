@@ -389,3 +389,20 @@ Authenticated existing report imports update run results; match the producer
 time to its captured run, so old reports cannot complete a newer request.
 The `build-task-operator` business permission set is independently assignable;
 never change root/member configuration to enable this feature.
+
+A build-task or problem-fix run holds its task or problem through
+`activeTaskId`/`activeProblemId`. Every write after the lock is taken must be
+conditional on still holding it (`updateMany` filtered on the lock). Staff free
+a stuck run with `POST …/runs/:runId/release` (the `run` permission), which marks
+it `abandoned` and audits it in `evaluationAudit`; late results are recorded but
+never take the lock again. The problem-fix factory protocol answers only while
+`problemFixes` is configured, and only to a source key whose instance and project
+equal `problemFixes.repository`. The Build tasks menu cannot be hidden at runtime
+(route `navigation` has no condition), so a disabled integration shows a
+"not enabled" state instead.
+
+`datetime` columns hold wall-clock time without a zone: `@nocobase/db` writes a
+`Date` in the host's local zone, through Repositories and raw queries alike.
+Read stored values with a local parse (`new Date(value)`) before returning or
+comparing them, and never append `Z`. Production runs in UTC; use `datetimeTz`
+for new instants that must survive a host-zone change.
