@@ -38,6 +38,12 @@ The receiver files a problem under that feature point only if it still exists at
 
 Only a problem with no feature point and no classification source is ever classified automatically. That covers new problems, and existing ones when their report is replayed, which is how problems collected before this change are classified. A person changing the feature point sets the source to `manual`, clears the reason and badge, and no later delivery changes it again, even when they clear it back to Uncategorized. An earlier automatic decision is likewise kept.
 
+## Problem classification deployment — 2026-09-28
+
+Deployed to https://test3.nfvd.net/main/ at 04:15:39 UTC from revision 3e8cbc922a9e5f945e5f48422e1be1df8c655244, image `testmanage3:classification-3e8cbc9` (`sha256:02bd9ac0b58f4664d2b830d823e9323280d7105fdbf53c68bc51fbab5847e342`), linux-x64 glibc Node 24 archive `a027cf794fb46d60a470e641ac6b6a9ddb347964cfa8141a4d3499d32644c836`. The previous image `testmanage3:fix-usage-8a9fbca` and the consistent pre-switch backup `/srv/testmanage3-backups/pre-classification-20260928T041533064024Z` are retained; runtime configuration is unchanged.
+
+A network-isolated trial on a copy of production data applied the migration, left every existing business row, grant and all 168 problems unchanged with no classification, and exercised the protocol under a trial-only source: 401 for anonymous, wrong-key and session reads of the tree; 400 for a malformed classification; rule and no-match decisions stored; a replay with different decisions classifying only the unclassified problem; a staff change marking the problem manual and surviving a later replay; persistence after restart. The production switch repeated the row and grant comparison and the anonymous, Problems API and sign-out checks. The trial container and its data copy were removed. Factory problems collected earlier stay Uncategorized until their reports are replayed by a factory that sends classifications.
+
 ## Removal and compatibility boundaries
 
 The standalone evaluation page, score/batch display, comparison, module mapping, finding review and regression services/API routes are removed with their helpers, locale strings, browser contracts, tests and obsolete acceptance screenshots. There are no hidden evaluation pages or unadvertised review endpoints. Unknown paths under `/api/evaluations/` return 404.
