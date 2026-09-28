@@ -25,6 +25,7 @@ import {
   classifyCollectedProblems,
   collectFactoryProblems,
   recordProblemSubmission,
+  reportLinkFacts,
 } from './problems.js';
 
 export interface SourceBinding {
@@ -353,6 +354,13 @@ export class EvaluationService {
               reportUrl,
               rank,
               document: JSON.stringify(document),
+              // Problem lists build source links from these, not the document.
+              problemSource:
+                document.type === 'evaluation-report'
+                  ? JSON.stringify(
+                      reportLinkFacts(document, ['evaluation.json'], false),
+                    )
+                  : null,
               manifest: JSON.stringify(null),
               receipt: JSON.stringify(receipt),
               receivedAt: now,

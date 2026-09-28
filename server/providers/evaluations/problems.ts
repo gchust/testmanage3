@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import type { FactoryPreviewConfig } from '../../config/factory-preview.js';
 import type { DatabaseConnection } from '@nocobase/db';
 import type { EvaluationReport } from './document.js';
@@ -38,6 +39,91 @@ export interface FactoryProblemSource {
   hasArchive: boolean;
 }
 
+/**
+ * What a problem's source links are built from. It is stored with each report
+ * when the report is received (`evaluationReports.problemSource`), so listing
+ * problems never reads or validates a report document again. The preview link
+ * depends on configuration and is derived on read.
+ */
+export interface ReportLinkFacts {
+  taskTitle: string;
+  repository: string;
+  issue: number;
+  pullRequest: number | null;
+  sourceInstance: string;
+  runId: number;
+  attempt: number;
+  files: string[];
+  hasArchive: boolean;
+}
+
+const reportLinkFactsSchema = z.strictObject({
+  taskTitle: z.string(),
+  repository: z.string(),
+  issue: z.number().int().positive(),
+  pullRequest: z.number().int().positive().nullable(),
+  sourceInstance: z.string(),
+  runId: z.number().int().positive(),
+  attempt: z.number().int().positive(),
+  files: z.array(z.string()),
+  hasArchive: z.boolean(),
+});
+
+export function reportLinkFacts(
+  report: EvaluationReport,
+  files: string[],
+  hasArchive: boolean,
+): ReportLinkFacts {
+  return {
+    taskTitle: report.run.task.title,
+    repository: report.run.task.repository,
+    issue: report.run.task.issue,
+    pullRequest: report.outcome.pullRequest?.number ?? null,
+    sourceInstance: report.source.instance,
+    runId: report.precedence.producer.runId,
+    attempt: report.precedence.producer.attempt,
+    files,
+    hasArchive,
+  };
+}
+
+/** Reads stored link facts; throws when the stored value is not what was written. */
+export function parseReportLinkFacts(value: string): ReportLinkFacts {
+  return reportLinkFactsSchema.parse(JSON.parse(value));
+}
+
+export function problemSourceFromFacts(
+  reportId: string,
+  facts: ReportLinkFacts,
+  reportUrl: string | null,
+  preview: FactoryPreviewConfig | null,
+): FactoryProblemSource {
+  const repo = facts.repository;
+  return {
+    reportId,
+    reportUrl,
+    hasArchive: facts.hasArchive,
+    taskTitle: facts.taskTitle,
+    issueUrl: `https://github.com/${repo}/issues/${facts.issue}`,
+    pullRequestUrl:
+      facts.pullRequest === null
+        ? null
+        : `https://github.com/${repo}/pull/${facts.pullRequest}`,
+    // The factory's documented preview-host.mjs address rule; see FactoryPreviewConfig.
+    environmentUrl:
+      preview &&
+      preview.repository !== '' &&
+      facts.sourceInstance === preview.repository &&
+      repo === preview.repository &&
+      facts.pullRequest !== null &&
+      PREVIEW_DOMAIN.test(preview.domain)
+        ? `https://nb3-${facts.pullRequest}.${preview.domain}/main/`
+        : null,
+    runUrl: `https://github.com/${repo}/actions/runs/${facts.runId}/attempts/${facts.attempt}`,
+    files: facts.files,
+  };
+}
+
 export function factoryProblemSource(
   reportId: string,
   report: EvaluationReport,
@@ -46,30 +132,12 @@ export function factoryProblemSource(
   hasArchive = true,
   preview: FactoryPreviewConfig | null = null,
 ): FactoryProblemSource {
-  const repo = report.run.task.repository;
-  const pullRequest = report.outcome.pullRequest;
-  return {
+  return problemSourceFromFacts(
     reportId,
+    reportLinkFacts(report, files, hasArchive),
     reportUrl,
-    hasArchive,
-    taskTitle: report.run.task.title,
-    issueUrl: `https://github.com/${repo}/issues/${report.run.task.issue}`,
-    pullRequestUrl: pullRequest
-      ? `https://github.com/${repo}/pull/${pullRequest.number}`
-      : null,
-    // The factory's documented preview-host.mjs address rule; see FactoryPreviewConfig.
-    environmentUrl:
-      preview &&
-      preview.repository !== '' &&
-      report.source.instance === preview.repository &&
-      repo === preview.repository &&
-      pullRequest &&
-      PREVIEW_DOMAIN.test(preview.domain)
-        ? `https://nb3-${pullRequest.number}.${preview.domain}/main/`
-        : null,
-    runUrl: `https://github.com/${repo}/actions/runs/${report.precedence.producer.runId}/attempts/${report.precedence.producer.attempt}`,
-    files,
-  };
+    preview,
+  );
 }
 /** Validate producer input and evidence references; the receiver never evaluates findings. */
 export function parseProblemSubmission(
