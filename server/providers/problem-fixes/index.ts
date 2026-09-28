@@ -10,7 +10,7 @@ import type { BuildTasksConfig } from '../../config/build-tasks.js';
 import type { ProblemFixesConfig } from '../../config/problem-fixes.js';
 import { testProgressServiceToken } from '../test-progress.js';
 import { ProblemFixGitHubClient } from './github.js';
-import { problemFixesResource } from './permissions.js';
+import { registeredProblemFixesResource } from './permissions.js';
 import { ProblemFixesService } from './service.js';
 export const problemFixesServiceToken =
   createServiceToken<ProblemFixesService>('app/problem-fixes');
@@ -47,6 +47,6 @@ export default class ProblemFixesProvider extends ServiceProvider<Application> {
       category: 'business',
     });
     authz.db.collections.add({ name: 'problemFixRuns' });
-    problemFixesResource.register(authz.resources);
+    registeredProblemFixesResource.register(authz.resources);
   }
 }

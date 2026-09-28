@@ -5,6 +5,10 @@ const read = (name: string) =>
 const tasks = read('buildTasks'),
   comments = read('buildTaskComments'),
   runs = read('buildTaskRuns');
+// Frozen dependency of the already-deployed 202609270001 seed: the grants it
+// stores name exactly these actions and grant keys, and an executed seed cannot
+// change. Change permissions through `registeredBuildTasksResource`, with a new
+// seed or migration for the grants already stored.
 export const buildTasksResource = defineAuthorizationResource(
   'buildTasks',
   (r) =>
@@ -39,3 +43,6 @@ export const buildTasksResource = defineAuthorizationResource(
           .grant('runs', runs.create('*').update('*')),
       ),
 );
+
+/** The resource the running application registers; identical to the seed's today. */
+export const registeredBuildTasksResource = buildTasksResource;

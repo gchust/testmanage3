@@ -7,7 +7,7 @@ import {
 } from '@nocobase/service-provider';
 import type { BuildTasksConfig } from '../../config/build-tasks.js';
 import { GitHubBuildClient } from './github.js';
-import { buildTasksResource } from './permissions.js';
+import { registeredBuildTasksResource } from './permissions.js';
 import { BuildTasksService } from './service.js';
 export const buildTasksServiceToken =
   createServiceToken<BuildTasksService>('app/build-tasks');
@@ -40,6 +40,6 @@ export default class BuildTasksProvider extends ServiceProvider<Application> {
       title: { key: 'buildTasks.title', ns: 'app' },
       actions: ['access'],
     });
-    buildTasksResource.register(authz.resources);
+    registeredBuildTasksResource.register(authz.resources);
   }
 }
