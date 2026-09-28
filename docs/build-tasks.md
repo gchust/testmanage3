@@ -47,7 +47,7 @@ The source-bound evaluation-import credential cannot create or run tasks.
 | GET    | `/build-tasks`                          | List tasks and latest run      | read       |
 | POST   | `/build-tasks`                          | Save a draft                   | manage     |
 | GET    | `/build-tasks/:id`                      | Task, comments and run history | read       |
-| PATCH  | `/build-tasks/:id`                      | Edit saved requirements        | manage     |
+| PATCH  | `/build-tasks/:id`                      | Edit only the fields sent      | manage     |
 | POST   | `/build-tasks/:id/comments`             | Append `{ "content": "..." }`  | comment    |
 | POST   | `/build-tasks/:id/runs`                 | Submit one saved snapshot      | run        |
 | POST   | `/build-tasks/:id/runs/:runId/refresh`  | Reconcile an existing run      | run        |
