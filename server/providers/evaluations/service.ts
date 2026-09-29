@@ -24,6 +24,7 @@ import {
 import {
   classifyCollectedProblems,
   collectFactoryProblems,
+  listTaskProblems,
   recordProblemSubmission,
   reportLinkFacts,
 } from './problems.js';
@@ -240,6 +241,18 @@ export class EvaluationService {
       level: String(row.level),
       parentId: row.parentId == null ? null : Number(row.parentId),
     }));
+  }
+
+  /**
+   * The problems an authenticated source's tasks may still recur as, so the
+   * factory can judge a differently worded problem a duplicate before delivery.
+   */
+  async listTaskProblems(source: SourceBinding, taskKeys: string[]) {
+    return listTaskProblems(
+      this.database.connection(),
+      source.sourceInstance,
+      taskKeys,
+    );
   }
 
   async importLinkedReport(

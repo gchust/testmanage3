@@ -366,11 +366,11 @@ function ProblemTimeline({
                   <span
                     className={cn(
                       'size-2.5 shrink-0 rounded-full',
-                      activity.kind === 'created'
-                        ? PROBLEM_ACTIVITY_DOT_CLASS.created
-                        : PROBLEM_ACTIVITY_DOT_CLASS[
+                      activity.kind === 'status'
+                        ? PROBLEM_ACTIVITY_DOT_CLASS[
                             activity.toStatus ?? 'pending'
-                          ],
+                          ]
+                        : PROBLEM_ACTIVITY_DOT_CLASS[activity.kind],
                     )}
                   />
                   {index === activities.data!.length - 1 ? null : (
@@ -382,22 +382,33 @@ function ProblemTimeline({
                     ? t('testProgress.timelineCreated', {
                         actor: activity.actorName,
                       })
-                    : t('testProgress.timelineStatus', {
-                        actor: activity.actorName,
-                        from:
-                          activity.fromStatus === null
-                            ? ''
-                            : t(
-                                `testProgress.problemStatus.${activity.fromStatus}`,
-                              ),
-                        to:
-                          activity.toStatus === null
-                            ? ''
-                            : t(
-                                `testProgress.problemStatus.${activity.toStatus}`,
-                              ),
-                      })}
+                    : activity.kind === 'recurred'
+                      ? t('testProgress.timelineRecurred', {
+                          actor: activity.actorName,
+                        })
+                      : t('testProgress.timelineStatus', {
+                          actor: activity.actorName,
+                          from:
+                            activity.fromStatus === null
+                              ? ''
+                              : t(
+                                  `testProgress.problemStatus.${activity.fromStatus}`,
+                                ),
+                          to:
+                            activity.toStatus === null
+                              ? ''
+                              : t(
+                                  `testProgress.problemStatus.${activity.toStatus}`,
+                                ),
+                        })}
                 </p>
+                {activity.note ? (
+                  <p className='mt-0.5 pr-4 text-xs text-muted-foreground'>
+                    {t('testProgress.timelineRecurredNote', {
+                      note: activity.note,
+                    })}
+                  </p>
+                ) : null}
                 <time
                   className='mt-0.5 text-xs text-muted-foreground'
                   dateTime={activity.createdAt}

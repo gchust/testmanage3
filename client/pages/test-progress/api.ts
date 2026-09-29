@@ -100,7 +100,7 @@ export interface ProblemCommentPayload {
 }
 
 /** Timeline entry kinds; `status` carries the from/to statuses. */
-export type ProblemActivityKind = 'created' | 'status';
+export type ProblemActivityKind = 'created' | 'status' | 'recurred';
 
 export interface ProblemActivity {
   readonly id: number;
@@ -110,6 +110,8 @@ export interface ProblemActivity {
   readonly kind: ProblemActivityKind;
   readonly fromStatus: ProblemStatus | null;
   readonly toStatus: ProblemStatus | null;
+  /** The factory model's reason when it judged a recurrence the same problem. */
+  readonly note: string | null;
   readonly createdAt: string;
 }
 

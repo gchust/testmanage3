@@ -183,8 +183,15 @@ export interface ProblemActor {
   readonly name: string;
 }
 
-/** Timeline entry kinds; kept as strings so a new kind needs no schema change. */
-export const PROBLEM_ACTIVITY_KINDS = ['created', 'status'] as const;
+/**
+ * Timeline entry kinds; kept as strings so a new kind needs no schema change.
+ * `recurred`: the factory reported the problem again in another run of its task.
+ */
+export const PROBLEM_ACTIVITY_KINDS = [
+  'created',
+  'status',
+  'recurred',
+] as const;
 export type ProblemActivityKind = (typeof PROBLEM_ACTIVITY_KINDS)[number];
 
 /** Read-only member list for owner pickers; credentials stay with Authentication. */
@@ -202,6 +209,8 @@ export interface ProblemActivityRecord {
   readonly kind: ProblemActivityKind;
   readonly fromStatus: ProblemStatus | null;
   readonly toStatus: ProblemStatus | null;
+  /** Why the factory judged a `recurred` problem the same as this one, if its model did. */
+  readonly note: string | null;
   readonly createdAt: string;
 }
 
@@ -923,6 +932,7 @@ function toProblemActivityRecord(row: Row): ProblemActivityRecord {
       row.toStatus === null || row.toStatus === undefined
         ? null
         : readEnum(PROBLEM_STATUSES, row.toStatus, 'toStatus', 'pending'),
+    note: asOptionalText(row.note),
     createdAt: toIsoDateTime(row.createdAt),
   };
 }
@@ -1553,6 +1563,7 @@ class DefaultTestProgressService implements TestProgressService {
         'kind',
         'fromStatus',
         'toStatus',
+        'note',
         'createdAt',
       ])
       .where('problemId', '=', problemId)

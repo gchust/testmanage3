@@ -173,10 +173,11 @@ export const AVAILABILITY_TEXT_CLASS: Record<AvailabilityStatus, string> = {
  * instead of a row of grey dots.
  */
 export const PROBLEM_ACTIVITY_DOT_CLASS: Record<
-  'created' | ProblemStatus,
+  'created' | 'recurred' | ProblemStatus,
   string
 > = {
   created: 'bg-primary',
+  recurred: 'bg-primary/60',
   pending: 'bg-muted-foreground',
   fixing: 'bg-warning',
   regression: 'bg-info',
