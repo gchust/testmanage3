@@ -27,6 +27,7 @@ import factoryMigration from '../../database/main/migrations/202609250002_collec
 import linkMigration from '../../database/main/migrations/202609250003_reference_factory_reports.js';
 import classificationMigration from '../../database/main/migrations/202609280001_add_problem_classification.js';
 import linkFactsMigration from '../../database/main/migrations/202609280002_store_report_link_facts.js';
+import recurrenceMigration from '../../database/main/migrations/202609290001_merge_recurring_factory_problems.js';
 import { createTestProgressService } from '../../server/providers/test-progress.js';
 import {
   factoryProblemSource,
@@ -204,6 +205,7 @@ async function setup() {
   await linkMigration.up(context);
   await classificationMigration.up(context);
   await linkFactsMigration.up(context);
+  await recurrenceMigration.up(context);
   await db.query().insertInto('user').values({ id: 'admin' }).execute();
   await db
     .query()
@@ -911,6 +913,320 @@ describe('factory problem reception', () => {
     expect(
       await db.query().selectFrom('evaluationReports').selectAll().execute(),
     ).toEqual([]);
+  });
+});
+
+describe('recurring factory problems', () => {
+  const fingerprint = hash('task-fingerprint');
+  const problem = (
+    d: EvaluationDocument,
+    fields: Partial<SubmittedProblem> = {},
+  ): SubmittedProblem[] => [
+    { ...submittedProblems(d)[0], taskKey: 'preset-7', fingerprint, ...fields },
+  ];
+  /** A later run's problem worded differently, which the factory model matched. */
+  const reworded = (
+    d: EvaluationDocument,
+    problemId: number,
+    fields: Partial<SubmittedProblem> = {},
+  ) =>
+    problem(d, {
+      title: 'Reworded factory problem',
+      fingerprint: hash('reworded'),
+      duplicateOf: { problemId, reason: 'Same missing validation.' },
+      ...fields,
+    });
+  /** Another build of the same task: a new Issue, run and report. */
+  const rerun = (issue: number) => {
+    const d = report();
+    d.run.key = `owner/factory/issues/${issue}/initial`;
+    d.run.task.issue = issue;
+    d.precedence.producer.runId += issue;
+    return d;
+  };
+  const automation = (db: Awaited<ReturnType<typeof setup>>['db']) =>
+    db
+      .query()
+      .selectFrom('issues')
+      .selectAll()
+      .where('type', '=', 'automation')
+      .orderBy('id', 'asc')
+      .execute();
+  const activities = (db: Awaited<ReturnType<typeof setup>>['db']) =>
+    db
+      .query()
+      .selectFrom('problemActivities')
+      .select(['problemId', 'kind'])
+      .orderBy('id', 'asc')
+      .execute();
+
+  it('records another run of the task on the problem it already reported', async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first));
+    const [original] = await automation(db);
+    await db
+      .query()
+      .updateTable('issues')
+      .set({ title: 'Human title', status: 'fixing' })
+      .where('id', '=', Number(original.id))
+      .execute();
+    const second = rerun(200);
+    const next = await save(second, problem(second));
+    expect((await save(second, problem(second))).duplicate).toBe(true);
+    const rows = await automation(db);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      title: 'Human title',
+      status: 'fixing',
+      factoryKey: original.factoryKey,
+      factoryFingerprint: fingerprint,
+      factoryReportId: next.receipt.receiptId,
+    });
+    expect(await activities(db)).toEqual([
+      { problemId: Number(original.id), kind: 'created' },
+      { problemId: Number(original.id), kind: 'recurred' },
+    ]);
+    const timeline = await createTestProgressService(db).listProblemActivities(
+      Number(original.id),
+    );
+    expect(timeline.map(({ kind }) => kind)).toEqual(['created', 'recurred']);
+    // A revision of the later run stays on the same problem without another entry.
+    second.revision++;
+    second.precedence.producer.runId++;
+    await save(second, problem(second));
+    expect(await automation(db)).toHaveLength(1);
+    expect(await activities(db)).toHaveLength(2);
+  });
+
+  it('keeps separate problems, tasks and unfingerprinted submissions apart', async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first));
+    const other = rerun(201);
+    await save(other, problem(other, { fingerprint: hash('another-task') }));
+    const legacy = rerun(202);
+    await save(legacy, problem(legacy, { fingerprint: undefined }));
+    expect((await automation(db)).map((r) => r.factoryFingerprint)).toEqual([
+      fingerprint,
+      hash('another-task'),
+      null,
+    ]);
+    expect((await activities(db)).map(({ kind }) => kind)).toEqual([
+      'created',
+      'created',
+      'created',
+    ]);
+  });
+
+  it('collects a verified problem that returns anew and keeps a cancelled one dismissed', async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first));
+    const [original] = await automation(db);
+    const setStatus = (status: string) =>
+      db
+        .query()
+        .updateTable('issues')
+        .set({ status })
+        .where('id', '=', Number(original.id))
+        .execute();
+    await setStatus('cancelled');
+    const second = rerun(203);
+    await save(second, problem(second));
+    expect(await automation(db)).toHaveLength(1);
+    expect((await automation(db))[0].status).toBe('cancelled');
+    await setStatus('verified');
+    const third = rerun(204);
+    await save(third, problem(third));
+    const rows = await automation(db);
+    expect(rows.map(({ status }) => status)).toEqual(['verified', 'pending']);
+    // Later runs join the new, open problem rather than the verified one.
+    const fourth = rerun(205);
+    await save(fourth, problem(fourth));
+    expect(await automation(db)).toHaveLength(2);
+    expect((await activities(db)).at(-1)).toEqual({
+      problemId: Number(rows[1].id),
+      kind: 'recurred',
+    });
+  });
+
+  it('does not recreate a merged problem someone deleted when the later run is replayed', async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first));
+    const second = rerun(206);
+    await save(second, problem(second));
+    await db
+      .query()
+      .deleteFrom('issues')
+      .where('type', '=', 'automation')
+      .execute();
+    await save(second, problem(second));
+    second.revision++;
+    second.precedence.producer.runId++;
+    await save(second, problem(second));
+    expect(await automation(db)).toEqual([]);
+  });
+
+  it('accepts a fingerprint on replay of an earlier delivery and fills it in', async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first, { fingerprint: undefined }));
+    expect((await automation(db))[0].factoryFingerprint).toBeNull();
+    expect((await save(first, problem(first))).duplicate).toBe(true);
+    expect((await automation(db))[0].factoryFingerprint).toBe(fingerprint);
+    const second = rerun(207);
+    await save(second, problem(second));
+    expect(await automation(db)).toHaveLength(1);
+  });
+
+  it("merges a problem the factory model matched to one of the task's problems", async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first));
+    const [original] = await automation(db);
+    expect(original.factoryTask).toBe('owner/factory/preset-7');
+    const second = rerun(210);
+    await save(second, reworded(second, Number(original.id)));
+    expect(await automation(db)).toHaveLength(1);
+    const timeline = await createTestProgressService(db).listProblemActivities(
+      Number(original.id),
+    );
+    expect(timeline.map(({ kind, note }) => ({ kind, note }))).toEqual([
+      { kind: 'created', note: null },
+      { kind: 'recurred', note: 'Same missing validation.' },
+    ]);
+    // The later wording is learned: the next run needs no model judgement.
+    const third = rerun(211);
+    await save(third, reworded(third, 0, { duplicateOf: undefined }));
+    expect(await automation(db)).toHaveLength(1);
+    expect(
+      (
+        await createTestProgressService(db).listProblemActivities(
+          Number(original.id),
+        )
+      ).map(({ kind, note }) => ({ kind, note })),
+    ).toEqual([
+      { kind: 'created', note: null },
+      { kind: 'recurred', note: 'Same missing validation.' },
+      { kind: 'recurred', note: null },
+    ]);
+  });
+
+  it("never merges into another task's, a verified or a missing problem on the model's word", async () => {
+    const { save, db } = await setup();
+    const first = report();
+    await save(first, problem(first, { taskKey: 'preset-8' }));
+    const verified = rerun(212);
+    await save(verified, problem(verified, { fingerprint: hash('verified') }));
+    const [otherTask, done] = await automation(db);
+    await db
+      .query()
+      .updateTable('issues')
+      .set({ status: 'verified' })
+      .where('id', '=', Number(done.id))
+      .execute();
+    const targets = [Number(otherTask.id), Number(done.id), 999];
+    for (const [index, target] of targets.entries()) {
+      const later = rerun(213 + index);
+      await save(
+        later,
+        reworded(later, target, { fingerprint: hash(`reworded-${index}`) }),
+      );
+    }
+    expect(await automation(db)).toHaveLength(5);
+    expect((await activities(db)).map(({ kind }) => kind)).not.toContain(
+      'recurred',
+    );
+  });
+
+  it('lists the mergeable problems of requested tasks to their factory source only', async () => {
+    const { save, db, service } = await setup(),
+      app = await router(service);
+    const first = report();
+    await save(first, problem(first));
+    const second = rerun(220);
+    const [original] = await automation(db);
+    await save(second, reworded(second, Number(original.id)));
+    const elsewhere = rerun(221);
+    await save(
+      elsewhere,
+      problem(elsewhere, { taskKey: 'preset-9', fingerprint: hash('other') }),
+    );
+    const done = rerun(222);
+    await save(done, problem(done, { fingerprint: hash('done') }));
+    await db
+      .query()
+      .updateTable('issues')
+      .set({ status: 'verified' })
+      .where('factoryFingerprint', '=', hash('done'))
+      .execute();
+    const get = (query: string, headers: Record<string, string> = {}) =>
+      app.request(`/evaluations/task-problems${query}`, { headers });
+    const key = { 'x-api-key': 'integration-secret' };
+    expect((await get('?task=preset-7')).status).toBe(401);
+    expect((await get('?task=preset-7', { 'x-user': 'admin' })).status).toBe(
+      401,
+    );
+    expect((await get('', key)).status).toBe(400);
+    expect((await get('?task=../x', key)).status).toBe(400);
+    const response = await get('?task=preset-7&task=preset-404', key);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      version: 1,
+      problems: [
+        {
+          id: Number(original.id),
+          taskKey: 'preset-7',
+          title: 'Factory reported problem',
+          description: 'Steps and evidence',
+          status: 'pending',
+          fingerprints: [fingerprint, hash('reworded')],
+        },
+      ],
+    });
+  });
+
+  it('rejects a duplicate judgement without its task and malformed judgements', async () => {
+    const { save } = await setup();
+    const d = report();
+    for (const fields of [
+      { taskKey: undefined, duplicateOf: { problemId: 1, reason: 'Same.' } },
+      { duplicateOf: { problemId: 0, reason: 'Same.' } },
+      { duplicateOf: { problemId: 1, reason: ' ' } },
+      { taskKey: '../preset' },
+    ])
+      await expect(
+        save(d, problem(d, fields as Partial<SubmittedProblem>)),
+      ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+  });
+
+  it('rejects malformed fingerprints', async () => {
+    const { save } = await setup();
+    const d = report();
+    await expect(
+      save(d, problem(d, { fingerprint: 'not-a-hash' })),
+    ).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+  });
+
+  it('adds and removes the recurrence schema', async () => {
+    const { save, db, context } = await setup();
+    const first = report();
+    await save(first, problem(first));
+    const second = rerun(208);
+    await save(second, problem(second));
+    await recurrenceMigration.down!(context);
+    expect((await automation(db))[0]).not.toHaveProperty('factoryFingerprint');
+    await recurrenceMigration.up(context);
+    expect(
+      await db
+        .query()
+        .selectFrom('factoryProblemOccurrences')
+        .selectAll()
+        .execute(),
+    ).toEqual([]);
+    expect((await automation(db))[0].factoryFingerprint).toBeNull();
   });
 });
 

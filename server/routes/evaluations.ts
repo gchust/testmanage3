@@ -17,6 +17,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { evaluationServiceToken } from '../providers/evaluations/index.js';
 import { parseLinkedReport } from '../providers/evaluations/report-links.js';
 import { EvaluationError } from '../providers/evaluations/protocol.js';
+import { isTaskKey } from '../providers/evaluations/problems.js';
 import { buildTasksServiceToken } from '../providers/build-tasks/index.js';
 
 type Env = AuthEnv &
@@ -137,6 +138,22 @@ export const evaluationRoutes: AppApiRouteContribution<Application> =
       return c.json({
         version: 1,
         featurePoints: await service.listFeaturePoints(),
+      });
+    });
+    // Each task's problems a new run may recur as; the factory's model compares
+    // differently worded problems against them before delivery.
+    router.get('/evaluations/task-problems', async (c) => {
+      const source = await factorySource(c);
+      if (!source) return c.json({ code: 'UNAUTHORIZED' }, 401);
+      const tasks = [...new Set(c.req.queries('task') ?? [])];
+      if (!tasks.length || tasks.length > 50 || !tasks.every(isTaskKey))
+        return c.json(
+          { code: 'INVALID_INPUT', message: 'Expected 1–50 task keys.' },
+          400,
+        );
+      return c.json({
+        version: 1,
+        problems: await service.listTaskProblems(source, tasks),
       });
     });
     router.post('/evaluations/import', async (c) => {

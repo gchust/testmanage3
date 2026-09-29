@@ -571,6 +571,8 @@ const zhCN: AppResource = {
     timeline: '时间线',
     timelineCreated: '{{actor}} 创建了问题',
     timelineStatus: '{{actor}} 将状态从「{{from}}」改为「{{to}}」',
+    timelineRecurred: '{{actor}} 再次上报了该问题',
+    timelineRecurredNote: 'AI 判定为同一问题：{{note}}',
     comments: '评论',
     commentPlaceholder: '写评论，支持 Markdown（图片、表格、代码）…',
     commentSubmit: '发表评论',

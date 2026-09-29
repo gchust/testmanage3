@@ -602,6 +602,8 @@ const enUS = {
     timeline: 'Timeline',
     timelineCreated: '{{actor}} created the problem',
     timelineStatus: '{{actor}} changed the status from {{from}} to {{to}}',
+    timelineRecurred: '{{actor}} reported the problem again',
+    timelineRecurredNote: 'Judged the same problem by AI: {{note}}',
     comments: 'Comments',
     commentPlaceholder: 'Write a comment. Markdown: images, tables, code…',
     commentSubmit: 'Post comment',
