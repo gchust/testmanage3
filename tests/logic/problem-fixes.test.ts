@@ -21,6 +21,7 @@ import evaluationsMigration from '../../database/main/migrations/202609250001_cr
 import ownerIdMigration from '../../database/main/migrations/202609220006_add_owner_id.js';
 import factoryMigration from '../../database/main/migrations/202609250002_collect_factory_problems.js';
 import classificationMigration from '../../database/main/migrations/202609280001_add_problem_classification.js';
+import recurrenceMigration from '../../database/main/migrations/202609290001_merge_recurring_factory_problems.js';
 import migration from '../../database/main/migrations/202609270002_create_problem_fix_runs.js';
 import permissionSeed from '../../database/main/seeds/202609270002_seed_problem_fix_permissions.js';
 import { createTestProgressService } from '../../server/providers/test-progress.js';
@@ -82,6 +83,7 @@ async function setup() {
     evaluationsMigration,
     factoryMigration,
     classificationMigration,
+    recurrenceMigration,
     migration,
   ])
     await step.up(context(db));
